@@ -1,0 +1,153 @@
+'use client'
+
+import { Article } from '@/lib/api'
+import { useRouter } from 'next/navigation'
+import { FormEvent, useState } from 'react'
+
+type EditArticleFormProps = {
+  article: Article
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+
+export default function EditArticleForm({
+  article,
+}: EditArticleFormProps) {
+  const router = useRouter()
+
+  const [nom, setNom] = useState(article.nom)
+  const [prix, setPrix] = useState(String(article.prix))
+  const [stock, setStock] = useState(String(article.stock))
+  const [emoji, setEmoji] = useState(article.emoji)
+  const [description, setDescription] = useState(article.description ?? '')
+  const [online, setOnline] = useState(article.online)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      const response = await fetch(`${API_URL}/articles/${article.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nom,
+          prix: Number(prix),
+          stock: Number(stock),
+          emoji,
+          description: description || undefined,
+          online,
+        }),
+      })
+
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || 'Erreur lors de la mise à jour')
+      }
+
+      router.push(`/articles/${article.id}`)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="grid max-w-xl gap-4">
+      <div className="grid gap-1">
+        <label htmlFor="nom">Nom</label>
+        <input
+          id="nom"
+          value={nom}
+          onChange={(e) => setNom(e.target.value)}
+          className="rounded border px-3 py-2"
+          required
+        />
+      </div>
+
+      <div className="grid gap-1">
+        <label htmlFor="prix">Prix</label>
+        <input
+          id="prix"
+          type="number"
+          step="0.01"
+          min="0"
+          value={prix}
+          onChange={(e) => setPrix(e.target.value)}
+          className="rounded border px-3 py-2"
+          required
+        />
+      </div>
+
+      <div className="grid gap-1">
+        <label htmlFor="stock">Stock</label>
+        <input
+          id="stock"
+          type="number"
+          min="0"
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+          className="rounded border px-3 py-2"
+          required
+        />
+      </div>
+
+      <div className="grid gap-1">
+        <label htmlFor="emoji">Emoji</label>
+        <input
+          id="emoji"
+          value={emoji}
+          onChange={(e) => setEmoji(e.target.value)}
+          className="rounded border px-3 py-2"
+        />
+      </div>
+
+      <div className="grid gap-1">
+        <label htmlFor="description">Description</label>
+        <textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="rounded border px-3 py-2"
+          rows={4}
+        />
+      </div>
+
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={online}
+          onChange={(e) => setOnline(e.target.checked)}
+        />
+        En ligne
+      </label>
+
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          disabled={loading}
+          className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+        >
+          {loading ? 'Enregistrement...' : 'Enregistrer'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => router.push(`/articles/${article.id}`)}
+          className="rounded border px-4 py-2"
+        >
+          Annuler
+        </button>
+      </div>
+    </form>
+  )
+}

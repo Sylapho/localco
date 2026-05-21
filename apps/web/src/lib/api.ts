@@ -1,0 +1,267 @@
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+
+if (!API_URL) {
+  throw new Error('NEXT_PUBLIC_API_URL est manquante')
+}
+
+export type Article = {
+  id: number
+  nom: string
+  prix: number
+  tva: number
+  stock: number
+  online: boolean
+  emoji: string
+  description?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type ArticlePayload = {
+  nom: string
+  prix: number
+  stock?: number
+  online?: boolean
+  emoji?: string
+  description?: string
+  tva?: number
+}
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(
+      `Erreur API - status ${response.status} - body: ${text || 'vide'}`,
+    )
+  }
+
+  return response.json()
+}
+
+export async function getArticles(): Promise<Article[]> {
+  const response = await fetch(`${API_URL}/articles`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<Article[]>(response)
+}
+
+export async function getArticle(id: number): Promise<Article> {
+  const response = await fetch(`${API_URL}/articles/${id}`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<Article>(response)
+}
+
+export async function createArticle(data: ArticlePayload): Promise<Article> {
+  const response = await fetch(`${API_URL}/articles`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  return parseResponse<Article>(response)
+}
+
+export async function updateArticle(
+  id: number,
+  data: Partial<ArticlePayload>,
+): Promise<Article> {
+  const response = await fetch(`${API_URL}/articles/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  return parseResponse<Article>(response)
+}
+
+export async function deleteArticle(id: number): Promise<Article> {
+  const response = await fetch(`${API_URL}/articles/${id}`, {
+    method: 'DELETE',
+  })
+
+  return parseResponse<Article>(response)
+}
+
+export type MatierePremiere = {
+  id: number
+  nom: string
+  stock: number
+  unite: string
+  coutUnitaire: number
+  seuil: number
+  conditionnement: string
+}
+
+export type MatierePremierePayload = {
+  nom: string
+  stock: number
+  unite: string
+  coutUnitaire: number
+  seuil: number
+  conditionnement: string
+}
+
+export async function getMatieresPremieres(): Promise<MatierePremiere[]> {
+  const response = await fetch(`${API_URL}/matieres-premieres`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<MatierePremiere[]>(response)
+}
+
+export async function getMatierePremiere(
+  id: number,
+): Promise<MatierePremiere> {
+  const response = await fetch(`${API_URL}/matieres-premieres/${id}`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<MatierePremiere>(response)
+}
+
+export async function createMatierePremiere(
+  data: MatierePremierePayload,
+): Promise<MatierePremiere> {
+  const response = await fetch(`${API_URL}/matieres-premieres`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  return parseResponse<MatierePremiere>(response)
+}
+
+export async function updateMatierePremiere(
+  id: number,
+  data: Partial<MatierePremierePayload>,
+): Promise<MatierePremiere> {
+  const response = await fetch(`${API_URL}/matieres-premieres/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  return parseResponse<MatierePremiere>(response)
+}
+
+export async function deleteMatierePremiere(
+  id: number,
+): Promise<MatierePremiere> {
+  const response = await fetch(`${API_URL}/matieres-premieres/${id}`, {
+    method: 'DELETE',
+  })
+
+  return parseResponse<MatierePremiere>(response)
+}
+export type NomenclatureLine = {
+  articleId: number
+  mpId: number
+  quantite: number
+  mp: MatierePremiere
+}
+
+export async function getArticleNomenclature(
+  articleId: number,
+): Promise<NomenclatureLine[]> {
+  const response = await fetch(`${API_URL}/articles/${articleId}/nomenclature`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<NomenclatureLine[]>(response)
+}
+
+export async function createNomenclatureLine(data: {
+  articleId: number
+  mpId: number
+  quantite: number
+}) {
+  const response = await fetch(
+    `${API_URL}/articles/${data.articleId}/nomenclature`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mpId: data.mpId,
+        quantite: data.quantite,
+      }),
+    },
+  )
+
+  return parseResponse<NomenclatureLine>(response)
+}
+
+export async function updateNomenclatureLine(data: {
+  articleId: number
+  mpId: number
+  quantite: number
+}) {
+  const response = await fetch(
+    `${API_URL}/articles/${data.articleId}/nomenclature/${data.mpId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quantite: data.quantite,
+      }),
+    },
+  )
+
+  return parseResponse<NomenclatureLine>(response)
+}
+
+export async function deleteNomenclatureLine(data: {
+  articleId: number
+  mpId: number
+}) {
+  const response = await fetch(
+    `${API_URL}/articles/${data.articleId}/nomenclature/${data.mpId}`,
+    {
+      method: 'DELETE',
+    },
+  )
+
+  return parseResponse<NomenclatureLine>(response)
+}
+
+export type ProductionCapacity = {
+  articleId: number
+  articleNom: string
+  capacite: number
+  limitingIngredient: {
+    mpId: number
+    nom: string
+    stock: number
+    unite: string
+    quantiteNecessaire: number
+    possible: number
+  } | null
+  ingredients: {
+    mpId: number
+    nom: string
+    stock: number
+    unite: string
+    quantiteNecessaire: number
+    possible: number
+  }[]
+}
+
+export async function getProductionCapacity(
+  articleId: number,
+): Promise<ProductionCapacity> {
+  const response = await fetch(`${API_URL}/articles/${articleId}/capacity`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<ProductionCapacity>(response)
+}

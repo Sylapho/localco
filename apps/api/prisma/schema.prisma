@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model Article {
+  id          Int             @id @default(autoincrement())
+  nom         String
+  prix        Float
+  tva         Float           @default(0.055)
+  stock       Int             @default(0)
+  online      Boolean         @default(true)
+  emoji       String          @default("🥖")
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  nomen       Nomenclature[]
+  lignesVente LigneVente[]
+  lignesCmd   LigneCommande[]
+}
+
+model MatierePremiere {
+  id              Int            @id @default(autoincrement())
+  nom             String
+  stock           Float
+  unite           String
+  coutUnitaire    Float
+  seuil           Float
+  conditionnement String
+  nomen           Nomenclature[]
+}
+
+model Nomenclature {
+  articleId Int
+  mpId      Int
+  quantite  Float
+  article   Article         @relation(fields: [articleId], references: [id])
+  mp        MatierePremiere @relation(fields: [mpId], references: [id])
+  @@id([articleId, mpId])
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  clerkId   String   @unique
+  nom       String
+  email     String   @unique
+  role      String   @default("vendeur")
+  createdAt DateTime @default(now())
+  ventes    Vente[]
+}
+
+model Vente {
+  id        Int          @id @default(autoincrement())
+  date      DateTime     @default(now())
+  totalTTC  Float
+  totalHT   Float
+  tva       Float
+  mode      String
+  remise    Float        @default(0)
+  userId    Int
+  user      User         @relation(fields: [userId], references: [id])
+  lignes    LigneVente[]
+}
+
+model LigneVente {
+  id        Int     @id @default(autoincrement())
+  venteId   Int
+  articleId Int
+  quantite  Int
+  prixUnit  Float
+  tva       Float
+  vente     Vente   @relation(fields: [venteId], references: [id])
+  article   Article @relation(fields: [articleId], references: [id])
+}
+
+model Commande {
+  id          Int             @id @default(autoincrement())
+  nom         String
+  email       String
+  tel         String?
+  totalTTC    Float
+  lieu        String
+  dateRetrait DateTime?
+  statut      String          @default("nouvelle")
+  stripeId    String?
+  createdAt   DateTime        @default(now())
+  lignes      LigneCommande[]
+}
+
+model LigneCommande {
+  id         Int      @id @default(autoincrement())
+  commandeId Int
+  articleId  Int
+  quantite   Int
+  prixUnit   Float
+  commande   Commande @relation(fields: [commandeId], references: [id])
+  article    Article  @relation(fields: [articleId], references: [id])
+}
+
+model JourneeCaisse {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @unique
+  totalTTC  Float
+  totalHT   Float
+  tva       Float
+  especes   Float
+  cb        Float
+  cheques   Float
+  marge     Float
+  nbVentes  Int
+  clotureeA DateTime @default(now())
+}
