@@ -293,3 +293,67 @@ export async function produceArticle(data: {
 
   return parseResponse<ProduceArticleResponse>(response)
 }
+
+export type VenteMode = 'cb' | 'especes' | 'cheque'
+
+export type LigneVente = {
+  id: number
+  venteId: number
+  articleId: number
+  quantite: number
+  prixUnit: number
+  tva: number
+  article: Article
+}
+
+export type VenteUser = {
+  id: number
+  clerkId: string
+  nom: string
+  email: string
+  role: string
+  createdAt: string
+}
+
+export type Vente = {
+  id: number
+  date: string
+  totalTTC: number
+  totalHT: number
+  tva: number
+  mode: VenteMode
+  remise: number
+  userId?: number | null
+  user?: VenteUser | null
+  lignes: LigneVente[]
+}
+
+export type VentePayload = {
+  mode: VenteMode
+  remise?: number
+  userId?: number
+  lignes: {
+    articleId: number
+    quantite: number
+  }[]
+}
+
+export async function getVentes(): Promise<Vente[]> {
+  const response = await fetch(`${API_URL}/ventes`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<Vente[]>(response)
+}
+
+export async function createVente(data: VentePayload): Promise<Vente> {
+  const response = await fetch(`${API_URL}/ventes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  return parseResponse<Vente>(response)
+}
