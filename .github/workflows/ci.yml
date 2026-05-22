@@ -39,7 +39,7 @@ jobs:
         run: pnpm --filter @localco/api exec prisma generate
 
       - name: Run API tests
-        run: pnpm --filter @localco/api test -- --runInBand
+        run: pnpm --filter @localco/api test --runInBand
 
   web-build:
     name: Web build
