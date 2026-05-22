@@ -265,3 +265,31 @@ export async function getProductionCapacity(
 
   return parseResponse<ProductionCapacity>(response)
 }
+
+export type ProduceArticleResponse = {
+  article: Article
+  produced: number
+  consumed: {
+    mpId: number
+    nom: string
+    unite: string
+    quantite: number
+  }[]
+}
+
+export async function produceArticle(data: {
+  articleId: number
+  quantite: number
+}): Promise<ProduceArticleResponse> {
+  const response = await fetch(`${API_URL}/articles/${data.articleId}/produce`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      quantite: data.quantite,
+    }),
+  })
+
+  return parseResponse<ProduceArticleResponse>(response)
+}

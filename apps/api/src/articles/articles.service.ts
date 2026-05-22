@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateArticleDto } from './dto/create-article.dto'
 import { UpdateArticleDto } from './dto/update-article.dto'
+import { ProduceArticleDto } from './dto/produce-article.dto'
 
 @Injectable()
 export class ArticlesService {
@@ -102,5 +103,87 @@ export class ArticlesService {
       limitingIngredient,
       ingredients,
     }
+  }
+
+  async produce(id: number, quantite: number) {
+    const article = await this.prisma.article.findUniqueOrThrow({
+      where: { id },
+      include: {
+        nomen: {
+          include: {
+            mp: true,
+          },
+        },
+      },
+    })
+
+    if (article.nomen.length === 0) {
+      throw new BadRequestException(
+        'Impossible de produire un article sans nomenclature',
+      )
+    }
+
+    const insufficientIngredients = article.nomen
+      .map((line) => {
+        const needed = line.quantite * quantite
+        const available = line.mp.stock
+
+        return {
+          mpId: line.mp.id,
+          nom: line.mp.nom,
+          unite: line.mp.unite,
+          needed,
+          available,
+          missing: Math.max(0, needed - available),
+        }
+      })
+      .filter((item) => item.missing > 0)
+
+    if (insufficientIngredients.length > 0) {
+      throw new BadRequestException({
+        message: 'Stock insuffisant pour produire cet article',
+        insufficientIngredients,
+      })
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      for (const line of article.nomen) {
+        await tx.matierePremiere.update({
+          where: { id: line.mpId },
+          data: {
+            stock: {
+              decrement: line.quantite * quantite,
+            },
+          },
+        })
+      }
+
+      const updatedArticle = await tx.article.update({
+        where: { id },
+        data: {
+          stock: {
+            increment: quantite,
+          },
+        },
+        include: {
+          nomen: {
+            include: {
+              mp: true,
+            },
+          },
+        },
+      })
+
+      return {
+        article: updatedArticle,
+        produced: quantite,
+        consumed: article.nomen.map((line) => ({
+          mpId: line.mp.id,
+          nom: line.mp.nom,
+          unite: line.mp.unite,
+          quantite: line.quantite * quantite,
+        })),
+      }
+    })
   }
 }

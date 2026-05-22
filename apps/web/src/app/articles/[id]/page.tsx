@@ -5,6 +5,7 @@ import {
   getProductionCapacity,
 } from '@/lib/api'
 import DeleteArticleButton from '@/components/articles/delete-article-button'
+import ProduceArticleForm from '@/components/articles/produce-article-form'
 
 type PageProps = {
   params: Promise<{
@@ -106,6 +107,13 @@ export default async function ArticleDetailPage({ params }: PageProps) {
           >
             Gérer la nomenclature
           </Link>
+        </div>
+        
+        <div className="mt-4">
+          <ProduceArticleForm
+            articleId={article.id}
+            maxQuantity={capacity.capacite}
+          />
         </div>
 
         <div className="mt-4 rounded bg-gray-50 p-4">

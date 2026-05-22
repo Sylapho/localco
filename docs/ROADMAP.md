@@ -1,0 +1,278 @@
+# Roadmap Localco
+
+## Contexte actuel
+
+Localco ressemble aujourd'hui a une application de gestion pour une activite de production/vente alimentaire ou artisanale.
+
+Etat visible dans le code :
+
+- Frontend Next.js dans `apps/web`.
+- API NestJS dans `apps/api`.
+- Base PostgreSQL via Prisma.
+- Modules deja presents : articles, matieres premieres, nomenclatures, production d'articles.
+- Modele de donnees deja prevu pour : utilisateurs, ventes, lignes de vente, commandes, lignes de commande, journees de caisse.
+- Authentification amorcee via Clerk, mais pas encore generalisee dans les routes.
+- Page d'accueil encore issue du template Next.js.
+- Documentation projet encore tres embryonnaire.
+
+## Objectif produit propose
+
+Construire un outil simple pour gerer :
+
+- le catalogue d'articles vendus,
+- les matieres premieres,
+- les recettes/nomenclatures,
+- la production et les stocks,
+- les ventes et la caisse,
+- les commandes client,
+- les alertes de reapprovisionnement,
+- les indicateurs de pilotage.
+
+## Phase 0 - Stabilisation de la base
+
+Priorite : rendre le socle fiable avant d'ajouter trop de features.
+
+- Remplacer la page d'accueil par un vrai tableau de bord.
+- Corriger les textes encodes incorrectement visibles dans l'interface.
+- Harmoniser les gestionnaires d'erreurs API cote web.
+- Verifier les variables d'environnement necessaires et documenter `.env`.
+- Nettoyer les README generes par Nest/Next.
+- Ajouter une documentation de demarrage local : installation, base de donnees, migrations, seed, lancement.
+- Ajouter une commande de verification globale : lint, build, tests.
+- Mettre en place une convention de nommage des branches, commits et tickets.
+
+Critere de sortie :
+
+- Un nouveau developpeur peut lancer le projet en local avec la documentation.
+- L'application affiche une page d'accueil utile.
+- Les erreurs les plus courantes sont comprehensibles.
+
+## Phase 1 - MVP stock et production
+
+Priorite : finir le coeur metier deja commence.
+
+- Articles :
+  - liste, detail, creation, modification, suppression,
+  - prix, TVA, stock, statut en ligne, description,
+  - affichage clair du stock disponible.
+- Matieres premieres :
+  - liste, detail, creation, modification, suppression,
+  - stock, unite, cout unitaire, seuil, conditionnement,
+  - mise en evidence des stocks sous seuil.
+- Nomenclatures :
+  - associer les matieres premieres a un article,
+  - modifier les quantites necessaires,
+  - supprimer une ligne de nomenclature,
+  - afficher le cout de revient estime par article.
+- Production :
+  - afficher la capacite de production selon le stock disponible,
+  - produire une quantite donnee,
+  - decrementer les matieres premieres,
+  - incrementer le stock article,
+  - bloquer la production si le stock est insuffisant.
+
+Critere de sortie :
+
+- On peut creer une recette, savoir combien on peut produire, produire, et voir les stocks evoluer correctement.
+
+## Phase 2 - Ventes et caisse
+
+Priorite : transformer les stocks en activite commerciale mesurable.
+
+- Creer un module ventes cote API.
+- Creer une interface de caisse simple :
+  - choix des articles,
+  - quantites,
+  - remise,
+  - mode de paiement,
+  - total HT, TVA, TTC.
+- A chaque vente :
+  - decrementer le stock article,
+  - enregistrer les lignes de vente,
+  - associer la vente a un utilisateur.
+- Gerer les journees de caisse :
+  - ouverture,
+  - resume de la journee,
+  - totaux par mode de paiement,
+  - cloture,
+  - export simple.
+- Ajouter des controles :
+  - impossible de vendre plus que le stock,
+  - impossible de modifier une journee cloturee sans role autorise.
+
+Critere de sortie :
+
+- Une vente peut etre saisie et retrouvee.
+- Les totaux de caisse sont coherents avec les ventes.
+
+## Phase 3 - Commandes client
+
+Priorite : preparer les ventes planifiees.
+
+- Creer un module commandes cote API.
+- Creer une interface de gestion des commandes :
+  - nouvelle,
+  - confirmee,
+  - en preparation,
+  - prete,
+  - retiree,
+  - annulee.
+- Relier les commandes aux articles et quantites.
+- Verifier les stocks disponibles lors de la confirmation/preparation.
+- Ajouter la date et le lieu de retrait.
+- Prevoir l'integration paiement plus tard via le champ `stripeId`.
+- Ajouter des filtres : statut, date de retrait, client.
+
+Critere de sortie :
+
+- Une commande peut etre creee, suivie, preparee et terminee.
+
+## Phase 4 - Authentification et roles
+
+Priorite : securiser les actions sensibles.
+
+- Finaliser l'integration Clerk.
+- Relier les utilisateurs Clerk au modele `User`.
+- Definir les roles :
+  - admin,
+  - responsable,
+  - vendeur,
+  - production.
+- Proteger les routes API.
+- Proteger les pages web selon le role.
+- Journaliser les actions critiques :
+  - production,
+  - vente,
+  - annulation,
+  - modification de stock,
+  - cloture de caisse.
+
+Critere de sortie :
+
+- Chaque utilisateur voit uniquement ce qu'il peut faire.
+- Les actions importantes sont attribuables a une personne.
+
+## Phase 5 - Pilotage et alertes
+
+Priorite : aider a prendre de meilleures decisions.
+
+- Tableau de bord :
+  - chiffre d'affaires du jour,
+  - ventes par article,
+  - stocks faibles,
+  - capacite de production,
+  - commandes a preparer.
+- Alertes :
+  - matieres premieres sous seuil,
+  - articles bientot en rupture,
+  - commandes proches du retrait,
+  - ecarts de caisse.
+- Reporting :
+  - ventes par periode,
+  - marge estimee,
+  - cout matiere par article,
+  - evolution des stocks.
+- Exports :
+  - CSV ventes,
+  - CSV stocks,
+  - resume de caisse.
+
+Critere de sortie :
+
+- L'utilisateur sait quoi produire, quoi acheter, et ce qui s'est vendu.
+
+## Phase 6 - Qualite, industrialisation et deploiement
+
+Priorite : rendre le projet durable.
+
+- Ajouter des tests unitaires sur les services metier critiques.
+- Ajouter des tests e2e sur :
+  - creation d'article,
+  - creation de nomenclature,
+  - production,
+  - vente,
+  - cloture caisse.
+- Ajouter une CI :
+  - installation,
+  - lint,
+  - tests,
+  - build.
+- Ajouter un environnement de staging.
+- Documenter la strategie de sauvegarde de la base.
+- Documenter la procedure de restauration.
+- Mettre en place des logs applicatifs utiles.
+- Ajouter un suivi d'erreurs frontend/backend.
+
+Critere de sortie :
+
+- Le projet peut etre deploye, surveille et maintenu sans improvisation.
+
+## Backlog fonctionnel
+
+### Stock
+
+- Historique des mouvements de stock.
+- Ajustement manuel avec raison obligatoire.
+- Inventaire periodique.
+- Import/export CSV des matieres premieres.
+- Gestion des fournisseurs.
+- Gestion des prix fournisseurs.
+
+### Production
+
+- Lots de production.
+- Dates de fabrication.
+- Dates limites de consommation.
+- Pertes et casse.
+- Production planifiee.
+- Suggestions de production selon les ventes passees.
+
+### Vente
+
+- Ticket de caisse.
+- Remboursement/annulation.
+- Remises nommees.
+- Moyens de paiement configurables.
+- Statistiques vendeur.
+
+### Commandes
+
+- Confirmation par email.
+- Paiement en ligne.
+- Acompte.
+- Preparation par lot.
+- Etiquettes de commande.
+
+### Catalogue
+
+- Categories d'articles.
+- Photos d'articles.
+- Disponibilite par jour.
+- Publication boutique en ligne.
+
+## Backlog technique
+
+- Clarifier la strategie Prisma Client, car le schema genere actuellement dans `prisma/generated/prisma`.
+- Centraliser les types partages ou generer les types API.
+- Ajouter une validation plus stricte des DTO.
+- Ajouter une couche de mapping pour eviter de coupler le frontend aux reponses Prisma brutes.
+- Normaliser les erreurs API.
+- Ajouter pagination et recherche sur les listes.
+- Ajouter fixtures/seed realistes.
+- Remplacer les nombres flottants par une representation plus sure pour les montants, si le projet manipule beaucoup d'argent.
+- Ajouter des migrations de donnees controlees.
+- Ajouter un design system minimal cote frontend.
+
+## Questions ouvertes
+
+- Qui sont les utilisateurs principaux : vendeur, responsable boutique, production, admin ?
+- Le projet vise-t-il une seule boutique ou plusieurs lieux de vente ?
+- Les stocks doivent-ils etre geres en temps reel ou seulement en fin de journee ?
+- Les commandes client viennent-elles d'un formulaire interne, d'une boutique en ligne, ou des deux ?
+- Stripe est-il vraiment prevu pour la V1 ou plus tard ?
+- Le calcul de marge doit-il etre precis comptablement ou seulement indicatif ?
+- Les recettes/nomenclatures peuvent-elles varier selon les lots ou sont-elles fixes ?
+- Faut-il gerer les pertes, invendus et dons ?
+- Le projet doit-il fonctionner sur tablette/mobile en caisse ?
+- Quelle est la date cible pour une premiere version utilisable ?
+

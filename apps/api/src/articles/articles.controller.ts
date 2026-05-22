@@ -11,6 +11,7 @@ import {
 import { ArticlesService } from './articles.service'
 import { CreateArticleDto } from './dto/create-article.dto'
 import { UpdateArticleDto } from './dto/update-article.dto'
+import { ProduceArticleDto } from './dto/produce-article.dto'
 
 @Controller('articles')
 export class ArticlesController {
@@ -24,6 +25,11 @@ export class ArticlesController {
   @Get(':id/capacity')
   getProductionCapacity(@Param('id', ParseIntPipe) id: number) {
     return this.articlesService.getProductionCapacity(id)
+  }
+
+  @Post(':id/produce')
+  produce(@Param('id', ParseIntPipe) id: number, @Body() body: ProduceArticleDto) {
+    return this.articlesService.produce(id, body.quantite)
   }
 
   @Get(':id')
