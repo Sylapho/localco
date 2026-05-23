@@ -357,3 +357,52 @@ export async function createVente(data: VentePayload): Promise<Vente> {
 
   return parseResponse<Vente>(response)
 }
+
+export type JourneeCaisse = {
+  id: number
+  date: string
+  totalTTC: number
+  totalHT: number
+  tva: number
+  especes: number
+  cb: number
+  cheques: number
+  marge: number
+  nbVentes: number
+  clotureeA: string
+}
+
+export type CaisseTotals = {
+  totalTTC: number
+  totalHT: number
+  tva: number
+  especes: number
+  cb: number
+  cheques: number
+  marge: number
+  nbVentes: number
+}
+
+export type CaisseSummary = {
+  date: string
+  dayKey: string
+  status: 'open' | 'closed'
+  closedDay: JourneeCaisse | null
+  totals: CaisseTotals
+}
+
+export async function getCaisseToday(): Promise<CaisseSummary> {
+  const response = await fetch(`${API_URL}/caisse/today`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<CaisseSummary>(response)
+}
+
+export async function closeCaisseToday(): Promise<JourneeCaisse> {
+  const response = await fetch(`${API_URL}/caisse/cloturer`, {
+    method: 'POST',
+  })
+
+  return parseResponse<JourneeCaisse>(response)
+}

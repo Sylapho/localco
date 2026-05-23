@@ -36,9 +36,17 @@ export default async function VentesPage() {
           </p>
         </div>
 
-        <Link href="/ventes/new" className="rounded bg-black px-4 py-2 text-white">
-          Nouvelle vente
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/caisse" className="rounded border px-4 py-2">
+            Caisse du jour
+          </Link>
+          <Link
+            href="/ventes/new"
+            className="rounded bg-black px-4 py-2 text-white"
+          >
+            Nouvelle vente
+          </Link>
+        </div>
       </div>
 
       {ventes.length === 0 ? (
