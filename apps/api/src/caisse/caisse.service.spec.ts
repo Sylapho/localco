@@ -9,7 +9,6 @@ describe('CaisseService', () => {
   const prismaMock = {
     journeeCaisse: {
       findUnique: jest.fn(),
-      findMany: jest.fn(),
       create: jest.fn(),
     },
     vente: {
@@ -41,30 +40,6 @@ describe('CaisseService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined()
-  })
-
-  it('findClosedDays should return closed days ordered by date desc', async () => {
-    const days = [
-      {
-        id: 2,
-        date: new Date('2026-05-23T22:00:00.000Z'),
-        totalTTC: 20,
-      },
-      {
-        id: 1,
-        date: new Date('2026-05-22T22:00:00.000Z'),
-        totalTTC: 10,
-      },
-    ]
-
-    prismaMock.journeeCaisse.findMany.mockResolvedValue(days)
-
-    await expect(service.findClosedDays()).resolves.toEqual(days)
-    expect(prismaMock.journeeCaisse.findMany).toHaveBeenCalledWith({
-      orderBy: {
-        date: 'desc',
-      },
-    })
   })
 
   it('getTodaySummary should return live totals when day is open', async () => {

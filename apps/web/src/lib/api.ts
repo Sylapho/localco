@@ -406,11 +406,3 @@ export async function closeCaisseToday(): Promise<JourneeCaisse> {
 
   return parseResponse<JourneeCaisse>(response)
 }
-
-export async function getJourneesCaisse(): Promise<JourneeCaisse[]> {
-  const response = await fetch(`${API_URL}/caisse/journees`, {
-    cache: 'no-store',
-  })
-
-  return parseResponse<JourneeCaisse[]>(response)
-}

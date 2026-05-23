@@ -109,9 +109,6 @@ export default async function CaissePage() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Link href="/caisse/journees" className="rounded border px-4 py-2">
-            Historique
-          </Link>
           <Link href="/ventes" className="rounded border px-4 py-2">
             Voir les ventes
           </Link>
