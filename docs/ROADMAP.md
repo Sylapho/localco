@@ -32,15 +32,47 @@ Construire un outil simple pour gerer :
 
 - Priorite V1 : stock + production.
 - Priorite suivante : caisse.
+- Strategie domaine : espace employe sur `app.<nom-de-domaine>`, boutique publique sur `<nom-de-domaine>`.
+- API commune possible sur `api.<nom-de-domaine>`.
 - Outil de suivi projet : Trello.
 - Equipe : developpement seul.
 - V1 utilisable : creer et gerer les articles, gerer les matieres premieres, produire, voir les stocks.
+
+## Vision domaine et applications
+
+La separation cible est la suivante :
+
+- `<nom-de-domaine>` : boutique publique accessible aux clients.
+- `app.<nom-de-domaine>` : interface interne protegee pour stock, production, caisse et gestion.
+- `api.<nom-de-domaine>` : API commune consommee par l'espace employe et la boutique publique.
+
+Cette approche est faisable et recommandee, car elle separe clairement :
+
+- les usages internes, qui demandent une authentification et des droits,
+- les usages publics, qui doivent etre simples, rapides et limites aux articles vendables,
+- le backend metier, qui reste la source unique de verite.
+
+Architecture cible proposee :
+
+- `apps/web` : espace employe V1.
+- `apps/api` : API NestJS commune.
+- `apps/shop` : boutique publique a creer plus tard, quand le socle stock/production sera stable.
+
+Regles importantes :
+
+- L'espace employe peut voir et modifier les articles, les matieres premieres, les nomenclatures et les stocks.
+- La boutique publique ne doit afficher que les articles publiables, par exemple `online = true`.
+- La boutique ne doit jamais exposer les matieres premieres, les couts internes, les seuils ou les donnees de production.
+- Les stocks doivent etre mis a jour par l'API commune pour eviter les incoherences entre boutique, caisse et production.
 
 ## Phase 0 - Stabilisation de la base
 
 Priorite : rendre le socle fiable avant d'ajouter trop de features.
 
 - Remplacer la page d'accueil par un vrai tableau de bord.
+- Assumer que `apps/web` est l'espace employe de la V1.
+- Preparer la configuration domaine cible : `app.<nom-de-domaine>`.
+- Preparer la configuration API cible : `api.<nom-de-domaine>`.
 - Corriger les textes encodes incorrectement visibles dans l'interface.
 - Harmoniser les gestionnaires d'erreurs API cote web.
 - Verifier les variables d'environnement necessaires et documenter `.env`.
@@ -52,12 +84,13 @@ Priorite : rendre le socle fiable avant d'ajouter trop de features.
 Critere de sortie :
 
 - Un nouveau developpeur peut lancer le projet en local avec la documentation.
-- L'application affiche une page d'accueil utile.
+- L'espace employe affiche une page d'accueil utile.
 - Les erreurs les plus courantes sont comprehensibles.
+- La strategie domaine est documentee meme si elle n'est pas encore deployee.
 
 ## Phase 1 - MVP stock et production
 
-Priorite : finir le coeur metier deja commence.
+Priorite : finir le coeur metier deja commence dans l'espace employe.
 
 - Articles :
   - liste, detail, creation, modification, suppression,
@@ -96,6 +129,7 @@ Perimetre V1 :
 - Exclu de la V1 :
   - caisse complete,
   - ventes,
+  - boutique publique,
   - commandes client,
   - paiement en ligne,
   - reporting avance.
@@ -130,7 +164,35 @@ Critere de sortie :
 - Une vente peut etre saisie et retrouvee.
 - Les totaux de caisse sont coherents avec les ventes.
 
-## Phase 3 - Commandes client
+## Phase 3 - Boutique publique
+
+Priorite apres caisse ou en parallele si le socle est stable : exposer les articles vendables sur le domaine principal.
+
+- Creer une application boutique publique, par exemple `apps/shop`.
+- Deployer la boutique sur `<nom-de-domaine>`.
+- Afficher uniquement les articles en ligne.
+- Masquer toutes les donnees internes :
+  - couts matieres,
+  - seuils,
+  - nomenclatures,
+  - capacite de production,
+  - informations de caisse.
+- Prevoir une fiche article publique :
+  - nom,
+  - prix,
+  - TVA si necessaire,
+  - disponibilite,
+  - description,
+  - image plus tard.
+- Ajouter une premiere logique de panier si la boutique doit vendre en ligne.
+- Garder l'API comme source unique des articles et stocks.
+
+Critere de sortie :
+
+- Le domaine principal affiche une boutique simple et publique.
+- Les donnees internes restent uniquement dans l'espace employe.
+
+## Phase 4 - Commandes client
 
 Priorite : preparer les ventes planifiees.
 
@@ -152,12 +214,13 @@ Critere de sortie :
 
 - Une commande peut etre creee, suivie, preparee et terminee.
 
-## Phase 4 - Authentification et roles
+## Phase 5 - Authentification et roles
 
 Priorite : securiser les actions sensibles.
 
 - Finaliser l'integration Clerk.
 - Relier les utilisateurs Clerk au modele `User`.
+- Proteger l'espace employe `app.<nom-de-domaine>`.
 - Definir les roles :
   - admin,
   - responsable,
@@ -177,7 +240,7 @@ Critere de sortie :
 - Chaque utilisateur voit uniquement ce qu'il peut faire.
 - Les actions importantes sont attribuables a une personne.
 
-## Phase 5 - Pilotage et alertes
+## Phase 6 - Pilotage et alertes
 
 Priorite : aider a prendre de meilleures decisions.
 
@@ -206,7 +269,7 @@ Critere de sortie :
 
 - L'utilisateur sait quoi produire, quoi acheter, et ce qui s'est vendu.
 
-## Phase 6 - Qualite, industrialisation et deploiement
+## Phase 7 - Qualite, industrialisation et deploiement
 
 Priorite : rendre le projet durable.
 
@@ -223,6 +286,10 @@ Priorite : rendre le projet durable.
   - tests,
   - build.
 - Ajouter un environnement de staging.
+- Documenter le deploiement par domaine :
+  - boutique publique sur `<nom-de-domaine>`,
+  - espace employe sur `app.<nom-de-domaine>`,
+  - API sur `api.<nom-de-domaine>`.
 - Documenter la strategie de sauvegarde de la base.
 - Documenter la procedure de restauration.
 - Mettre en place des logs applicatifs utiles.
@@ -273,7 +340,8 @@ Critere de sortie :
 - Categories d'articles.
 - Photos d'articles.
 - Disponibilite par jour.
-- Publication boutique en ligne.
+- Publication boutique en ligne sur `<nom-de-domaine>`.
+- Application boutique separee de l'espace employe.
 
 ## Backlog technique
 
@@ -287,13 +355,15 @@ Critere de sortie :
 - Remplacer les nombres flottants par une representation plus sure pour les montants, si le projet manipule beaucoup d'argent.
 - Ajouter des migrations de donnees controlees.
 - Ajouter un design system minimal cote frontend.
+- Preparer une configuration CORS propre entre boutique, espace employe et API.
+- Preparer les variables d'environnement par application et par domaine.
 
 ## Questions ouvertes
 
 - Qui sont les utilisateurs principaux : vendeur, responsable boutique, production, admin ?
 - Le projet vise-t-il une seule boutique ou plusieurs lieux de vente ?
 - Les stocks doivent-ils etre geres en temps reel ou seulement en fin de journee ?
-- Les commandes client viennent-elles d'un formulaire interne, d'une boutique en ligne, ou des deux ?
+- Les commandes client viendront-elles de la boutique publique, d'un formulaire interne, ou des deux ?
 - Stripe est-il vraiment prevu pour la V1 ou plus tard ?
 - Le calcul de marge doit-il etre precis comptablement ou seulement indicatif ?
 - Les recettes/nomenclatures peuvent-elles varier selon les lots ou sont-elles fixes ?
@@ -305,6 +375,9 @@ Critere de sortie :
 
 - Priorite V1 : stock + production.
 - Caisse : apres la V1.
+- Domaine principal : boutique publique.
+- Sous-domaine employe : espace interne stock, production, puis caisse.
+- API commune : option cible sur `api.<nom-de-domaine>`.
 - Outil de gestion projet : Trello.
 - Taille equipe : solo.
 - Definition pratique de la V1 : creer/gerer articles, gerer matieres premieres, produire, voir les stocks.
