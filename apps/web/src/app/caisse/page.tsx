@@ -203,7 +203,7 @@ export default async function CaissePage() {
 
           {topArticles.length === 0 ? (
             <p className="text-sm text-gray-600">
-              Aucun article vendu aujourd'hui.
+              Aucun article vendu aujourd&apos;hui.
             </p>
           ) : (
             <ul className="grid gap-3">
@@ -234,7 +234,7 @@ export default async function CaissePage() {
           {ventesDuJour.length === 0 ? (
             <div>
               <p className="text-sm text-gray-600">
-                Aucune vente enregistree aujourd'hui.
+                Aucune vente enregistree aujourd&apos;hui.
               </p>
               <Link
                 href="/ventes/new"
