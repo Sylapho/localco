@@ -29,7 +29,9 @@ describe('MouvementsStockController', () => {
       .useValue({ canActivate: jest.fn(() => true) })
       .compile()
 
-    controller = module.get<MouvementsStockController>(MouvementsStockController)
+    controller = module.get<MouvementsStockController>(
+      MouvementsStockController,
+    )
     jest.clearAllMocks()
   })
 

@@ -171,7 +171,9 @@ export class VentesService {
           motif: `Vente #${vente.id}`,
           reference: `vente:${vente.id}`,
           createdByUserId:
-            typeof data.userId === 'number' ? data.userId.toString() : undefined,
+            typeof data.userId === 'number'
+              ? data.userId.toString()
+              : undefined,
         })
       }
 

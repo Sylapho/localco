@@ -173,7 +173,9 @@ export class MouvementsStockService {
       const stockApres = stockAvant + data.quantite
 
       if (stockApres < 0) {
-        throw new BadRequestException('Le stock article ne peut pas etre negatif')
+        throw new BadRequestException(
+          'Le stock article ne peut pas etre negatif',
+        )
       }
 
       await tx.article.update({

@@ -23,7 +23,9 @@ type RequestWithUser = {
 @Controller('mouvements-stock')
 @UseGuards(BetterAuthGuard, RolesGuard)
 export class MouvementsStockController {
-  constructor(private readonly mouvementsStockService: MouvementsStockService) {}
+  constructor(
+    private readonly mouvementsStockService: MouvementsStockService,
+  ) {}
 
   @Get()
   @Roles(ROLES.GERANT, ROLES.STOCK, ROLES.PRODUCTION, ROLES.COMPTABLE)
