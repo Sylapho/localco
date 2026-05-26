@@ -18,11 +18,7 @@ describe('Roles decorator', () => {
       throw new Error('Descriptor introuvable')
     }
 
-    Roles('gerant', 'vendeur')(
-      TestController.prototype,
-      'handler',
-      descriptor,
-    )
+    Roles('gerant', 'vendeur')(TestController.prototype, 'handler', descriptor)
 
     expect(Reflect.getMetadata(ROLES_KEY, descriptor.value)).toEqual([
       'gerant',

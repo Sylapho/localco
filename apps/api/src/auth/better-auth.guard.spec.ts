@@ -22,7 +22,9 @@ describe('BetterAuthGuard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    configMock.get.mockReturnValue('postgresql://localco:localco_dev@localhost:5432/localco_db')
+    configMock.get.mockReturnValue(
+      'postgresql://localco:localco_dev@localhost:5432/localco_db',
+    )
   })
 
   function createContext(request: TestRequest): ExecutionContext {
@@ -56,9 +58,9 @@ describe('BetterAuthGuard', () => {
   it('should require a configured database url', () => {
     configMock.get.mockReturnValue(undefined)
 
-    expect(() => new BetterAuthGuard(configMock as unknown as ConfigService)).toThrow(
-      'DATABASE_URL est manquante',
-    )
+    expect(
+      () => new BetterAuthGuard(configMock as unknown as ConfigService),
+    ).toThrow('DATABASE_URL est manquante')
   })
 
   it('should read the configured database url', () => {
@@ -73,9 +75,9 @@ describe('BetterAuthGuard', () => {
       headers: {},
     }
 
-    await expect(guard.canActivate(createContext(request))).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    )
+    await expect(
+      guard.canActivate(createContext(request)),
+    ).rejects.toBeInstanceOf(UnauthorizedException)
     expect(getSession).not.toHaveBeenCalled()
   })
 
@@ -133,8 +135,8 @@ describe('BetterAuthGuard', () => {
 
     getSession.mockResolvedValue(null)
 
-    await expect(guard.canActivate(createContext(request))).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    )
+    await expect(
+      guard.canActivate(createContext(request)),
+    ).rejects.toBeInstanceOf(UnauthorizedException)
   })
 })

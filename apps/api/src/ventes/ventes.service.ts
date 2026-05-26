@@ -38,7 +38,9 @@ export class VentesService {
 
   async create(data: CreateVenteDto) {
     if (!data.lignes || data.lignes.length === 0) {
-      throw new BadRequestException('Une vente doit contenir au moins une ligne')
+      throw new BadRequestException(
+        'Une vente doit contenir au moins une ligne',
+      )
     }
 
     const articleIds = data.lignes.map((ligne) => ligne.articleId)
@@ -52,7 +54,9 @@ export class VentesService {
     })
 
     if (articles.length !== articleIds.length) {
-      throw new BadRequestException('Un ou plusieurs articles sont introuvables')
+      throw new BadRequestException(
+        'Un ou plusieurs articles sont introuvables',
+      )
     }
 
     const insufficientStock = data.lignes

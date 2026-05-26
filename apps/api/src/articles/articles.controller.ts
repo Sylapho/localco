@@ -37,7 +37,10 @@ export class ArticlesController {
 
   @Post(':id/produce')
   @Roles(ROLES.GERANT, ROLES.PRODUCTION)
-  produce(@Param('id', ParseIntPipe) id: number, @Body() body: ProduceArticleDto) {
+  produce(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: ProduceArticleDto,
+  ) {
     return this.articlesService.produce(id, body.quantite)
   }
 

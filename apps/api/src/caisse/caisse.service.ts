@@ -238,7 +238,9 @@ function zonedTimeToUtc(
   second: number,
   timeZone: string,
 ) {
-  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
+  const utcGuess = new Date(
+    Date.UTC(year, month - 1, day, hour, minute, second),
+  )
   const offset = getTimeZoneOffsetMs(utcGuess, timeZone)
 
   return new Date(utcGuess.getTime() - offset)
