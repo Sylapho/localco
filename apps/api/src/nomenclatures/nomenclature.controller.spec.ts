@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+import { ConfigService } from '@nestjs/config'
 import { NomenclatureController } from './nomenclature.controller'
 import { NomenclatureService } from './nomenclature.service'
 
@@ -19,6 +20,12 @@ describe('NomenclatureController', () => {
         {
           provide: NomenclatureService,
           useValue: nomenclatureServiceMock,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('test-secret'),
+          },
         },
       ],
     }).compile()

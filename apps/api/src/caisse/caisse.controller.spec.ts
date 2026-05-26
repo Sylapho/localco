@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+import { ConfigService } from '@nestjs/config'
 import { CaisseController } from './caisse.controller'
 import { CaisseService } from './caisse.service'
 
@@ -18,6 +19,12 @@ describe('CaisseController', () => {
         {
           provide: CaisseService,
           useValue: caisseServiceMock,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('test-secret'),
+          },
         },
       ],
     }).compile()

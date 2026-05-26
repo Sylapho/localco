@@ -1,7 +1,27 @@
+import 'server-only'
+
+import { headers as nextHeaders } from 'next/headers'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 if (!API_URL) {
   throw new Error('NEXT_PUBLIC_API_URL est manquante')
+}
+
+async function apiFetch(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers)
+  const requestHeaders = await nextHeaders()
+  const cookie = requestHeaders.get('cookie')
+
+  if (cookie) {
+    headers.set('Cookie', cookie)
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    ...init,
+    headers,
+    credentials: 'include',
+  })
 }
 
 export type Article = {
@@ -39,7 +59,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export async function getArticles(): Promise<Article[]> {
-  const response = await fetch(`${API_URL}/articles`, {
+  const response = await apiFetch('/articles', {
     cache: 'no-store',
   })
 
@@ -47,7 +67,7 @@ export async function getArticles(): Promise<Article[]> {
 }
 
 export async function getArticle(id: number): Promise<Article> {
-  const response = await fetch(`${API_URL}/articles/${id}`, {
+  const response = await apiFetch(`/articles/${id}`, {
     cache: 'no-store',
   })
 
@@ -55,7 +75,7 @@ export async function getArticle(id: number): Promise<Article> {
 }
 
 export async function createArticle(data: ArticlePayload): Promise<Article> {
-  const response = await fetch(`${API_URL}/articles`, {
+  const response = await apiFetch('/articles', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -70,7 +90,7 @@ export async function updateArticle(
   id: number,
   data: Partial<ArticlePayload>,
 ): Promise<Article> {
-  const response = await fetch(`${API_URL}/articles/${id}`, {
+  const response = await apiFetch(`/articles/${id}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -82,7 +102,7 @@ export async function updateArticle(
 }
 
 export async function deleteArticle(id: number): Promise<Article> {
-  const response = await fetch(`${API_URL}/articles/${id}`, {
+  const response = await apiFetch(`/articles/${id}`, {
     method: 'DELETE',
   })
 
@@ -109,7 +129,7 @@ export type MatierePremierePayload = {
 }
 
 export async function getMatieresPremieres(): Promise<MatierePremiere[]> {
-  const response = await fetch(`${API_URL}/matieres-premieres`, {
+  const response = await apiFetch('/matieres-premieres', {
     cache: 'no-store',
   })
 
@@ -119,7 +139,7 @@ export async function getMatieresPremieres(): Promise<MatierePremiere[]> {
 export async function getMatierePremiere(
   id: number,
 ): Promise<MatierePremiere> {
-  const response = await fetch(`${API_URL}/matieres-premieres/${id}`, {
+  const response = await apiFetch(`/matieres-premieres/${id}`, {
     cache: 'no-store',
   })
 
@@ -129,7 +149,7 @@ export async function getMatierePremiere(
 export async function createMatierePremiere(
   data: MatierePremierePayload,
 ): Promise<MatierePremiere> {
-  const response = await fetch(`${API_URL}/matieres-premieres`, {
+  const response = await apiFetch('/matieres-premieres', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -144,7 +164,7 @@ export async function updateMatierePremiere(
   id: number,
   data: Partial<MatierePremierePayload>,
 ): Promise<MatierePremiere> {
-  const response = await fetch(`${API_URL}/matieres-premieres/${id}`, {
+  const response = await apiFetch(`/matieres-premieres/${id}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -158,7 +178,7 @@ export async function updateMatierePremiere(
 export async function deleteMatierePremiere(
   id: number,
 ): Promise<MatierePremiere> {
-  const response = await fetch(`${API_URL}/matieres-premieres/${id}`, {
+  const response = await apiFetch(`/matieres-premieres/${id}`, {
     method: 'DELETE',
   })
 
@@ -174,7 +194,7 @@ export type NomenclatureLine = {
 export async function getArticleNomenclature(
   articleId: number,
 ): Promise<NomenclatureLine[]> {
-  const response = await fetch(`${API_URL}/articles/${articleId}/nomenclature`, {
+  const response = await apiFetch(`/articles/${articleId}/nomenclature`, {
     cache: 'no-store',
   })
 
@@ -186,8 +206,8 @@ export async function createNomenclatureLine(data: {
   mpId: number
   quantite: number
 }) {
-  const response = await fetch(
-    `${API_URL}/articles/${data.articleId}/nomenclature`,
+  const response = await apiFetch(
+    `/articles/${data.articleId}/nomenclature`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -206,8 +226,8 @@ export async function updateNomenclatureLine(data: {
   mpId: number
   quantite: number
 }) {
-  const response = await fetch(
-    `${API_URL}/articles/${data.articleId}/nomenclature/${data.mpId}`,
+  const response = await apiFetch(
+    `/articles/${data.articleId}/nomenclature/${data.mpId}`,
     {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -224,8 +244,8 @@ export async function deleteNomenclatureLine(data: {
   articleId: number
   mpId: number
 }) {
-  const response = await fetch(
-    `${API_URL}/articles/${data.articleId}/nomenclature/${data.mpId}`,
+  const response = await apiFetch(
+    `/articles/${data.articleId}/nomenclature/${data.mpId}`,
     {
       method: 'DELETE',
     },
@@ -259,7 +279,7 @@ export type ProductionCapacity = {
 export async function getProductionCapacity(
   articleId: number,
 ): Promise<ProductionCapacity> {
-  const response = await fetch(`${API_URL}/articles/${articleId}/capacity`, {
+  const response = await apiFetch(`/articles/${articleId}/capacity`, {
     cache: 'no-store',
   })
 
@@ -281,7 +301,7 @@ export async function produceArticle(data: {
   articleId: number
   quantite: number
 }): Promise<ProduceArticleResponse> {
-  const response = await fetch(`${API_URL}/articles/${data.articleId}/produce`, {
+  const response = await apiFetch(`/articles/${data.articleId}/produce`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -308,7 +328,6 @@ export type LigneVente = {
 
 export type VenteUser = {
   id: number
-  clerkId: string
   nom: string
   email: string
   role: string
@@ -339,7 +358,7 @@ export type VentePayload = {
 }
 
 export async function getVentes(): Promise<Vente[]> {
-  const response = await fetch(`${API_URL}/ventes`, {
+  const response = await apiFetch('/ventes', {
     cache: 'no-store',
   })
 
@@ -347,7 +366,7 @@ export async function getVentes(): Promise<Vente[]> {
 }
 
 export async function createVente(data: VentePayload): Promise<Vente> {
-  const response = await fetch(`${API_URL}/ventes`, {
+  const response = await apiFetch('/ventes', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -392,7 +411,7 @@ export type CaisseSummary = {
 }
 
 export async function getCaisseToday(): Promise<CaisseSummary> {
-  const response = await fetch(`${API_URL}/caisse/today`, {
+  const response = await apiFetch('/caisse/today', {
     cache: 'no-store',
   })
 
@@ -400,7 +419,7 @@ export async function getCaisseToday(): Promise<CaisseSummary> {
 }
 
 export async function closeCaisseToday(): Promise<JourneeCaisse> {
-  const response = await fetch(`${API_URL}/caisse/cloturer`, {
+  const response = await apiFetch('/caisse/cloturer', {
     method: 'POST',
   })
 
@@ -408,7 +427,7 @@ export async function closeCaisseToday(): Promise<JourneeCaisse> {
 }
 
 export async function getJourneesCaisse(): Promise<JourneeCaisse[]> {
-  const response = await fetch(`${API_URL}/caisse/journees`, {
+  const response = await apiFetch('/caisse/journees', {
     cache: 'no-store',
   })
 

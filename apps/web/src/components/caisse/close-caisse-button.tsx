@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -11,6 +12,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function CloseCaisseButton({ disabled }: CloseCaisseButtonProps) {
   const router = useRouter()
+  const authenticatedFetch = useAuthenticatedFetch()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -27,7 +29,7 @@ export default function CloseCaisseButton({ disabled }: CloseCaisseButtonProps) 
     setError('')
 
     try {
-      const response = await fetch(`${API_URL}/caisse/cloturer`, {
+      const response = await authenticatedFetch(`${API_URL}/caisse/cloturer`, {
         method: 'POST',
       })
 

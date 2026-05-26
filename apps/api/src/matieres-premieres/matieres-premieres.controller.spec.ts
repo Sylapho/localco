@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+import { ConfigService } from '@nestjs/config'
 import { MatieresPremieresController } from './matieres-premieres.controller'
 import { MatieresPremieresService } from './matieres-premieres.service'
 
@@ -20,6 +21,12 @@ describe('MatieresPremieresController', () => {
         {
           provide: MatieresPremieresService,
           useValue: matieresPremieresServiceMock,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('test-secret'),
+          },
         },
       ],
     }).compile()

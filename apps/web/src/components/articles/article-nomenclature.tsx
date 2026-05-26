@@ -1,9 +1,10 @@
 'use client'
 
-import {
+import type {
   MatierePremiere,
   NomenclatureLine,
 } from '@/lib/api'
+import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -21,6 +22,7 @@ export default function ArticleNomenclature({
   matieres,
 }: Props) {
   const router = useRouter()
+  const authenticatedFetch = useAuthenticatedFetch()
 
   const [mpId, setMpId] = useState('')
   const [quantite, setQuantite] = useState('')
@@ -32,14 +34,17 @@ export default function ArticleNomenclature({
     e.preventDefault()
     setError('')
 
-    const response = await fetch(`${API_URL}/articles/${articleId}/nomenclature`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        mpId: Number(mpId),
-        quantite: Number(quantite),
-      }),
-    })
+    const response = await authenticatedFetch(
+      `${API_URL}/articles/${articleId}/nomenclature`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mpId: Number(mpId),
+          quantite: Number(quantite),
+        }),
+      },
+    )
 
     if (!response.ok) {
       setError(await response.text())
@@ -54,7 +59,7 @@ export default function ArticleNomenclature({
   async function updateLine(line: NomenclatureLine) {
     setError('')
 
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${API_URL}/articles/${articleId}/nomenclature/${line.mpId}`,
       {
         method: 'PATCH',
@@ -81,7 +86,7 @@ export default function ArticleNomenclature({
 
     setError('')
 
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${API_URL}/articles/${articleId}/nomenclature/${line.mpId}`,
       {
         method: 'DELETE',

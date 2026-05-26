@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+import { ConfigService } from '@nestjs/config'
 import { ArticlesController } from './articles.controller'
 import { ArticlesService } from './articles.service'
 
@@ -22,6 +23,12 @@ describe('ArticlesController', () => {
         {
           provide: ArticlesService,
           useValue: articlesServiceMock,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('test-secret'),
+          },
         },
       ],
     }).compile()

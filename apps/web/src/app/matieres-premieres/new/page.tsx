@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -7,6 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function NewMatierePremierePage() {
   const router = useRouter()
+  const authenticatedFetch = useAuthenticatedFetch()
 
   const [nom, setNom] = useState('')
   const [stock, setStock] = useState('')
@@ -23,7 +25,7 @@ export default function NewMatierePremierePage() {
     setError('')
 
     try {
-      const response = await fetch(`${API_URL}/matieres-premieres`, {
+      const response = await authenticatedFetch(`${API_URL}/matieres-premieres`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

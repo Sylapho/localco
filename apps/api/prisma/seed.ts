@@ -290,7 +290,7 @@ async function seedSalesHistory(
   ]
 
   for (const day of history) {
-    const sales = []
+    const sales: Awaited<ReturnType<typeof createVente>>[] = []
 
     for (const sale of day.sales) {
       sales.push(await createVente(prisma, sale))

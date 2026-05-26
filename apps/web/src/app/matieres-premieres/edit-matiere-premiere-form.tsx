@@ -1,6 +1,7 @@
 'use client'
 
-import { MatierePremiere } from '@/lib/api'
+import type { MatierePremiere } from '@/lib/api'
+import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -12,6 +13,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function EditMatierePremiereForm({ matiere }: Props) {
   const router = useRouter()
+  const authenticatedFetch = useAuthenticatedFetch()
 
   const [nom, setNom] = useState(matiere.nom)
   const [stock, setStock] = useState(String(matiere.stock))
@@ -32,7 +34,7 @@ export default function EditMatierePremiereForm({ matiere }: Props) {
     setLoading(true)
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `${API_URL}/matieres-premieres/${matiere.id}`,
         {
           method: 'PATCH',

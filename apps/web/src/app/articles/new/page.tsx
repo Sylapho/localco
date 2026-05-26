@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -7,6 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function NewArticlePage() {
   const router = useRouter()
+  const authenticatedFetch = useAuthenticatedFetch()
 
   const [nom, setNom] = useState('')
   const [prix, setPrix] = useState('')
@@ -22,7 +24,7 @@ export default function NewArticlePage() {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_URL}/articles`, {
+      const response = await authenticatedFetch(`${API_URL}/articles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -13,6 +14,7 @@ export default function DeleteArticleButton({
   articleId,
 }: DeleteArticleButtonProps) {
   const router = useRouter()
+  const authenticatedFetch = useAuthenticatedFetch()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -27,7 +29,7 @@ export default function DeleteArticleButton({
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_URL}/articles/${articleId}`, {
+      const response = await authenticatedFetch(`${API_URL}/articles/${articleId}`, {
         method: 'DELETE',
       })
 

@@ -1,6 +1,7 @@
 'use client'
 
 import type { Article, VenteMode } from '@/lib/api'
+import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useMemo, useState } from 'react'
 
@@ -37,6 +38,7 @@ function createEmptyLine(): SaleLineForm {
 
 export default function NewVenteForm({ articles }: NewVenteFormProps) {
   const router = useRouter()
+  const authenticatedFetch = useAuthenticatedFetch()
 
   const [mode, setMode] = useState<VenteMode>('cb')
   const [remise, setRemise] = useState('0')
@@ -140,7 +142,7 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
     }
 
     try {
-      const response = await fetch(`${API_URL}/ventes`, {
+      const response = await authenticatedFetch(`${API_URL}/ventes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

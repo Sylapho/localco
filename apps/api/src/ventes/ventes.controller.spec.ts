@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+import { ConfigService } from '@nestjs/config'
 import { CreateVenteDto } from './dto/create-vente.dto'
 import { VentesController } from './ventes.controller'
 import { VentesService } from './ventes.service'
@@ -19,6 +20,12 @@ describe('VentesController', () => {
         {
           provide: VentesService,
           useValue: ventesServiceMock,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('test-secret'),
+          },
         },
       ],
     }).compile()
