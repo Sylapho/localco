@@ -4,13 +4,6 @@ import { PrismaService } from '../prisma/prisma.service'
 import { CreateVenteDto } from './dto/create-vente.dto'
 import { VentesService } from './ventes.service'
 
-type VenteCreateCall = {
-  data: {
-    totalHT: number
-    tva: number
-  }
-}
-
 describe('VentesService', () => {
   let service: VentesService
 
@@ -185,8 +178,8 @@ describe('VentesService', () => {
         mode: 'cb',
         remise: 1,
         totalTTC: 4.7,
-        totalHT: expect.any(Number),
-        tva: expect.any(Number),
+        totalHT: 4.313315872619938,
+        tva: 0.38668412738006186,
         userId: undefined,
         lignes: {
           create: [
@@ -214,12 +207,6 @@ describe('VentesService', () => {
         },
       },
     })
-
-    const [venteCreateCall] = prismaMock.vente.create.mock.calls[0] as [
-      VenteCreateCall,
-    ]
-    expect(venteCreateCall.data.totalHT).toBeCloseTo(4.313315872619938, 5)
-    expect(venteCreateCall.data.tva).toBeCloseTo(0.38668412738006186, 5)
   })
 
   it('create should reject an empty vente', async () => {
