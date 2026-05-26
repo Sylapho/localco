@@ -6,7 +6,6 @@ const publicRoutes = [
   '/api/auth',
   '/boutique',
   '/sign-in',
-  '/sign-up',
 ]
 
 function isPublicRoute(pathname: string) {

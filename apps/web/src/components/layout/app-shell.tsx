@@ -146,9 +146,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <Link href="/sign-in" className="lc-auth-primary">
                 Se connecter
               </Link>
-              <Link href="/sign-up" className="lc-auth-secondary">
-                Creer un compte
-              </Link>
             </div>
           ) : null}
         </div>
@@ -174,9 +171,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <div className="lc-topbar-auth">
               <Link href="/sign-in" className="lc-topbar-action">
                 Connexion
-              </Link>
-              <Link href="/sign-up" className="lc-topbar-link">
-                Inscription
               </Link>
             </div>
           ) : null}

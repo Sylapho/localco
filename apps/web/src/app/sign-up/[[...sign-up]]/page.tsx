@@ -1,9 +1,5 @@
-import AuthForm from '@/components/auth/auth-form'
+import { redirect } from 'next/navigation'
 
 export default function SignUpPage() {
-  return (
-    <main className="grid min-h-screen place-items-center p-6">
-      <AuthForm mode="sign-up" />
-    </main>
-  )
+  redirect('/sign-in')
 }

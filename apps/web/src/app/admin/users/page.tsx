@@ -1,3 +1,4 @@
+import CreateEmployeeForm from '@/components/admin/create-employee-form'
 import UserRoleSelect from '@/components/admin/user-role-select'
 import { getCurrentAuthSession, listAdminUsers } from '@/lib/admin-users'
 import { roleLabels } from '@/lib/roles'
@@ -36,6 +37,10 @@ export default async function AdminUsersPage() {
           </p>
         </div>
       </div>
+
+      <section className="mb-6">
+        <CreateEmployeeForm />
+      </section>
 
       <section className="overflow-hidden rounded border bg-white shadow-sm">
         <div className="grid grid-cols-[1.2fr_1.5fr_180px_180px] gap-4 border-b bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-600">

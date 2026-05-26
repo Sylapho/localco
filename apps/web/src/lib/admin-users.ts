@@ -72,3 +72,25 @@ export async function updateUserRole(userId: string, role: Role) {
     userId,
   ])
 }
+
+export async function createEmployee(data: {
+  name: string
+  email: string
+  password: string
+  role: Role
+}) {
+  const requestHeaders = await headers()
+
+  const user = await auth.api.createUser({
+    body: {
+      name: data.name,
+      email: data.email,
+      password: data.password,
+    },
+    headers: requestHeaders,
+  })
+
+  await updateUserRole(user.user.id, data.role)
+
+  return user
+}

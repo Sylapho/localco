@@ -4,19 +4,12 @@ import { authClient } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
-type AuthFormProps = {
-  mode: 'sign-in' | 'sign-up'
-}
-
-export default function AuthForm({ mode }: AuthFormProps) {
+export default function AuthForm() {
   const router = useRouter()
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  const isSignUp = mode === 'sign-up'
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -24,18 +17,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
     setError('')
 
     try {
-      const result = isSignUp
-        ? await authClient.signUp.email({
-            name,
-            email,
-            password,
-            callbackURL: '/',
-          })
-        : await authClient.signIn.email({
-            email,
-            password,
-            callbackURL: '/',
-          })
+      const result = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: '/',
+      })
 
       if (result.error) {
         throw new Error(result.error.message || 'Authentification impossible')
@@ -57,22 +43,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
           LocalCo
         </p>
         <h1 className="mt-2 text-2xl font-bold">
-          {isSignUp ? 'Creer un compte' : 'Connexion'}
+          Connexion
         </h1>
       </div>
-
-      {isSignUp ? (
-        <div className="grid gap-1">
-          <label htmlFor="name">Nom</label>
-          <input
-            id="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="rounded border px-3 py-2"
-            required
-          />
-        </div>
-      ) : null}
 
       <div className="grid gap-1">
         <label htmlFor="email">Email</label>
@@ -106,11 +79,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         disabled={loading}
         className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
       >
-        {loading
-          ? 'Chargement...'
-          : isSignUp
-            ? 'Creer mon compte'
-            : 'Se connecter'}
+        {loading ? 'Chargement...' : 'Se connecter'}
       </button>
     </form>
   )

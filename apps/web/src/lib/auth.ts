@@ -1,4 +1,7 @@
 import { betterAuth } from 'better-auth'
+import { admin } from 'better-auth/plugins'
+import { createAccessControl } from 'better-auth/plugins/access'
+import { adminAc, defaultStatements } from 'better-auth/plugins/admin/access'
 import { Pool } from 'pg'
 
 const databaseUrl = process.env.DATABASE_URL
@@ -26,24 +29,38 @@ const socialProviders = {
     : {}),
 }
 
+const ac = createAccessControl({
+  ...defaultStatements,
+} as const)
+
+const gerant = ac.newRole({
+  ...adminAc.statements,
+})
+
+const employee = ac.newRole({})
+
 export const auth = betterAuth({
   database: new Pool({
     connectionString: databaseUrl,
   }),
   emailAndPassword: {
     enabled: true,
+    disableSignUp: true,
   },
   socialProviders,
-  user: {
-    additionalFields: {
-      role: {
-        type: ['gerant', 'vendeur', 'production', 'stock', 'comptable'],
-        required: false,
-        defaultValue: 'vendeur',
-        input: false,
+  plugins: [
+    admin({
+      ac,
+      roles: {
+        gerant,
+        vendeur: employee,
+        production: employee,
+        stock: employee,
+        comptable: employee,
       },
-    },
-  },
+      defaultRole: 'vendeur',
+    }),
+  ],
 })
 
 export default auth
