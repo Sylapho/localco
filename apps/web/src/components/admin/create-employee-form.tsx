@@ -58,9 +58,9 @@ export default function CreateEmployeeForm() {
       className="grid gap-4 rounded border bg-white p-4 shadow-sm"
     >
       <div>
-        <h2 className="text-xl font-semibold">Creer un employe</h2>
+        <h2 className="text-xl font-semibold">Créer un employé</h2>
         <p className="mt-1 text-sm text-zinc-600">
-          L&apos;employe pourra se connecter avec cet email et ce mot de passe.
+          L&apos;employé pourra se connecter avec cet email et ce mot de passe.
         </p>
       </div>
 
