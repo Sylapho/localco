@@ -94,7 +94,9 @@ export class CommandesService {
           email: data.email,
           tel: data.tel,
           lieu: data.lieu,
-          dateRetrait: data.dateRetrait ? new Date(data.dateRetrait) : undefined,
+          dateRetrait: data.dateRetrait
+            ? new Date(data.dateRetrait)
+            : undefined,
           totalTTC,
           statut: 'nouvelle',
           lignes: {
@@ -224,9 +226,11 @@ export class CommandesService {
       )
     }
 
-    return Array.from(linesByArticle.entries()).map(([articleId, quantite]) => ({
-      articleId,
-      quantite,
-    }))
+    return Array.from(linesByArticle.entries()).map(
+      ([articleId, quantite]) => ({
+        articleId,
+        quantite,
+      }),
+    )
   }
 }
