@@ -7,7 +7,6 @@ import { FormEvent, useMemo, useState } from 'react'
 type ShopClientProps = {
   articles: ShopArticle[]
   apiUrl: string
-  paymentStatus: 'success' | 'cancelled' | null
 }
 
 type Cart = Record<number, number>
@@ -26,7 +25,6 @@ function todayInputValue() {
 export default function ShopClient({
   articles,
   apiUrl,
-  paymentStatus,
 }: ShopClientProps) {
   const [cart, setCart] = useState<Cart>({})
   const [panelOpen, setPanelOpen] = useState(false)
@@ -132,19 +130,6 @@ export default function ShopClient({
       <Header count={count} onCartClick={() => setPanelOpen(true)} />
 
       <section className="mx-auto max-w-5xl px-4 py-6">
-        {paymentStatus === 'success' ? (
-          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-            Paiement confirme. Votre commande a bien ete transmise a
-            l&apos;equipe.
-          </div>
-        ) : null}
-
-        {paymentStatus === 'cancelled' ? (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            Paiement annule. Votre panier n&apos;a pas ete valide.
-          </div>
-        ) : null}
-
         <div className="mb-5 rounded-lg bg-[#fceef6] p-5">
           <p className="text-sm font-semibold uppercase tracking-wide text-[#b5006e]">
             Commande en ligne

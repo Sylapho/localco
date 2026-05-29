@@ -171,8 +171,8 @@ export class CommandesService {
       metadata: {
         commandeId: String(commande.id),
       },
-      success_url: `${shopUrl}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${shopUrl}/?payment=cancelled`,
+      success_url: `${shopUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${shopUrl}/cancel`,
     })
 
     if (!session.url) {
