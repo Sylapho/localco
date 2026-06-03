@@ -41,6 +41,10 @@ describe('CommandesService', () => {
     sendOrderConfirmation: jest.fn(),
   }
 
+  const emailsServiceMock = {
+    sendOrderConfirmation: jest.fn(),
+  }
+
   type TransactionClient = {
     article: typeof prismaMock.article
     commande: typeof prismaMock.commande
@@ -92,10 +96,6 @@ describe('CommandesService', () => {
     mouvementsStockServiceMock.recordArticleMovement.mockResolvedValue({
       id: 1,
     })
-    mouvementsStockServiceMock.getSellableArticleStock.mockImplementation(
-      (articles: { id: number; stock: number }[]) =>
-        new Map(articles.map((article) => [article.id, article.stock])),
-    )
     emailsServiceMock.sendOrderConfirmation.mockResolvedValue(undefined)
   })
 

@@ -52,7 +52,6 @@ export default function ProduceLotForm({ articles }: ProduceLotFormProps) {
       }
 
       setQuantite('')
-      setExpiresAt('')
       setMessage('Lot article ajouté au stock.')
       router.refresh()
     } catch (err) {

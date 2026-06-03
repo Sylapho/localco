@@ -453,6 +453,227 @@ export class CommandesService {
         },
       })
 
+      const insufficientStock = commande.lignes
+        .map((ligne) => {
+          const article = articles.find((item) => item.id === ligne.articleId)
+
+          if (!article) return null
+
+          return {
+            articleId: article.id,
+            nom: article.nom,
+            stock: article.stock,
+            requested: ligne.quantite,
+            missing: Math.max(0, ligne.quantite - article.stock),
+          }
+        })
+        .filter((item) => item && item.missing > 0)
+
+      if (insufficientStock.length > 0) {
+        await tx.commande.update({
+          where: { id: commande.id },
+          data: { statut: 'paiement_a_verifier' },
+        })
+
+        await this.recordStatusHistory(tx, {
+          commandeId: commande.id,
+          ancienStatut: commande.statut,
+          nouveauStatut: 'paiement_a_verifier',
+          motif: 'stock_insuffisant_apres_paiement',
+        })
+
+        return null
+      }
+
+      for (const ligne of commande.lignes) {
+        const article = articles.find((item) => item.id === ligne.articleId)!
+
+        await tx.article.update({
+          where: { id: article.id },
+          data: {
+            stock: {
+              decrement: ligne.quantite,
+            },
+          },
+        })
+
+        await this.mouvementsStockService.recordArticleMovement(tx, {
+          articleId: article.id,
+          quantite: -ligne.quantite,
+          stockAvant: article.stock,
+          stockApres: article.stock - ligne.quantite,
+          type: 'commande',
+          motif: `Commande payée #${commande.id}`,
+          reference: `commande:${commande.id}`,
+        })
+      }
+
+      const updated = await tx.commande.update({
+        where: { id: commande.id },
+        data: { statut: 'nouvelle' },
+        include: {
+          lignes: {
+            include: {
+              article: true,
+            },
+          },
+        },
+      })
+
+      await this.recordStatusHistory(tx, {
+        commandeId: commande.id,
+        ancienStatut: commande.statut,
+        nouveauStatut: 'nouvelle',
+        motif: 'paiement_confirme',
+      })
+
+      return updated
+    })
+  }
+
+  private async expirePendingCommande(stripeId: string) {
+    const commandes = await this.prisma.commande.findMany({
+      where: {
+        stripeId,
+        statut: 'paiement_en_attente',
+      },
+    })
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const commande of commandes) {
+        await tx.commande.update({
+          where: { id: commande.id },
+          data: { statut: 'annulee' },
+        })
+
+        await this.recordStatusHistory(tx, {
+          commandeId: commande.id,
+          ancienStatut: commande.statut,
+          nouveauStatut: 'annulee',
+          motif: 'checkout_expire',
+        })
+      }
+    })
+  }
+
+  private async recordStatusHistory(
+    tx: {
+      commandeStatutHistorique: {
+        create: (args: {
+          data: {
+            commandeId: number
+            ancienStatut?: string | null
+            nouveauStatut: string
+            motif?: string
+            createdByUserId?: string
+          }
+        }) => Promise<unknown>
+      }
+    },
+    data: {
+      commandeId: number
+      ancienStatut?: string | null
+      nouveauStatut: string
+      motif?: string
+      createdByUserId?: string
+    },
+  ) {
+    await tx.commandeStatutHistorique.create({
+      data,
+    })
+  }
+
+  private getStripe() {
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY')
+
+    if (!secretKey) {
+      throw new BadRequestException('STRIPE_SECRET_KEY est manquant')
+    }
+
+    if (!this.stripe) {
+      this.stripe = new Stripe(secretKey)
+    }
+
+    return this.stripe
+  }
+
+  private async prepareCommande(data: CreateCommandeDto) {
+    const lignesAgregees = this.aggregateLines(data.lignes)
+    const articleIds = lignesAgregees.map((ligne) => ligne.articleId)
+
+    const articles = await this.prisma.article.findMany({
+      where: {
+        id: {
+          in: articleIds,
+        },
+        online: true,
+      },
+    })
+
+    if (articles.length !== articleIds.length) {
+      throw new BadRequestException(
+        'Un ou plusieurs articles sont introuvables ou indisponibles',
+      )
+    }
+
+    const insufficientStock = lignesAgregees
+      .map((ligne) => {
+        const article = articles.find((item) => item.id === ligne.articleId)
+
+        if (!article) return null
+
+        return {
+          articleId: article.id,
+          nom: article.nom,
+          stock: article.stock,
+          requested: ligne.quantite,
+          missing: Math.max(0, ligne.quantite - article.stock),
+        }
+      })
+      .filter((item) => item && item.missing > 0)
+
+    if (insufficientStock.length > 0) {
+      throw new BadRequestException({
+        message: 'Stock insuffisant pour une ou plusieurs lignes',
+        insufficientStock,
+      })
+    }
+
+    const totalTTC = lignesAgregees.reduce((total, ligne) => {
+      const article = articles.find((item) => item.id === ligne.articleId)!
+
+      return total + article.prix * ligne.quantite
+    }, 0)
+
+    return { lignesAgregees, articles, totalTTC }
+  }
+
+  private async confirmPaidCommande(stripeId: string) {
+    const commande = await this.prisma.commande.findFirst({
+      where: { stripeId },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
+    })
+
+    if (!commande || commande.statut !== 'paiement_en_attente') {
+      return
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const articleIds = commande.lignes.map((ligne) => ligne.articleId)
+      const articles = await tx.article.findMany({
+        where: {
+          id: {
+            in: articleIds,
+          },
+        },
+      })
+
       const sellableStockByArticle =
         await this.mouvementsStockService.getSellableArticleStock(articles)
 
