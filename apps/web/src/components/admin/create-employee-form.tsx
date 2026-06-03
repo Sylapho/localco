@@ -36,14 +36,14 @@ export default function CreateEmployeeForm() {
 
       if (!response.ok) {
         const text = await response.text()
-        throw new Error(text || 'Impossible de creer cet employe')
+        throw new Error(text || 'Impossible de créer cet employé')
       }
 
       setName('')
       setEmail('')
       setPassword('')
       setRole('vendeur')
-      setMessage('Employe cree avec succes.')
+      setMessage('Employé créé avec succès.')
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -102,7 +102,7 @@ export default function CreateEmployeeForm() {
         </div>
 
         <div className="grid gap-1">
-          <label htmlFor="employee-role">Role</label>
+          <label htmlFor="employee-role">Rôle</label>
           <select
             id="employee-role"
             value={role}
@@ -126,7 +126,7 @@ export default function CreateEmployeeForm() {
         disabled={loading}
         className="w-fit rounded bg-black px-4 py-2 text-white disabled:opacity-50"
       >
-        {loading ? 'Creation...' : "Creer l'employe"}
+        {loading ? 'Création...' : "Créer l'employé"}
       </button>
     </form>
   )

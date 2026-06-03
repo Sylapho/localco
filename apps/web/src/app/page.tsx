@@ -3,13 +3,13 @@ import Link from 'next/link'
 const quickActions = [
   {
     title: 'Nouvelle vente',
-    description: 'Encaisser des articles et mettre a jour le stock.',
+    description: 'Encaisser des articles et mettre à jour le stock.',
     href: '/ventes/new',
     primary: true,
   },
   {
     title: 'Caisse du jour',
-    description: 'Suivre les totaux, les paiements et cloturer la journee.',
+    description: 'Suivre les totaux, les paiements et clôturer la journée.',
     href: '/caisse',
     primary: false,
   },
@@ -20,8 +20,8 @@ const quickActions = [
     primary: false,
   },
   {
-    title: 'Matieres premieres',
-    description: 'Surveiller les ingredients, seuils et couts unitaires.',
+    title: 'Matières premières',
+    description: 'Surveiller les ingrédients, seuils et coûts unitaires.',
     href: '/matieres-premieres',
     primary: false,
   },
@@ -30,23 +30,23 @@ const quickActions = [
 const modules = [
   {
     name: 'Vente',
-    status: 'Pret',
-    items: ['Creation de ventes', 'Decrement du stock', 'Modes de paiement'],
+    status: 'Prêt',
+    items: ['Création de ventes', 'Décrément du stock', 'Modes de paiement'],
   },
   {
     name: 'Caisse',
-    status: 'Pret',
-    items: ['Synthese du jour', 'Cloture', 'Historique'],
+    status: 'Prêt',
+    items: ['Synthèse du jour', 'Clôture', 'Historique'],
   },
   {
     name: 'Production',
     status: 'En cours',
-    items: ['Nomenclatures', 'Capacite de production', 'Production articles'],
+    items: ['Nomenclatures', 'Capacité de production', 'Production articles'],
   },
   {
     name: 'Roles',
-    status: 'A implementer',
-    items: ['Matrice definie', 'Guards API', 'Menus par role'],
+    status: 'À implémenter',
+    items: ['Matrice définie', 'Guards API', 'Menus par rôle'],
   },
 ]
 
@@ -64,8 +64,8 @@ export default function Home() {
                 Gestion de stock et caisse
               </h1>
               <p className="mt-3 max-w-2xl text-zinc-600">
-                Pilote les ventes, la caisse, les articles et les matieres
-                premieres depuis un point d&apos;entree simple.
+                Pilote les ventes, la caisse, les articles et les matières
+                premières depuis un point d&apos;entrée simple.
               </p>
             </div>
 
@@ -136,10 +136,10 @@ export default function Home() {
           <aside className="rounded border bg-white p-4 shadow-sm">
             <h2 className="text-xl font-semibold">Prochaines etapes</h2>
             <ol className="mt-4 grid gap-3 text-sm text-zinc-700">
-              <li>1. Proteger les routes API avec les roles.</li>
-              <li>2. Ajouter une navigation adaptee au role connecte.</li>
-              <li>3. Creer les mouvements de stock.</li>
-              <li>4. Ajouter les receptions de matieres premieres.</li>
+              <li>1. Protéger les routes API avec les rôles.</li>
+              <li>2. Ajouter une navigation adaptée au rôle connecté.</li>
+              <li>3. Créer les mouvements de stock.</li>
+              <li>4. Ajouter les réceptions de matières premières.</li>
             </ol>
             <Link
               href="/caisse/journees"

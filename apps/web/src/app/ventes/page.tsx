@@ -4,8 +4,8 @@ import { getVentes } from '@/lib/api'
 
 const modeLabels = {
   cb: 'Carte bancaire',
-  especes: 'Especes',
-  cheque: 'Cheque',
+  especes: 'Espèces',
+  cheque: 'Chèque',
 }
 
 function formatCurrency(value: number) {
@@ -51,7 +51,7 @@ export default async function VentesPage() {
       </div>
 
       {ventes.length === 0 ? (
-        <p>Aucune vente enregistree.</p>
+        <p>Aucune vente enregistrée.</p>
       ) : (
         <ul className="grid gap-4">
           {ventes.map((vente) => (
@@ -92,7 +92,7 @@ export default async function VentesPage() {
                   <thead>
                     <tr className="border-b">
                       <th className="py-2 pr-3 font-medium">Article</th>
-                      <th className="py-2 pr-3 font-medium">Quantite</th>
+                      <th className="py-2 pr-3 font-medium">Quantité</th>
                       <th className="py-2 pr-3 font-medium">Prix unit.</th>
                       <th className="py-2 font-medium">Total</th>
                     </tr>

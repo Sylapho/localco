@@ -83,12 +83,12 @@ export default function AdjustStockForm({
 
       if (!response.ok) {
         const text = await response.text()
-        throw new Error(text || 'Impossible d ajuster le stock')
+        throw new Error(text || 'Impossible d’ajuster le stock')
       }
 
       setQuantite('')
       setMotif('')
-      setMessage('Ajustement enregistre.')
+      setMessage('Ajustement enregistré.')
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -102,7 +102,7 @@ export default function AdjustStockForm({
       <div>
         <h2 className="text-lg font-semibold">Ajustement manuel</h2>
         <p className="mt-1 text-sm text-gray-600">
-          Utilise une quantite positive pour ajouter du stock, negative pour en
+          Utilise une quantité positive pour ajouter du stock, négative pour en
           retirer.
         </p>
       </div>
@@ -117,7 +117,7 @@ export default function AdjustStockForm({
               : 'rounded border px-3 py-2 text-sm'
           }
         >
-          Matiere premiere
+          Matière première
         </button>
         <button
           type="button"
@@ -134,7 +134,7 @@ export default function AdjustStockForm({
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="grid gap-1">
-          <label htmlFor="adjust-cible">Element</label>
+          <label htmlFor="adjust-cible">Élément</label>
           <select
             id="adjust-cible"
             value={cibleId}
@@ -190,7 +190,7 @@ export default function AdjustStockForm({
         disabled={loading || !cibleId || Number(quantite) === 0}
         className="w-fit rounded bg-black px-4 py-2 text-white disabled:opacity-50"
       >
-        {loading ? 'Ajustement...' : 'Enregistrer l ajustement'}
+        {loading ? 'Ajustement...' : 'Enregistrer l’ajustement'}
       </button>
     </form>
   )

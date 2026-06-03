@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   const session = await requireGerantSession()
 
   if (!session) {
-    return NextResponse.json({ message: 'Acces interdit' }, { status: 403 })
+    return NextResponse.json({ message: 'Accès interdit' }, { status: 403 })
   }
 
   const body = (await request.json()) as {
@@ -22,12 +22,12 @@ export async function POST(request: NextRequest) {
     typeof body.password !== 'string' ||
     !isRole(body.role)
   ) {
-    return NextResponse.json({ message: 'Donnees invalides' }, { status: 400 })
+    return NextResponse.json({ message: 'Données invalides' }, { status: 400 })
   }
 
   if (body.password.length < 8) {
     return NextResponse.json(
-      { message: 'Le mot de passe doit contenir au moins 8 caracteres' },
+      { message: 'Le mot de passe doit contenir au moins 8 caractères' },
       { status: 400 },
     )
   }
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         message:
-          err instanceof Error ? err.message : "Impossible de creer l'employe",
+          err instanceof Error ? err.message : "Impossible de créer l'employé",
       },
       { status: 400 },
     )

@@ -59,7 +59,7 @@ export class MouvementsStockService {
     createdByUserId?: string,
   ) {
     if (data.quantite === 0) {
-      throw new BadRequestException('La quantite doit etre differente de 0')
+      throw new BadRequestException('La quantité doit être différente de 0')
     }
 
     if (data.cible === 'article') {
@@ -162,7 +162,7 @@ export class MouvementsStockService {
   }) {
     if (!Number.isInteger(data.quantite)) {
       throw new BadRequestException(
-        'La quantite doit etre un entier pour un article',
+        'La quantité doit être un entier pour un article',
       )
     }
 
@@ -175,7 +175,7 @@ export class MouvementsStockService {
 
       if (stockApres < 0) {
         throw new BadRequestException(
-          'Le stock article ne peut pas etre negatif',
+          'Le stock article ne peut pas être négatif',
         )
       }
 
@@ -223,7 +223,7 @@ export class MouvementsStockService {
 
       if (stockApres < 0) {
         throw new BadRequestException(
-          'Le stock matiere premiere ne peut pas etre negatif',
+          'Le stock matière première ne peut pas être négatif',
         )
       }
 

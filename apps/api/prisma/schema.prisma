@@ -87,17 +87,18 @@ model LigneVente {
 }
 
 model Commande {
-  id          Int             @id @default(autoincrement())
+  id          Int                       @id @default(autoincrement())
   nom         String
   email       String
   tel         String?
   totalTTC    Float
   lieu        String
   dateRetrait DateTime?
-  statut      String          @default("nouvelle")
+  statut      String                    @default("nouvelle")
   stripeId    String?
-  createdAt   DateTime        @default(now())
+  createdAt   DateTime                  @default(now())
   lignes      LigneCommande[]
+  historique  CommandeStatutHistorique[]
 }
 
 model LigneCommande {
@@ -108,6 +109,17 @@ model LigneCommande {
   prixUnit   Float
   commande   Commande @relation(fields: [commandeId], references: [id])
   article    Article  @relation(fields: [articleId], references: [id])
+}
+
+model CommandeStatutHistorique {
+  id              Int      @id @default(autoincrement())
+  commandeId      Int
+  ancienStatut    String?
+  nouveauStatut   String
+  motif           String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  commande        Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
 }
 
 model JourneeCaisse {

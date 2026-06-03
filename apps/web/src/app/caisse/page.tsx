@@ -10,8 +10,8 @@ import {
 
 const modeLabels: Record<VenteMode, string> = {
   cb: 'Carte bancaire',
-  especes: 'Especes',
-  cheque: 'Cheque',
+  especes: 'Espèces',
+  cheque: 'Chèque',
 }
 
 function formatCurrency(value: number) {
@@ -105,7 +105,7 @@ export default async function CaissePage() {
         <div>
           <h1 className="text-2xl font-bold">Caisse du jour</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Synthese des ventes du {caisse.dayKey}
+            Synthèse des ventes du {caisse.dayKey}
           </p>
         </div>
 
@@ -122,16 +122,16 @@ export default async function CaissePage() {
       <section className="mb-6 rounded border p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-gray-600">Etat de la caisse</p>
+            <p className="text-sm text-gray-600">État de la caisse</p>
             {caisse.status === 'closed' ? (
               <p className="mt-1 font-semibold">
-                Journee cloturee
+                Journée clôturée
                 {caisse.closedDay
                   ? ` le ${formatDateTime(caisse.closedDay.clotureeA)}`
                   : ''}
               </p>
             ) : (
-              <p className="mt-1 font-semibold">Journee ouverte</p>
+              <p className="mt-1 font-semibold">Journée ouverte</p>
             )}
           </div>
 
@@ -189,7 +189,7 @@ export default async function CaissePage() {
               <dd className="font-medium">{formatCurrency(totalRemise)}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt>Marge estimee</dt>
+              <dt>Marge estimée</dt>
               <dd className="font-medium">
                 {formatCurrency(caisse.totals.marge)}
               </dd>
@@ -240,7 +240,7 @@ export default async function CaissePage() {
           {ventesDuJour.length === 0 ? (
             <div>
               <p className="text-sm text-gray-600">
-                Aucune vente enregistree aujourd&apos;hui.
+                Aucune vente enregistrée aujourd&apos;hui.
               </p>
               <Link
                 href="/ventes/new"

@@ -112,7 +112,7 @@ export default async function ArticleDetailPage({ params }: PageProps) {
             Gérer la nomenclature
           </Link>
         </div>
-        
+
         <div className="mt-4">
           <ProduceArticleForm
             articleId={article.id}
@@ -129,7 +129,8 @@ export default async function ArticleDetailPage({ params }: PageProps) {
           {capacity.limitingIngredient ? (
             <p className="mt-1 text-sm text-gray-600">
               Matière limitante : {capacity.limitingIngredient.nom} — stock :{' '}
-              {capacity.limitingIngredient.stock} {capacity.limitingIngredient.unite}
+              {capacity.limitingIngredient.stock}{' '}
+              {capacity.limitingIngredient.unite}
             </p>
           ) : (
             <p className="mt-1 text-sm text-gray-600">

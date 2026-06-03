@@ -1,20 +1,8 @@
 import CommandeStatusActions from '@/components/commandes/commande-status-actions'
+import CommandeStatusBadge from '@/components/commandes/commande-status-badge'
 import ArticleImage from '@/components/articles/article-image'
-import { getCommandes, type CommandeStatut } from '@/lib/api'
-
-const statusLabels: Record<CommandeStatut, string> = {
-  nouvelle: 'Nouvelle',
-  preparee: 'Preparee',
-  traitee: 'Traitee',
-  annulee: 'Annulee',
-}
-
-const statusClasses: Record<CommandeStatut, string> = {
-  nouvelle: 'bg-amber-100 text-amber-800',
-  preparee: 'bg-blue-100 text-blue-800',
-  traitee: 'bg-green-100 text-green-800',
-  annulee: 'bg-red-100 text-red-800',
-}
+import { getCommandes } from '@/lib/api'
+import Link from 'next/link'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('fr-FR', {
@@ -33,7 +21,7 @@ function formatDateTime(value: string) {
 
 function formatDate(value?: string | null) {
   if (!value) {
-    return 'Non precisee'
+    return 'Non précisée'
   }
 
   return new Intl.DateTimeFormat('fr-FR', {
@@ -45,7 +33,8 @@ function formatDate(value?: string | null) {
 export default async function CommandesPage() {
   const commandes = await getCommandes()
   const commandesActives = commandes.filter(
-    (commande) => commande.statut === 'nouvelle' || commande.statut === 'preparee',
+    (commande) =>
+      commande.statut === 'nouvelle' || commande.statut === 'preparee',
   )
 
   return (
@@ -54,13 +43,13 @@ export default async function CommandesPage() {
         <div>
           <h1 className="text-2xl font-bold">Commandes en ligne</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Commandes passees par les clients depuis la future boutique publique.
+            Commandes passées par les clients depuis la future boutique publique.
           </p>
         </div>
 
         <div className="rounded border bg-white px-4 py-3 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-            A traiter
+            À traiter
           </p>
           <p className="mt-1 text-2xl font-bold">{commandesActives.length}</p>
         </div>
@@ -70,8 +59,8 @@ export default async function CommandesPage() {
         <section className="rounded border bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Aucune commande</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Les commandes client apparaitront ici quand la boutique publique
-            sera branchee.
+            Les commandes client apparaîtront ici quand la boutique publique
+            sera branchée.
           </p>
         </section>
       ) : (
@@ -87,13 +76,7 @@ export default async function CommandesPage() {
                     <h2 className="text-lg font-semibold">
                       Commande #{commande.id}
                     </h2>
-                    <span
-                      className={`rounded px-2 py-1 text-xs font-semibold ${
-                        statusClasses[commande.statut]
-                      }`}
-                    >
-                      {statusLabels[commande.statut]}
-                    </span>
+                    <CommandeStatusBadge statut={commande.statut} />
                   </div>
                   <p className="mt-1 text-sm text-gray-600">
                     {formatDateTime(commande.createdAt)}
@@ -118,7 +101,7 @@ export default async function CommandesPage() {
                       <dd className="font-medium">{commande.email}</dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt>Telephone</dt>
+                      <dt>Téléphone</dt>
                       <dd className="font-medium">{commande.tel || '-'}</dd>
                     </div>
                     <div className="flex justify-between gap-4">
@@ -126,7 +109,7 @@ export default async function CommandesPage() {
                       <dd className="font-medium">{commande.lieu}</dd>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <dt>Date souhaitee</dt>
+                      <dt>Date souhaitée</dt>
                       <dd className="font-medium">
                         {formatDate(commande.dateRetrait)}
                       </dd>
@@ -161,10 +144,19 @@ export default async function CommandesPage() {
               </div>
 
               <div className="mt-4">
-                <CommandeStatusActions
-                  commandeId={commande.id}
-                  statut={commande.statut}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/commandes/${commande.id}`}
+                    className="rounded border px-3 py-2 text-sm"
+                  >
+                    Voir détail
+                  </Link>
+
+                  <CommandeStatusActions
+                    commandeId={commande.id}
+                    statut={commande.statut}
+                  />
+                </div>
               </div>
             </article>
           ))}

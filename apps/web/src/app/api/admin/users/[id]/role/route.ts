@@ -9,7 +9,7 @@ export async function PATCH(
   const session = await requireGerantSession()
 
   if (!session) {
-    return NextResponse.json({ message: 'Acces interdit' }, { status: 403 })
+    return NextResponse.json({ message: 'Accès interdit' }, { status: 403 })
   }
 
   const { id } = await context.params

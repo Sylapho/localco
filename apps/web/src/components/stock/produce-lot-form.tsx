@@ -46,11 +46,11 @@ export default function ProduceLotForm({ articles }: ProduceLotFormProps) {
 
       if (!response.ok) {
         const text = await response.text()
-        throw new Error(text || 'Impossible d ajouter ce lot')
+        throw new Error(text || 'Impossible d’ajouter ce lot')
       }
 
       setQuantite('')
-      setMessage('Lot article ajoute au stock.')
+      setMessage('Lot article ajouté au stock.')
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -91,7 +91,7 @@ export default function ProduceLotForm({ articles }: ProduceLotFormProps) {
         </div>
 
         <div className="grid gap-1">
-          <label htmlFor="lot-quantite">Quantite</label>
+          <label htmlFor="lot-quantite">Quantité</label>
           <input
             id="lot-quantite"
             type="number"

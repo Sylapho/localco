@@ -38,18 +38,18 @@ export default async function JourneesCaissePage() {
         <div>
           <h1 className="text-2xl font-bold">Historique de caisse</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Journees cloturees et totaux conserves.
+            Journées clôturées et totaux conservés.
           </p>
         </div>
 
         <Link href="/caisse" className="rounded border px-4 py-2">
-          Retour a la caisse
+          Retour à la caisse
         </Link>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded border p-4">
-          <p className="text-sm text-gray-600">Journees cloturees</p>
+          <p className="text-sm text-gray-600">Journées clôturées</p>
           <p className="mt-2 text-2xl font-bold">{journees.length}</p>
         </div>
         <div className="rounded border p-4">
@@ -57,21 +57,21 @@ export default async function JourneesCaissePage() {
           <p className="mt-2 text-2xl font-bold">{formatCurrency(totalTTC)}</p>
         </div>
         <div className="rounded border p-4">
-          <p className="text-sm text-gray-600">Marge estimee</p>
+          <p className="text-sm text-gray-600">Marge estimée</p>
           <p className="mt-2 text-2xl font-bold">{formatCurrency(totalMarge)}</p>
         </div>
       </section>
 
       <section className="mt-6 rounded border p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Journees</h2>
+          <h2 className="text-lg font-semibold">Journées</h2>
           <p className="text-sm text-gray-600">{totalVentes} vente(s)</p>
         </div>
 
         {journees.length === 0 ? (
           <div>
             <p className="text-sm text-gray-600">
-              Aucune journee de caisse cloturee pour le moment.
+              Aucune journée de caisse clôturée pour le moment.
             </p>
             <Link
               href="/caisse"
@@ -91,10 +91,10 @@ export default async function JourneesCaissePage() {
                   <th className="py-2 pr-3 font-medium">Total HT</th>
                   <th className="py-2 pr-3 font-medium">TVA</th>
                   <th className="py-2 pr-3 font-medium">CB</th>
-                  <th className="py-2 pr-3 font-medium">Especes</th>
-                  <th className="py-2 pr-3 font-medium">Cheques</th>
+                  <th className="py-2 pr-3 font-medium">Espèces</th>
+                  <th className="py-2 pr-3 font-medium">Chèques</th>
                   <th className="py-2 pr-3 font-medium">Marge</th>
-                  <th className="py-2 font-medium">Cloturee</th>
+                  <th className="py-2 font-medium">Clôturée</th>
                 </tr>
               </thead>
               <tbody>

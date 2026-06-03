@@ -18,7 +18,7 @@ export default function CloseCaisseButton({ disabled }: CloseCaisseButtonProps) 
 
   async function handleClose() {
     const confirmed = window.confirm(
-      'Cloturer la journee de caisse ? Cette action cree un recapitulatif definitif.',
+      'Clôturer la journée de caisse ? Cette action crée un récapitulatif définitif.',
     )
 
     if (!confirmed) {
@@ -35,7 +35,7 @@ export default function CloseCaisseButton({ disabled }: CloseCaisseButtonProps) 
 
       if (!response.ok) {
         const text = await response.text()
-        throw new Error(text || 'Erreur lors de la cloture')
+        throw new Error(text || 'Erreur lors de la clôture')
       }
 
       router.refresh()
@@ -54,7 +54,7 @@ export default function CloseCaisseButton({ disabled }: CloseCaisseButtonProps) 
         disabled={disabled || loading}
         className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
       >
-        {loading ? 'Cloture...' : 'Cloturer la journee'}
+        {loading ? 'Clôture...' : 'Clôturer la journée'}
       </button>
       {error ? <p className="max-w-sm text-sm text-red-600">{error}</p> : null}
     </div>

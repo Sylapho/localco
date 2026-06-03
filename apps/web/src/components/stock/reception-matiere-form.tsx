@@ -56,12 +56,12 @@ export default function ReceptionMatiereForm({
 
       if (!response.ok) {
         const text = await response.text()
-        throw new Error(text || 'Impossible d enregistrer la reception')
+        throw new Error(text || 'Impossible d’enregistrer la réception')
       }
 
       setQuantite('')
       setMotif('')
-      setMessage('Reception enregistree.')
+      setMessage('Réception enregistrée.')
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -73,15 +73,15 @@ export default function ReceptionMatiereForm({
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 rounded border bg-white p-4 shadow-sm">
       <div>
-        <h2 className="text-lg font-semibold">Reception de matiere</h2>
+        <h2 className="text-lg font-semibold">Réception de matière</h2>
         <p className="mt-1 text-sm text-gray-600">
-          Ajoute une livraison au stock d une matiere premiere.
+          Ajoute une livraison au stock d’une matière première.
         </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="grid gap-1">
-          <label htmlFor="reception-matiere">Matiere premiere</label>
+          <label htmlFor="reception-matiere">Matière première</label>
           <select
             id="reception-matiere"
             value={matiereId}
@@ -99,7 +99,7 @@ export default function ReceptionMatiereForm({
 
         <div className="grid gap-1">
           <label htmlFor="reception-quantite">
-            Quantite {selectedMatiere ? `(${selectedMatiere.unite})` : ''}
+            Quantité {selectedMatiere ? `(${selectedMatiere.unite})` : ''}
           </label>
           <input
             id="reception-quantite"
@@ -133,7 +133,7 @@ export default function ReceptionMatiereForm({
         disabled={loading || !matiereId || Number(quantite) <= 0}
         className="w-fit rounded bg-black px-4 py-2 text-white disabled:opacity-50"
       >
-        {loading ? 'Enregistrement...' : 'Enregistrer la reception'}
+        {loading ? 'Enregistrement...' : 'Enregistrer la réception'}
       </button>
     </form>
   )

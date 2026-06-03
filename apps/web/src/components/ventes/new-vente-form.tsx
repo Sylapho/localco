@@ -18,8 +18,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 const modeLabels: Record<VenteMode, string> = {
   cb: 'Carte bancaire',
-  especes: 'Especes',
-  cheque: 'Cheque',
+  especes: 'Espèces',
+  cheque: 'Chèque',
 }
 
 function formatCurrency(value: number) {
@@ -135,7 +135,7 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
       const [articleId, quantite] = stockError
       const article = articleById.get(articleId)
       setError(
-        `Stock insuffisant pour ${article?.nom ?? 'cet article'} (${quantite} demande, ${article?.stock ?? 0} disponible).`,
+        `Stock insuffisant pour ${article?.nom ?? 'cet article'} (${quantite} demandé, ${article?.stock ?? 0} disponible).`,
       )
       setLoading(false)
       return
@@ -156,7 +156,7 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
 
       if (!response.ok) {
         const text = await response.text()
-        throw new Error(text || 'Erreur lors de la creation de la vente')
+        throw new Error(text || 'Erreur lors de la création de la vente')
       }
 
       router.push('/ventes')
@@ -234,7 +234,7 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
                   </div>
 
                   <div className="grid gap-1">
-                    <label htmlFor={`quantite-${index}`}>Quantite</label>
+                    <label htmlFor={`quantite-${index}`}>Quantité</label>
                     <input
                       id={`quantite-${index}`}
                       type="number"
@@ -275,7 +275,7 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
       </section>
 
       <aside className="h-fit rounded border p-4">
-        <h2 className="mb-4 text-lg font-semibold">Resume</h2>
+        <h2 className="mb-4 text-lg font-semibold">Résumé</h2>
 
         <div className="grid gap-3">
           <div className="grid gap-1">

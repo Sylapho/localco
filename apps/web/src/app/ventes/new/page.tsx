@@ -11,7 +11,7 @@ export default async function NewVentePage() {
         <div>
           <h1 className="text-2xl font-bold">Nouvelle vente</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Selectionnez les articles, les quantites et le mode de paiement.
+            Sélectionnez les articles, les quantités et le mode de paiement.
           </p>
         </div>
 
@@ -22,12 +22,12 @@ export default async function NewVentePage() {
 
       {articles.length === 0 ? (
         <div className="rounded border p-4">
-          <p>Aucun article disponible pour creer une vente.</p>
+          <p>Aucun article disponible pour créer une vente.</p>
           <Link
             href="/articles/new"
             className="mt-4 inline-block rounded bg-black px-4 py-2 text-white"
           >
-            Creer un article
+            Créer un article
           </Link>
         </div>
       ) : (

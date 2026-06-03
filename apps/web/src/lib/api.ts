@@ -378,10 +378,22 @@ export async function createVente(data: VentePayload): Promise<Vente> {
 }
 
 export type CommandeStatut =
+  | 'paiement_en_attente'
   | 'nouvelle'
   | 'preparee'
   | 'traitee'
   | 'annulee'
+  | 'paiement_a_verifier'
+
+export type CommandeStatutHistorique = {
+  id: number
+  commandeId: number
+  ancienStatut?: CommandeStatut | null
+  nouveauStatut: CommandeStatut
+  motif?: string | null
+  createdByUserId?: string | null
+  createdAt: string
+}
 
 export type LigneCommande = {
   id: number
@@ -404,6 +416,7 @@ export type Commande = {
   stripeId?: string | null
   createdAt: string
   lignes: LigneCommande[]
+  historique?: CommandeStatutHistorique[]
 }
 
 export async function getCommandes(): Promise<Commande[]> {
@@ -412,6 +425,14 @@ export async function getCommandes(): Promise<Commande[]> {
   })
 
   return parseResponse<Commande[]>(response)
+}
+
+export async function getCommande(id: number): Promise<Commande> {
+  const response = await apiFetch(`/commandes/${id}`, {
+    cache: 'no-store',
+  })
+
+  return parseResponse<Commande>(response)
 }
 
 export type JourneeCaisse = {

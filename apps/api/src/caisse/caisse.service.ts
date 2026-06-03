@@ -72,7 +72,7 @@ export class CaisseService {
     })
 
     if (alreadyClosed) {
-      throw new BadRequestException('La journee de caisse est deja cloturee')
+      throw new BadRequestException('La journée de caisse est déjà clôturée')
     }
 
     const totals = await this.calculateTotals(bounds)

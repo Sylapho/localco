@@ -9,9 +9,12 @@ describe('CommandesController', () => {
 
   const commandesServiceMock = {
     create: jest.fn(),
+    createCheckout: jest.fn(),
+    handleStripeWebhook: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
     updateStatut: jest.fn(),
+    cleanupAbandonedCommandes: jest.fn(),
   }
 
   beforeEach(async () => {
@@ -54,6 +57,21 @@ describe('CommandesController', () => {
     expect(commandesServiceMock.create).toHaveBeenCalledWith(body)
   })
 
+  it('createCheckout should create a checkout session', async () => {
+    const body: CreateCommandeDto = {
+      nom: 'Marie Dupont',
+      email: 'marie@example.fr',
+      lieu: 'En boutique',
+      lignes: [{ articleId: 1, quantite: 2 }],
+    }
+    const result = { url: 'https://checkout.stripe.com/test' }
+
+    commandesServiceMock.createCheckout.mockResolvedValue(result)
+
+    await expect(controller.createCheckout(body)).resolves.toEqual(result)
+    expect(commandesServiceMock.createCheckout).toHaveBeenCalledWith(body)
+  })
+
   it('findAll should return commandes', async () => {
     const result = [{ id: 1, statut: 'nouvelle' }]
     commandesServiceMock.findAll.mockResolvedValue(result)
@@ -68,6 +86,14 @@ describe('CommandesController', () => {
 
     await expect(controller.findOne(1)).resolves.toEqual(result)
     expect(commandesServiceMock.findOne).toHaveBeenCalledWith(1)
+  })
+
+  it('cleanupAbandoned should cleanup pending commandes', async () => {
+    const result = { count: 2 }
+    commandesServiceMock.cleanupAbandonedCommandes.mockResolvedValue(result)
+
+    await expect(controller.cleanupAbandoned()).resolves.toEqual(result)
+    expect(commandesServiceMock.cleanupAbandonedCommandes).toHaveBeenCalled()
   })
 
   it('updateStatut should update commande status', async () => {

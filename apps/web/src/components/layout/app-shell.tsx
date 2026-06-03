@@ -17,13 +17,13 @@ const navItems: NavItem[] = [
     label: 'Accueil',
     href: '/',
     short: 'Home',
-    description: 'Vue generale',
+    description: 'Vue générale',
   },
   {
     label: 'Caisse',
     href: '/caisse',
     short: 'Caisse',
-    description: 'Journee en cours',
+    description: 'Journée en cours',
   },
   {
     label: 'Ventes',
@@ -47,13 +47,13 @@ const navItems: NavItem[] = [
     label: 'Stock',
     href: '/stock',
     short: 'Stock',
-    description: 'Matieres & articles',
+    description: 'Matières & articles',
   },
   {
     label: 'Historique',
     href: '/caisse/journees',
     short: 'Hist.',
-    description: 'Clotures',
+    description: 'Clôtures',
   },
 ]
 
@@ -136,13 +136,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={handleSignOut}
                 className="lc-avatar"
-                title="Se deconnecter"
+                title="Se déconnecter"
               >
                 {user?.name?.slice(0, 2).toUpperCase() ?? 'LC'}
               </button>
               <span>
                 <strong>{user?.name ?? 'Compte'}</strong>
-                <small>Role : {typeof role === 'string' ? role : 'vendeur'}</small>
+                <small>Rôle : {typeof role === 'string' ? role : 'vendeur'}</small>
               </span>
             </div>
           ) : null}
@@ -165,7 +165,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <span>Interface de gestion</span>
             ) : null}
             {isLoaded && !isSignedIn ? (
-              <span>Connecte-toi pour acceder a la gestion</span>
+              <span>Connecte-toi pour accéder à la gestion</span>
             ) : null}
           </div>
           {isLoaded && isSignedIn ? (
