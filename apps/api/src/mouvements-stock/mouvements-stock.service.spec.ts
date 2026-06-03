@@ -16,6 +16,7 @@ describe('MouvementsStockService', () => {
     },
     stockLot: {
       findMany: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },

@@ -25,6 +25,7 @@ describe('ArticlesService', () => {
   const mouvementsStockServiceMock = {
     recordArticleMovement: jest.fn(),
     recordMatierePremiereMovement: jest.fn(),
+    getSellableMatiereStock: jest.fn(),
   }
 
   type TransactionClient = {
@@ -66,6 +67,10 @@ describe('ArticlesService', () => {
     mouvementsStockServiceMock.recordMatierePremiereMovement.mockResolvedValue({
       id: 2,
     })
+    mouvementsStockServiceMock.getSellableMatiereStock.mockImplementation(
+      (matieres: { id: number; stock: number }[]) =>
+        new Map(matieres.map((matiere) => [matiere.id, matiere.stock])),
+    )
   })
 
   it('should be defined', () => {
@@ -229,6 +234,7 @@ describe('ArticlesService', () => {
         mpId: 2,
         nom: 'Levure',
         stock: 1,
+        sellableStock: 1,
         unite: 'kg',
         quantiteNecessaire: 0.1,
         possible: 10,
@@ -238,6 +244,7 @@ describe('ArticlesService', () => {
           mpId: 1,
           nom: 'Farine',
           stock: 10,
+          sellableStock: 10,
           unite: 'kg',
           quantiteNecessaire: 0.5,
           possible: 20,
@@ -246,6 +253,7 @@ describe('ArticlesService', () => {
           mpId: 2,
           nom: 'Levure',
           stock: 1,
+          sellableStock: 1,
           unite: 'kg',
           quantiteNecessaire: 0.1,
           possible: 10,

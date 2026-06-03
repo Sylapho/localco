@@ -83,13 +83,20 @@ export class ArticlesService {
       }
     }
 
+    const sellableStockByMatiere =
+      await this.mouvementsStockService.getSellableMatiereStock(
+        article.nomen.map((line) => line.mp),
+      )
+
     const ingredients = article.nomen.map((line) => {
-      const possible = Math.floor(line.mp.stock / line.quantite)
+      const sellableStock = sellableStockByMatiere.get(line.mp.id) ?? 0
+      const possible = Math.floor(sellableStock / line.quantite)
 
       return {
         mpId: line.mp.id,
         nom: line.mp.nom,
         stock: line.mp.stock,
+        sellableStock,
         unite: line.mp.unite,
         quantiteNecessaire: line.quantite,
         possible,
@@ -129,15 +136,21 @@ export class ArticlesService {
       )
     }
 
+    const sellableStockByMatiere =
+      await this.mouvementsStockService.getSellableMatiereStock(
+        article.nomen.map((line) => line.mp),
+      )
+
     const insufficientIngredients = article.nomen
       .map((line) => {
         const needed = line.quantite * quantite
-        const available = line.mp.stock
+        const available = sellableStockByMatiere.get(line.mp.id) ?? 0
 
         return {
           mpId: line.mp.id,
           nom: line.mp.nom,
           unite: line.mp.unite,
+          stock: line.mp.stock,
           needed,
           available,
           missing: Math.max(0, needed - available),

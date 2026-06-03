@@ -28,16 +28,6 @@ type MouvementStockCreateData = {
   createdByUserId?: string
 }
 
-type StockLotData = {
-  target: StockLotTarget
-  articleId?: number
-  mpId?: number
-  initialQuantity: number
-  remainingQuantity: number
-  expiresAt?: Date
-  reference?: string
-}
-
 type StockLotRecord = {
   id: number
   remainingQuantity: number
@@ -45,7 +35,30 @@ type StockLotRecord = {
   createdAt: Date
 }
 
+type StockItem = {
+  id: number
+  stock: number
+}
+
 type MouvementStockTransaction = {
+  article: {
+    findUniqueOrThrow: (args: {
+      where: { id: number }
+    }) => Promise<{ id: number; stock: number }>
+    update: (args: {
+      where: { id: number }
+      data: { stock: { decrement: number } | number }
+    }) => Promise<{ id: number; stock: number }>
+  }
+  matierePremiere: {
+    findUniqueOrThrow: (args: {
+      where: { id: number }
+    }) => Promise<{ id: number; stock: number }>
+    update: (args: {
+      where: { id: number }
+      data: { stock: { decrement: number } | number }
+    }) => Promise<{ id: number; stock: number }>
+  }
   mouvementStock: {
     create: (args: {
       data: MouvementStockCreateData
@@ -56,27 +69,9 @@ type MouvementStockTransaction = {
     }) => Promise<unknown>
   }
   stockLot: {
-    findMany: (args: {
-      where: {
-        target: StockLotTarget
-        articleId?: number
-        mpId?: number
-        remainingQuantity: {
-          gt: number
-        }
-      }
-      select: {
-        id: true
-        remainingQuantity: true
-        expiresAt: true
-        createdAt: true
-      }
-    }) => Promise<StockLotRecord[]>
-    create: (args: { data: StockLotData }) => Promise<unknown>
-    update: (args: {
-      where: { id: number }
-      data: { remainingQuantity: number }
-    }) => Promise<unknown>
+    findMany: (args: unknown) => Promise<unknown>
+    create: (args: unknown) => Promise<unknown>
+    update: (args: unknown) => Promise<unknown>
   }
 }
 
@@ -108,6 +103,116 @@ export class MouvementsStockService {
         mp: true,
       },
       orderBy: [{ expiresAt: 'asc' }, { createdAt: 'asc' }],
+    })
+  }
+
+  async getSellableArticleStock(articles: StockItem[]) {
+    return this.getSellableStock('article', articles)
+  }
+
+  async getSellableMatiereStock(matieres: StockItem[]) {
+    return this.getSellableStock('matiere_premiere', matieres)
+  }
+
+  async markLotAsLoss(id: number, createdByUserId?: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const lot = await tx.stockLot.findUniqueOrThrow({
+        where: { id },
+        include: {
+          article: true,
+          mp: true,
+        },
+      })
+
+      if (!this.isExpired(lot.expiresAt)) {
+        throw new BadRequestException(
+          'Seul un lot périmé peut être passé en perte',
+        )
+      }
+
+      if (lot.remainingQuantity <= 0) {
+        throw new BadRequestException('Ce lot ne contient plus de stock')
+      }
+
+      if (lot.target === 'article') {
+        if (!lot.article || !lot.articleId) {
+          throw new BadRequestException('Lot article invalide')
+        }
+
+        const quantity = Math.min(lot.remainingQuantity, lot.article.stock)
+        const updatedArticle = await tx.article.update({
+          where: { id: lot.articleId },
+          data: {
+            stock: {
+              decrement: quantity,
+            },
+          },
+        })
+
+        await tx.stockLot.update({
+          where: { id },
+          data: {
+            remainingQuantity: 0,
+          },
+        })
+
+        return tx.mouvementStock.create({
+          data: {
+            type: 'perte',
+            cible: 'article',
+            articleId: lot.articleId,
+            quantite: -quantity,
+            stockAvant: lot.article.stock,
+            stockApres: updatedArticle.stock,
+            motif: `Lot périmé #${id}`,
+            reference: `stock-lot:${id}:perte`,
+            createdByUserId,
+          },
+          include: {
+            article: true,
+            mp: true,
+          },
+        })
+      }
+
+      if (!lot.mp || !lot.mpId) {
+        throw new BadRequestException('Lot matière première invalide')
+      }
+
+      const quantity = Math.min(lot.remainingQuantity, lot.mp.stock)
+      const updatedMatiere = await tx.matierePremiere.update({
+        where: { id: lot.mpId },
+        data: {
+          stock: {
+            decrement: quantity,
+          },
+        },
+      })
+
+      await tx.stockLot.update({
+        where: { id },
+        data: {
+          remainingQuantity: 0,
+        },
+      })
+
+      return tx.mouvementStock.create({
+        data: {
+          type: 'perte',
+          cible: 'matiere_premiere',
+          mpId: lot.mpId,
+          quantite: -quantity,
+          stockAvant: lot.mp.stock,
+          stockApres: updatedMatiere.stock,
+          motif: `Lot périmé #${id}`,
+          reference: `stock-lot:${id}:perte`,
+          createdByUserId,
+        },
+        include: {
+          article: true,
+          mp: true,
+        },
+      })
     })
   }
 
@@ -394,7 +499,7 @@ export class MouvementsStockService {
     quantity: number,
   ) {
     let remainingToConsume = quantity
-    const lots = await tx.stockLot.findMany({
+    const lots = (await tx.stockLot.findMany({
       where: {
         target,
         articleId: target === 'article' ? targetId : undefined,
@@ -409,9 +514,16 @@ export class MouvementsStockService {
         expiresAt: true,
         createdAt: true,
       },
-    })
+    })) as StockLotRecord[]
 
     const sortedLots = lots.sort((a, b) => {
+      if (this.isExpired(a.expiresAt) && this.isExpired(b.expiresAt)) {
+        return a.createdAt.getTime() - b.createdAt.getTime()
+      }
+
+      if (this.isExpired(a.expiresAt)) return 1
+      if (this.isExpired(b.expiresAt)) return -1
+
       if (a.expiresAt && b.expiresAt) {
         return a.expiresAt.getTime() - b.expiresAt.getTime()
       }
@@ -424,6 +536,7 @@ export class MouvementsStockService {
 
     for (const lot of sortedLots) {
       if (remainingToConsume <= 0) return
+      if (this.isExpired(lot.expiresAt)) continue
 
       const consumed = Math.min(lot.remainingQuantity, remainingToConsume)
 
@@ -442,5 +555,58 @@ export class MouvementsStockService {
     if (!value) return undefined
 
     return new Date(value)
+  }
+
+  private async getSellableStock(target: StockLotTarget, items: StockItem[]) {
+    const result = new Map(items.map((item) => [item.id, item.stock]))
+    const ids = items.map((item) => item.id)
+
+    if (ids.length === 0) {
+      return result
+    }
+
+    const expiredLots = await this.prisma.stockLot.findMany({
+      where: {
+        target,
+        articleId: target === 'article' ? { in: ids } : undefined,
+        mpId: target === 'matiere_premiere' ? { in: ids } : undefined,
+        remainingQuantity: {
+          gt: 0,
+        },
+        expiresAt: {
+          lt: this.startOfToday(),
+        },
+      },
+      select: {
+        id: true,
+        articleId: true,
+        mpId: true,
+        remainingQuantity: true,
+      },
+    })
+
+    for (const lot of expiredLots) {
+      const itemId = target === 'article' ? lot.articleId : lot.mpId
+
+      if (!itemId) continue
+
+      result.set(
+        itemId,
+        Math.max(0, (result.get(itemId) ?? 0) - lot.remainingQuantity),
+      )
+    }
+
+    return result
+  }
+
+  private isExpired(expiresAt: Date | null) {
+    return Boolean(expiresAt && expiresAt < this.startOfToday())
+  }
+
+  private startOfToday() {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    return today
   }
 }

@@ -61,4 +61,13 @@ export class MouvementsStockController {
       request.userId,
     )
   }
+
+  @Post('lots/:id/perte')
+  @Roles(ROLES.GERANT, ROLES.STOCK)
+  markLotAsLoss(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: RequestWithUser,
+  ) {
+    return this.mouvementsStockService.markLotAsLoss(id, request.userId)
+  }
 }

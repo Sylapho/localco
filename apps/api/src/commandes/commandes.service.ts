@@ -453,18 +453,23 @@ export class CommandesService {
         },
       })
 
+      const sellableStockByArticle =
+        await this.mouvementsStockService.getSellableArticleStock(articles)
+
       const insufficientStock = commande.lignes
         .map((ligne) => {
           const article = articles.find((item) => item.id === ligne.articleId)
 
           if (!article) return null
+          const sellableStock = sellableStockByArticle.get(article.id) ?? 0
 
           return {
             articleId: article.id,
             nom: article.nom,
             stock: article.stock,
+            sellableStock,
             requested: ligne.quantite,
-            missing: Math.max(0, ligne.quantite - article.stock),
+            missing: Math.max(0, ligne.quantite - sellableStock),
           }
         })
         .filter((item) => item && item.missing > 0)
@@ -616,18 +621,23 @@ export class CommandesService {
       )
     }
 
+    const sellableStockByArticle =
+      await this.mouvementsStockService.getSellableArticleStock(articles)
+
     const insufficientStock = lignesAgregees
       .map((ligne) => {
         const article = articles.find((item) => item.id === ligne.articleId)
 
         if (!article) return null
+        const sellableStock = sellableStockByArticle.get(article.id) ?? 0
 
         return {
           articleId: article.id,
           nom: article.nom,
           stock: article.stock,
+          sellableStock,
           requested: ligne.quantite,
-          missing: Math.max(0, ligne.quantite - article.stock),
+          missing: Math.max(0, ligne.quantite - sellableStock),
         }
       })
       .filter((item) => item && item.missing > 0)

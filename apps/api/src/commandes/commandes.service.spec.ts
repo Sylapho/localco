@@ -34,6 +34,7 @@ describe('CommandesService', () => {
 
   const mouvementsStockServiceMock = {
     recordArticleMovement: jest.fn(),
+    getSellableArticleStock: jest.fn(),
   }
 
   const emailsServiceMock = {
@@ -91,6 +92,10 @@ describe('CommandesService', () => {
     mouvementsStockServiceMock.recordArticleMovement.mockResolvedValue({
       id: 1,
     })
+    mouvementsStockServiceMock.getSellableArticleStock.mockImplementation(
+      (articles: { id: number; stock: number }[]) =>
+        new Map(articles.map((article) => [article.id, article.stock])),
+    )
     emailsServiceMock.sendOrderConfirmation.mockResolvedValue(undefined)
   })
 

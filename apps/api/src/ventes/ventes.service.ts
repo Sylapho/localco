@@ -63,18 +63,28 @@ export class VentesService {
       )
     }
 
-    const insufficientStock = data.lignes
-      .map((ligne) => {
-        const article = articles.find((a) => a.id === ligne.articleId)
+    const sellableStockByArticle =
+      await this.mouvementsStockService.getSellableArticleStock(articles)
+    const requestedByArticle = data.lignes.reduce((acc, ligne) => {
+      acc.set(ligne.articleId, (acc.get(ligne.articleId) ?? 0) + ligne.quantite)
+      return acc
+    }, new Map<number, number>())
+
+    const insufficientStock = Array.from(requestedByArticle.entries())
+      .map(([articleId, quantite]) => {
+        const article = articles.find((a) => a.id === articleId)
 
         if (!article) return null
+
+        const sellableStock = sellableStockByArticle.get(article.id) ?? 0
 
         return {
           articleId: article.id,
           nom: article.nom,
           stock: article.stock,
-          requested: ligne.quantite,
-          missing: Math.max(0, ligne.quantite - article.stock),
+          sellableStock,
+          requested: quantite,
+          missing: Math.max(0, quantite - sellableStock),
         }
       })
       .filter((item) => item && item.missing > 0)

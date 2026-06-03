@@ -16,6 +16,18 @@ type SeedArticle = {
   }[]
 }
 
+type SeedMatiere = {
+  id: number
+  nom: string
+  stock: number
+  unite: string
+}
+
+type SeedCatalogue = {
+  articles: Record<string, SeedArticle>
+  matieres: Record<string, SeedMatiere>
+}
+
 type SaleLineSeed = {
   article: SeedArticle
   quantite: number
@@ -43,13 +55,14 @@ async function main() {
 
   await resetDatabase(prisma)
 
-  const articles = await seedCatalogue(prisma)
-  await seedSalesHistory(prisma, articles)
+  const catalogue = await seedCatalogue(prisma)
+  await seedStockLots(prisma, catalogue)
+  await seedSalesHistory(prisma, catalogue.articles)
 
   await prisma.$disconnect()
   await pool.end()
 
-  console.log('Seed termine avec catalogue, ventes et historique de caisse')
+  console.log('Seed terminé avec catalogue, ventes, lots DLC et historique de caisse')
 }
 
 async function resetDatabase(prisma: PrismaClient) {
@@ -58,12 +71,14 @@ async function resetDatabase(prisma: PrismaClient) {
   await prisma.vente.deleteMany()
   await prisma.ligneCommande.deleteMany()
   await prisma.commande.deleteMany()
+  await prisma.mouvementStock.deleteMany()
+  await prisma.stockLot.deleteMany()
   await prisma.nomenclature.deleteMany()
   await prisma.matierePremiere.deleteMany()
   await prisma.article.deleteMany()
 }
 
-async function seedCatalogue(prisma: PrismaClient) {
+async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const farine = await prisma.matierePremiere.create({
     data: {
       nom: 'Farine T65',
@@ -196,13 +211,95 @@ async function seedCatalogue(prisma: PrismaClient) {
   })
 
   return {
-    baguette: seededArticles.find((article) => article.id === baguette.id)!,
-    croissant: seededArticles.find((article) => article.id === croissant.id)!,
-    painChocolat: seededArticles.find(
-      (article) => article.id === painChocolat.id,
-    )!,
-    flan: seededArticles.find((article) => article.id === flan.id)!,
+    articles: {
+      baguette: seededArticles.find((article) => article.id === baguette.id)!,
+      croissant: seededArticles.find((article) => article.id === croissant.id)!,
+      painChocolat: seededArticles.find(
+        (article) => article.id === painChocolat.id,
+      )!,
+      flan: seededArticles.find((article) => article.id === flan.id)!,
+    },
+    matieres: {
+      farine,
+      beurre,
+      levure,
+      sucre,
+      lait,
+    },
   }
+}
+
+async function seedStockLots(prisma: PrismaClient, catalogue: SeedCatalogue) {
+  const { articles, matieres } = catalogue
+
+  await prisma.stockLot.createMany({
+    data: [
+      {
+        target: 'matiere_premiere',
+        mpId: matieres.lait.id,
+        initialQuantity: 5,
+        remainingQuantity: 4,
+        expiresAt: daysFromNow(-1),
+        reference: 'seed-lait-expired',
+      },
+      {
+        target: 'matiere_premiere',
+        mpId: matieres.levure.id,
+        initialQuantity: 2,
+        remainingQuantity: 1,
+        expiresAt: daysFromNow(1),
+        reference: 'seed-levure-urgent',
+      },
+      {
+        target: 'matiere_premiere',
+        mpId: matieres.beurre.id,
+        initialQuantity: 8,
+        remainingQuantity: 6,
+        expiresAt: daysFromNow(2),
+        reference: 'seed-beurre-near',
+      },
+      {
+        target: 'matiere_premiere',
+        mpId: matieres.farine.id,
+        initialQuantity: 35,
+        remainingQuantity: 35,
+        expiresAt: daysFromNow(20),
+        reference: 'seed-farine-ok',
+      },
+      {
+        target: 'article',
+        articleId: articles.flan.id,
+        initialQuantity: 4,
+        remainingQuantity: 3,
+        expiresAt: daysFromNow(-1),
+        reference: 'seed-flan-expired',
+      },
+      {
+        target: 'article',
+        articleId: articles.baguette.id,
+        initialQuantity: 25,
+        remainingQuantity: 18,
+        expiresAt: daysFromNow(1),
+        reference: 'seed-baguette-urgent',
+      },
+      {
+        target: 'article',
+        articleId: articles.croissant.id,
+        initialQuantity: 15,
+        remainingQuantity: 12,
+        expiresAt: daysFromNow(2),
+        reference: 'seed-croissant-near',
+      },
+      {
+        target: 'article',
+        articleId: articles.painChocolat.id,
+        initialQuantity: 20,
+        remainingQuantity: 20,
+        expiresAt: daysFromNow(5),
+        reference: 'seed-pain-chocolat-ok',
+      },
+    ],
+  })
 }
 
 async function seedSalesHistory(
@@ -318,6 +415,14 @@ function createSaleSeed(
     remise,
     lignes,
   }
+}
+
+function daysFromNow(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  date.setHours(12, 0, 0, 0)
+
+  return date
 }
 
 async function createVente(prisma: PrismaClient, sale: SaleSeed) {

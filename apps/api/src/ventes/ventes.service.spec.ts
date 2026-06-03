@@ -23,6 +23,7 @@ describe('VentesService', () => {
 
   const mouvementsStockServiceMock = {
     recordArticleMovement: jest.fn(),
+    getSellableArticleStock: jest.fn(),
   }
 
   type TransactionClient = {
@@ -61,6 +62,10 @@ describe('VentesService', () => {
     mouvementsStockServiceMock.recordArticleMovement.mockResolvedValue({
       id: 1,
     })
+    mouvementsStockServiceMock.getSellableArticleStock.mockImplementation(
+      (articles: { id: number; stock: number }[]) =>
+        new Map(articles.map((article) => [article.id, article.stock])),
+    )
   })
 
   it('should be defined', () => {
