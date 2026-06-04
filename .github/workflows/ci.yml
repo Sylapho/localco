@@ -81,11 +81,8 @@ jobs:
       - name: Lint API
         run: pnpm lint:api
 
-      - name: Run API unit tests
+      - name: Run API tests
         run: pnpm test:api --runInBand
-
-      - name: Run API e2e tests
-        run: pnpm test:api:e2e --runInBand
 
       - name: Build API
         run: pnpm build:api
