@@ -1,0 +1,777 @@
+import { BadRequestException, INestApplication, ValidationPipe } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { Test, TestingModule } from '@nestjs/testing'
+import express, { Request } from 'express'
+import request from 'supertest'
+import Stripe from 'stripe'
+import { EmailsService } from '../emails/emails.service'
+import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
+import { PrismaService } from '../prisma/prisma.service'
+import { CommandesController } from './commandes.controller'
+import { CommandesService } from './commandes.service'
+import { BetterAuthGuard } from '../auth/better-auth.guard'
+import { RolesGuard } from '../auth/roles.guard'
+
+const mockStripeCheckoutSessionsCreate = jest.fn()
+const mockStripeConstructEvent = jest.fn()
+
+jest.mock('stripe', () => {
+    return jest.fn().mockImplementation(() => ({
+        checkout: {
+            sessions: {
+                create: mockStripeCheckoutSessionsCreate,
+            },
+        },
+        webhooks: {
+            constructEvent: mockStripeConstructEvent,
+        },
+    }))
+})
+
+type ArticleMock = {
+    id: number
+    nom: string
+    prix: number
+    stock: number
+    online?: boolean
+    imageUrl?: string | null
+}
+
+type TransactionClient = {
+    article: {
+        findMany: jest.Mock
+        update: jest.Mock
+    }
+    commande: {
+        findMany: jest.Mock
+        findFirst: jest.Mock
+        findUniqueOrThrow: jest.Mock
+        create: jest.Mock
+        update: jest.Mock
+        updateMany: jest.Mock
+    }
+    commandeStatutHistorique: {
+        create: jest.Mock
+    }
+    mouvementStock: {
+        findFirst: jest.Mock
+        create: jest.Mock
+    }
+}
+
+type TransactionCallback<T> = (tx: TransactionClient) => Promise<T>
+
+describe('Commandes integration', () => {
+    let app: INestApplication
+
+    const prismaMock = {
+        article: {
+            findMany: jest.fn(),
+            update: jest.fn(),
+        },
+        commande: {
+            findMany: jest.fn(),
+            findFirst: jest.fn(),
+            findUniqueOrThrow: jest.fn(),
+            create: jest.fn(),
+            update: jest.fn(),
+            updateMany: jest.fn(),
+        },
+        commandeStatutHistorique: {
+            create: jest.fn(),
+        },
+        mouvementStock: {
+            findFirst: jest.fn(),
+            create: jest.fn(),
+        },
+        stripeWebhookEvent: {
+            create: jest.fn(),
+        },
+        $transaction: jest.fn(),
+    }
+
+    const transactionClient: TransactionClient = {
+        article: prismaMock.article,
+        commande: prismaMock.commande,
+        commandeStatutHistorique: prismaMock.commandeStatutHistorique,
+        mouvementStock: prismaMock.mouvementStock,
+    }
+
+    const mouvementsStockServiceMock = {
+        recordArticleMovement: jest.fn(),
+        getSellableArticleStock: jest.fn(),
+    }
+
+    const configServiceMock = {
+        get: jest.fn(),
+    }
+
+    const emailsServiceMock = {
+        sendOrderConfirmation: jest.fn(),
+    }
+
+    const validPickupPoint = 'Marché de Gaillon - Mardi matin, 8h-12h'
+    const validPickupDate = getNextDateForWeekday(2)
+
+    beforeEach(async () => {
+        const moduleBuilder = Test.createTestingModule({
+            controllers: [CommandesController],
+            providers: [
+                CommandesService,
+                {
+                    provide: PrismaService,
+                    useValue: prismaMock,
+                },
+                {
+                    provide: MouvementsStockService,
+                    useValue: mouvementsStockServiceMock,
+                },
+                {
+                    provide: ConfigService,
+                    useValue: configServiceMock,
+                },
+                {
+                    provide: EmailsService,
+                    useValue: emailsServiceMock,
+                },
+            ],
+        })
+
+        const moduleFixture: TestingModule = await moduleBuilder
+            .overrideGuard(BetterAuthGuard)
+            .useValue({
+                canActivate: jest.fn(() => true),
+            })
+            .overrideGuard(RolesGuard)
+            .useValue({
+                canActivate: jest.fn(() => true),
+            })
+            .compile()
+
+        app = moduleFixture.createNestApplication()
+
+        app.use(
+            express.json({
+                verify: (req, _res, buffer) => {
+                    ; (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer)
+                },
+            }),
+        )
+
+        app.useGlobalPipes(
+            new ValidationPipe({
+                whitelist: true,
+                forbidNonWhitelisted: true,
+                transform: true,
+            }),
+        )
+
+        app.setGlobalPrefix('api')
+
+        await app.init()
+
+        jest.clearAllMocks()
+
+        prismaMock.$transaction.mockImplementation(
+            async <T>(callback: TransactionCallback<T>) => callback(transactionClient),
+        )
+
+        prismaMock.commande.findMany.mockResolvedValue([])
+        prismaMock.commandeStatutHistorique.create.mockResolvedValue({ id: 1 })
+        prismaMock.mouvementStock.findFirst.mockResolvedValue(null)
+        prismaMock.mouvementStock.create.mockResolvedValue({ id: 1 })
+        prismaMock.stripeWebhookEvent.create.mockResolvedValue({ id: 1 })
+
+        mouvementsStockServiceMock.recordArticleMovement.mockResolvedValue({
+            id: 1,
+        })
+
+        mouvementsStockServiceMock.getSellableArticleStock.mockResolvedValue(
+            new Map(),
+        )
+
+        configServiceMock.get.mockImplementation((key: string) => {
+            const values: Record<string, string> = {
+                DATABASE_URL: 'postgresql://localco:localco@localhost:5432/localco_test',
+                STRIPE_SECRET_KEY: 'sk_test_localco',
+                STRIPE_WEBHOOK_SECRET: 'whsec_test_localco',
+                SHOP_PUBLIC_URL: 'http://localhost:3000',
+            }
+
+            return values[key]
+        })
+
+        mockStripeCheckoutSessionsCreate.mockResolvedValue({
+            id: 'cs_test_123',
+            url: 'https://checkout.stripe.com/pay/cs_test_123',
+        })
+
+        mockStripeConstructEvent.mockReturnValue({
+            id: 'evt_unhandled',
+            type: 'unhandled.event',
+            data: {
+                object: {
+                    id: 'evt_unused',
+                },
+            },
+        })
+
+        emailsServiceMock.sendOrderConfirmation.mockResolvedValue(undefined)
+    })
+
+    afterEach(async () => {
+        if (app) {
+            await app.close()
+        }
+    })
+
+    it('POST /api/commandes should create a direct order and allow negative stock', async () => {
+        const articles: ArticleMock[] = [
+            {
+                id: 1,
+                nom: 'Baguette',
+                prix: 2,
+                stock: 3,
+            },
+        ]
+
+        const createdCommande = {
+            id: 101,
+            statut: 'nouvelle',
+            totalTTC: 10,
+            lignes: [],
+        }
+
+        prismaMock.article.findMany.mockResolvedValue(articles)
+        prismaMock.commande.create.mockResolvedValue(createdCommande)
+
+        const response = await request(app.getHttpServer())
+            .post('/api/commandes')
+            .send({
+                nom: 'Marie Dupont',
+                email: 'marie@example.fr',
+                tel: '0612345678',
+                lieu: validPickupPoint,
+                dateRetrait: validPickupDate,
+                lignes: [{ articleId: 1, quantite: 5 }],
+            })
+            .expect(201)
+
+        expect(response.body).toEqual(createdCommande)
+
+        expect(prismaMock.article.findMany).toHaveBeenCalledWith({
+            where: {
+                id: {
+                    in: [1],
+                },
+                online: true,
+            },
+        })
+
+        expect(prismaMock.commande.create).toHaveBeenCalledWith({
+            data: {
+                nom: 'Marie Dupont',
+                email: 'marie@example.fr',
+                tel: '0612345678',
+                lieu: validPickupPoint,
+                dateRetrait: new Date(validPickupDate),
+                totalTTC: 10,
+                statut: 'nouvelle',
+                lignes: {
+                    create: [
+                        {
+                            articleId: 1,
+                            quantite: 5,
+                            prixUnit: 2,
+                        },
+                    ],
+                },
+            },
+            include: {
+                lignes: {
+                    include: {
+                        article: true,
+                    },
+                },
+            },
+        })
+
+        expect(prismaMock.article.update).toHaveBeenCalledWith({
+            where: { id: 1 },
+            data: {
+                stock: {
+                    decrement: 5,
+                },
+            },
+        })
+
+        expect(
+            mouvementsStockServiceMock.recordArticleMovement,
+        ).toHaveBeenCalledWith(transactionClient, {
+            articleId: 1,
+            quantite: -5,
+            stockAvant: 3,
+            stockApres: -2,
+            type: 'commande',
+            motif: 'Commande en ligne #101',
+            reference: 'commande:101',
+        })
+    })
+
+    it('POST /api/commandes should reject invalid DTO payload before service writes anything', async () => {
+        const response = await request(app.getHttpServer())
+            .post('/api/commandes')
+            .send({
+                nom: 'Marie Dupont',
+                email: 'not-an-email',
+                lieu: validPickupPoint,
+                dateRetrait: validPickupDate,
+                lignes: [{ articleId: 1, quantite: 0 }],
+                unexpectedField: true,
+            })
+            .expect(400)
+
+        expect(response.body.statusCode).toBe(400)
+        expect(prismaMock.article.findMany).not.toHaveBeenCalled()
+        expect(prismaMock.commande.create).not.toHaveBeenCalled()
+        expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    })
+
+    it('POST /api/commandes should reject an invalid pickup slot before querying articles', async () => {
+        await request(app.getHttpServer())
+            .post('/api/commandes')
+            .send({
+                nom: 'Marie Dupont',
+                email: 'marie@example.fr',
+                tel: '0612345678',
+                lieu: 'Marché de Gaillon - Mardi matin, 8h-12h',
+                dateRetrait: getNextDateForWeekday(3),
+                lignes: [{ articleId: 1, quantite: 1 }],
+            })
+            .expect(400)
+
+        expect(prismaMock.article.findMany).not.toHaveBeenCalled()
+        expect(prismaMock.commande.create).not.toHaveBeenCalled()
+        expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    })
+
+    it('POST /api/commandes should reject unavailable or offline articles', async () => {
+        prismaMock.article.findMany.mockResolvedValue([])
+
+        await request(app.getHttpServer())
+            .post('/api/commandes')
+            .send({
+                nom: 'Marie Dupont',
+                email: 'marie@example.fr',
+                tel: '0612345678',
+                lieu: validPickupPoint,
+                dateRetrait: validPickupDate,
+                lignes: [{ articleId: 1, quantite: 1 }],
+            })
+            .expect(400)
+
+        expect(prismaMock.article.findMany).toHaveBeenCalledWith({
+            where: {
+                id: {
+                    in: [1],
+                },
+                online: true,
+            },
+        })
+
+        expect(prismaMock.commande.create).not.toHaveBeenCalled()
+        expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    })
+
+    it('POST /api/commandes/checkout should create pending order, reserve stock, and return Stripe checkout URL', async () => {
+        const articles: ArticleMock[] = [
+            {
+                id: 1,
+                nom: 'Baguette',
+                prix: 2.5,
+                stock: 3,
+                imageUrl: 'https://example.com/baguette.jpg',
+            },
+        ]
+
+        const pendingCommande = {
+            id: 202,
+            statut: 'paiement_en_attente',
+            totalTTC: 12.5,
+            lignes: [],
+        }
+
+        prismaMock.article.findMany.mockResolvedValue(articles)
+        prismaMock.commande.create.mockResolvedValue(pendingCommande)
+        prismaMock.commande.update.mockResolvedValue({
+            ...pendingCommande,
+            stripeId: 'cs_test_123',
+        })
+
+        const response = await request(app.getHttpServer())
+            .post('/api/commandes/checkout')
+            .send({
+                nom: 'Marie Dupont',
+                email: 'marie@example.fr',
+                tel: '0612345678',
+                lieu: validPickupPoint,
+                dateRetrait: validPickupDate,
+                lignes: [{ articleId: 1, quantite: 5 }],
+            })
+            .expect(201)
+
+        expect(response.body).toEqual({
+            url: 'https://checkout.stripe.com/pay/cs_test_123',
+        })
+
+        expect(Stripe).toHaveBeenCalledWith('sk_test_localco')
+
+        expect(prismaMock.commande.create).toHaveBeenCalledWith({
+            data: {
+                nom: 'Marie Dupont',
+                email: 'marie@example.fr',
+                tel: '0612345678',
+                lieu: validPickupPoint,
+                dateRetrait: new Date(validPickupDate),
+                totalTTC: 12.5,
+                statut: 'paiement_en_attente',
+                lignes: {
+                    create: [
+                        {
+                            articleId: 1,
+                            quantite: 5,
+                            prixUnit: 2.5,
+                        },
+                    ],
+                },
+            },
+        })
+
+        expect(prismaMock.article.update).toHaveBeenCalledWith({
+            where: { id: 1 },
+            data: {
+                stock: {
+                    decrement: 5,
+                },
+            },
+        })
+
+        expect(
+            mouvementsStockServiceMock.recordArticleMovement,
+        ).toHaveBeenCalledWith(transactionClient, {
+            articleId: 1,
+            quantite: -5,
+            stockAvant: 3,
+            stockApres: -2,
+            type: 'commande',
+            motif: 'Réservation checkout #202',
+            reference: 'commande:202:reservation',
+        })
+
+        expect(mockStripeCheckoutSessionsCreate).toHaveBeenCalledWith(
+            {
+                mode: 'payment',
+                customer_email: 'marie@example.fr',
+                client_reference_id: '202',
+                line_items: [
+                    {
+                        quantity: 5,
+                        price_data: {
+                            currency: 'eur',
+                            unit_amount: 250,
+                            product_data: {
+                                name: 'Baguette',
+                                images: ['https://example.com/baguette.jpg'],
+                            },
+                        },
+                    },
+                ],
+                metadata: {
+                    commandeId: '202',
+                },
+                success_url:
+                    'http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url: 'http://localhost:3000/cancel',
+            },
+            {
+                idempotencyKey: 'commande:202:checkout',
+            },
+        )
+
+        expect(prismaMock.commande.update).toHaveBeenCalledWith({
+            where: { id: 202 },
+            data: { stripeId: 'cs_test_123' },
+        })
+    })
+
+    it('POST /api/commandes/checkout should reject when STRIPE_SECRET_KEY is missing', async () => {
+        configServiceMock.get.mockImplementation((key: string) => {
+            if (key === 'STRIPE_SECRET_KEY') return undefined
+            if (key === 'SHOP_PUBLIC_URL') return 'http://localhost:3000'
+            return undefined
+        })
+
+        await request(app.getHttpServer())
+            .post('/api/commandes/checkout')
+            .send({
+                nom: 'Marie Dupont',
+                email: 'marie@example.fr',
+                tel: '0612345678',
+                lieu: validPickupPoint,
+                dateRetrait: validPickupDate,
+                lignes: [{ articleId: 1, quantite: 1 }],
+            })
+            .expect(400)
+
+        expect(prismaMock.article.findMany).not.toHaveBeenCalled()
+        expect(prismaMock.commande.create).not.toHaveBeenCalled()
+        expect(mockStripeCheckoutSessionsCreate).not.toHaveBeenCalled()
+    })
+
+    it('POST /api/commandes/stripe/webhook should reject missing Stripe signature', async () => {
+        await request(app.getHttpServer())
+            .post('/api/commandes/stripe/webhook')
+            .send({})
+            .expect(400)
+
+        expect(mockStripeConstructEvent).not.toHaveBeenCalled()
+        expect(prismaMock.stripeWebhookEvent.create).not.toHaveBeenCalled()
+    })
+
+    it('POST /api/commandes/stripe/webhook should ignore duplicate Stripe events', async () => {
+        mockStripeConstructEvent.mockReturnValue({
+            id: 'evt_duplicate',
+            type: 'checkout.session.completed',
+            data: {
+                object: {
+                    id: 'cs_paid',
+                },
+            },
+        })
+
+        prismaMock.stripeWebhookEvent.create.mockRejectedValueOnce({
+            code: 'P2002',
+        })
+
+        const response = await request(app.getHttpServer())
+            .post('/api/commandes/stripe/webhook')
+            .set('stripe-signature', 'stripe-signature')
+            .send({})
+            .expect(201)
+
+        expect(response.body).toEqual({
+            received: true,
+            duplicate: true,
+        })
+
+        expect(prismaMock.commande.findFirst).not.toHaveBeenCalled()
+        expect(prismaMock.commande.update).not.toHaveBeenCalled()
+        expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
+    })
+
+    it('POST /api/commandes/stripe/webhook should confirm paid order without decrementing stock again', async () => {
+        const commande = {
+            id: 303,
+            statut: 'paiement_en_attente',
+            stripeId: 'cs_paid',
+            lignes: [
+                {
+                    articleId: 1,
+                    quantite: 5,
+                    article: {
+                        stock: -2,
+                    },
+                },
+            ],
+        }
+
+        const updatedCommande = {
+            ...commande,
+            statut: 'nouvelle',
+        }
+
+        mockStripeConstructEvent.mockReturnValue({
+            id: 'evt_paid',
+            type: 'checkout.session.completed',
+            data: {
+                object: {
+                    id: 'cs_paid',
+                },
+            },
+        })
+
+        prismaMock.commande.findFirst.mockResolvedValue(commande)
+        prismaMock.commande.update.mockResolvedValue(updatedCommande)
+
+        const response = await request(app.getHttpServer())
+            .post('/api/commandes/stripe/webhook')
+            .set('stripe-signature', 'stripe-signature')
+            .send({})
+            .expect(201)
+
+        expect(response.body).toEqual({
+            received: true,
+        })
+
+        expect(prismaMock.stripeWebhookEvent.create).toHaveBeenCalledWith({
+            data: {
+                eventId: 'evt_paid',
+                type: 'checkout.session.completed',
+            },
+        })
+
+        expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
+            where: { stripeId: 'cs_paid' },
+            include: {
+                lignes: {
+                    include: {
+                        article: true,
+                    },
+                },
+            },
+        })
+
+        expect(prismaMock.article.update).not.toHaveBeenCalled()
+        expect(
+            mouvementsStockServiceMock.recordArticleMovement,
+        ).not.toHaveBeenCalled()
+
+        expect(prismaMock.commande.update).toHaveBeenCalledWith({
+            where: { id: 303 },
+            data: { statut: 'nouvelle' },
+            include: {
+                lignes: {
+                    include: {
+                        article: true,
+                    },
+                },
+            },
+        })
+
+        expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({
+            data: {
+                commandeId: 303,
+                ancienStatut: 'paiement_en_attente',
+                nouveauStatut: 'nouvelle',
+                motif: 'paiement_confirme',
+            },
+        })
+
+        expect(emailsServiceMock.sendOrderConfirmation).toHaveBeenCalledWith(
+            updatedCommande,
+        )
+    })
+
+    it('POST /api/commandes/stripe/webhook should expire pending checkout and release reserved stock', async () => {
+        const pendingCommande = {
+            id: 404,
+            statut: 'paiement_en_attente',
+            lignes: [
+                {
+                    articleId: 1,
+                    quantite: 5,
+                    article: {
+                        stock: -2,
+                    },
+                },
+            ],
+        }
+
+        mockStripeConstructEvent.mockReturnValue({
+            id: 'evt_expired',
+            type: 'checkout.session.expired',
+            data: {
+                object: {
+                    id: 'cs_expired',
+                },
+            },
+        })
+
+        prismaMock.commande.findMany.mockResolvedValue([pendingCommande])
+        prismaMock.mouvementStock.findFirst
+            .mockResolvedValueOnce({ id: 1 })
+            .mockResolvedValueOnce(null)
+        prismaMock.article.update.mockResolvedValue({
+            id: 1,
+            stock: 3,
+        })
+
+        const response = await request(app.getHttpServer())
+            .post('/api/commandes/stripe/webhook')
+            .set('stripe-signature', 'stripe-signature')
+            .send({})
+            .expect(201)
+
+        expect(response.body).toEqual({
+            received: true,
+        })
+
+        expect(prismaMock.commande.findMany).toHaveBeenCalledWith({
+            where: {
+                stripeId: 'cs_expired',
+                statut: 'paiement_en_attente',
+            },
+            include: {
+                lignes: {
+                    include: {
+                        article: true,
+                    },
+                },
+            },
+        })
+
+        expect(prismaMock.article.update).toHaveBeenCalledWith({
+            where: { id: 1 },
+            data: {
+                stock: {
+                    increment: 5,
+                },
+            },
+        })
+
+        expect(
+            mouvementsStockServiceMock.recordArticleMovement,
+        ).toHaveBeenCalledWith(transactionClient, {
+            articleId: 1,
+            quantite: 5,
+            stockAvant: -2,
+            stockApres: 3,
+            type: 'commande',
+            motif: 'Libération réservation commande #404',
+            reference: 'commande:404:reservation:release',
+        })
+
+        expect(prismaMock.commande.update).toHaveBeenCalledWith({
+            where: { id: 404 },
+            data: { statut: 'annulee' },
+        })
+
+        expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({
+            data: {
+                commandeId: 404,
+                ancienStatut: 'paiement_en_attente',
+                nouveauStatut: 'annulee',
+                motif: 'checkout_expire',
+            },
+        })
+    })
+})
+
+function getNextDateForWeekday(targetWeekday: number) {
+    const date = new Date()
+    date.setHours(0, 0, 0, 0)
+
+    do {
+        date.setDate(date.getDate() + 1)
+    } while (date.getDay() !== targetWeekday)
+
+    return formatDateInput(date)
+}
+
+function formatDateInput(date: Date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
