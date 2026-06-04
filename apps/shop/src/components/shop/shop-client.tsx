@@ -10,7 +10,6 @@ import {
   type Cart,
 } from '@/lib/cart'
 import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
-import ArticleImage from './article-image'
 import ProductInfoPopover from './product-info-popover'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -20,38 +19,72 @@ type ShopClientProps = {
   articles: ShopArticle[]
 }
 
-type Category = 'Tous' | 'Plats' | 'Desserts' | 'Offres du moment'
+type ProductCategory =
+  | 'Bocaux'
+  | 'Découpes'
+  | 'Préparations'
+  | 'Brochettes'
+  | 'Œufs'
+  | 'Packs'
 
-const categories: Category[] = ['Tous', 'Plats', 'Desserts', 'Offres du moment']
+type CategoryFilter = 'Toutes' | ProductCategory
 
-function getArticleCategory(article: ShopArticle): Exclude<Category, 'Tous'> {
+const productCategories: ProductCategory[] = [
+  'Bocaux',
+  'Découpes',
+  'Préparations',
+  'Brochettes',
+  'Œufs',
+  'Packs',
+]
+
+const categories: CategoryFilter[] = ['Toutes', ...productCategories]
+
+function getArticleCategory(article: ShopArticle): ProductCategory {
   const text = `${article.nom} ${article.description ?? ''}`.toLowerCase()
 
+  if (text.includes('pack')) {
+    return 'Packs'
+  }
+
+  if (text.includes('œuf') || text.includes('oeuf')) {
+    return 'Œufs'
+  }
+
   if (
-    text.includes('dessert') ||
-    text.includes('tarte') ||
-    text.includes('gâteau') ||
-    text.includes('gateau') ||
-    text.includes('cookie') ||
-    text.includes('chocolat') ||
-    text.includes('sucré') ||
-    text.includes('sucre')
+    text.includes('terrine') ||
+    text.includes('rillettes') ||
+    text.includes('mousse') ||
+    text.includes('gésiers') ||
+    text.includes('gesiers')
   ) {
-    return 'Desserts'
+    return 'Bocaux'
   }
 
-  if (article.stock > 0 && article.stock <= 4) {
-    return 'Offres du moment'
+  if (text.includes('brochette')) {
+    return 'Brochettes'
   }
 
-  return 'Plats'
+  if (
+    text.includes('saucisse') ||
+    text.includes('merguez') ||
+    text.includes('paupiette') ||
+    text.includes('ballotine') ||
+    text.includes('cordon bleu') ||
+    text.includes('chicken') ||
+    text.includes('milanaise')
+  ) {
+    return 'Préparations'
+  }
+
+  return 'Découpes'
 }
 
 function getAvailabilityLabel(stock: number) {
   if (stock <= 0) return 'Épuisé aujourd’hui'
   if (stock <= 3) return `Plus que ${stock} disponible${stock > 1 ? 's' : ''}`
 
-  return 'Disponible au retrait'
+  return null
 }
 
 export default function ShopClient({ articles }: ShopClientProps) {
@@ -59,7 +92,7 @@ export default function ShopClient({ articles }: ShopClientProps) {
   const [cartReady, setCartReady] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState<Category>('Tous')
+  const [category, setCategory] = useState<CategoryFilter>('Toutes')
   const [onlyAvailable, setOnlyAvailable] = useState(false)
 
   useEffect(() => {
@@ -85,18 +118,27 @@ export default function ShopClient({ articles }: ShopClientProps) {
     const searchValue = search.trim().toLowerCase()
 
     const matchesSearch = searchValue
-      ? `${article.nom} ${article.description ?? ''}`
+      ? `${article.nom} ${article.description ?? ''} ${article.ingredients ?? ''} ${article.allergenes ?? ''}`
           .toLowerCase()
           .includes(searchValue)
       : true
 
     const matchesCategory =
-      category === 'Tous' ? true : getArticleCategory(article) === category
+      category === 'Toutes' ? true : getArticleCategory(article) === category
 
     const matchesAvailability = onlyAvailable ? article.stock > 0 : true
 
     return matchesSearch && matchesCategory && matchesAvailability
   })
+
+  const groupedArticles = productCategories
+    .map((item) => ({
+      category: item,
+      articles: filteredArticles.filter(
+        (article) => getArticleCategory(article) === item,
+      ),
+    }))
+    .filter((group) => group.articles.length > 0)
 
   function updateCart(article: ShopArticle, delta: number) {
     setCart((current) => {
@@ -256,7 +298,7 @@ export default function ShopClient({ articles }: ShopClientProps) {
               id="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Rechercher une tarte, un plat, un dessert..."
+              placeholder="Rechercher un produit, un ingrédient, un allergène..."
               className="min-h-11 flex-1 rounded-full border border-[#e8e1e4] bg-white px-4 text-sm shadow-sm"
             />
 
@@ -269,7 +311,7 @@ export default function ShopClient({ articles }: ShopClientProps) {
                   : 'border-[#e8e1e4] bg-white text-[#4a3d43]'
               }`}
             >
-              Disponible aujourd’hui
+              En stock uniquement
             </button>
           </div>
         </div>
@@ -296,83 +338,36 @@ export default function ShopClient({ articles }: ShopClientProps) {
         ) : filteredArticles.length === 0 ? (
           <EmptyState message="Aucun produit ne correspond à cette recherche." />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredArticles.map((article) => {
-              const quantity = cart[article.id] ?? 0
-              const disabled = article.stock <= 0
+          <div className="grid gap-5">
+            {groupedArticles.map((group) => (
+              <section
+                key={group.category}
+                className="overflow-hidden rounded-[1.5rem] border border-[#eee2e7] bg-white shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-[#eee2e7] bg-[#fffafb] px-4 py-3">
+                  <h3 className="text-lg font-black text-[#181014]">
+                    {group.category}
+                  </h3>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#7a6d73]">
+                    {group.articles.length} produit
+                    {group.articles.length > 1 ? 's' : ''}
+                  </span>
+                </div>
 
-              return (
-                <article
-                  key={article.id}
-                  className="group overflow-hidden rounded-[1.35rem] border border-[#eee2e7] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <ArticleImage article={article} />
-
-                  <div className="grid gap-4 p-4">
-                    <div>
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-lg font-black text-[#181014]">
-                          {article.nom}
-                        </h3>
-
-                        <span className="rounded-full bg-[#fff4d6] px-2.5 py-1 text-xs font-bold text-[#7c5c13]">
-                          {getArticleCategory(article)}
-                        </span>
-                      </div>
-
-                      {article.description ? (
-                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#7a6d73]">
-                          {article.description}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <ProductInfoPopover
-                      ingredients={article.ingredients}
-                      allergenes={article.allergenes}
+                <div className="divide-y divide-[#eee2e7]">
+                  {group.articles.map((article) => (
+                    <ProductRow
+                      key={article.id}
+                      article={article}
+                      quantity={cart[article.id] ?? 0}
+                      availabilityLabel={getAvailabilityLabel(article.stock)}
+                      onDecrease={() => updateCart(article, -1)}
+                      onIncrease={() => updateCart(article, 1)}
                     />
-
-                    <div className="flex items-end justify-between gap-3">
-                      <div>
-                        <p className="text-xl font-black text-[#b5006e]">
-                          {formatCurrency(article.prix)}
-                        </p>
-
-                        <p
-                          className={`text-xs font-semibold ${
-                            article.stock <= 0
-                              ? 'text-red-600'
-                              : article.stock <= 3
-                                ? 'text-amber-700'
-                                : 'text-green-700'
-                          }`}
-                        >
-                          {getAvailabilityLabel(article.stock)}
-                        </p>
-                      </div>
-
-                      {quantity === 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => updateCart(article, 1)}
-                          disabled={disabled}
-                          className="rounded-full bg-[#b5006e] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#8c0055] disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          Ajouter
-                        </button>
-                      ) : (
-                        <QuantityStepper
-                          quantity={quantity}
-                          max={article.stock}
-                          onDecrease={() => updateCart(article, -1)}
-                          onIncrease={() => updateCart(article, 1)}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </section>
@@ -451,6 +446,111 @@ function Header({
         </button>
       </div>
     </header>
+  )
+}
+
+function ProductRow({
+  article,
+  quantity,
+  availabilityLabel,
+  onDecrease,
+  onIncrease,
+}: {
+  article: ShopArticle
+  quantity: number
+  availabilityLabel: string | null
+  onDecrease: () => void
+  onIncrease: () => void
+}) {
+  const disabled = article.stock <= 0
+
+  return (
+    <article className="grid grid-cols-[4.5rem_1fr] gap-3 p-3 sm:grid-cols-[4.5rem_1fr_auto] sm:items-center sm:p-4">
+      <ProductThumbnail article={article} />
+
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h4 className="text-base font-black text-[#181014]">{article.nom}</h4>
+
+          {article.allergenes ? (
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-600">
+              Allergènes
+            </span>
+          ) : null}
+        </div>
+
+        {article.description ? (
+          <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#7a6d73]">
+            {article.description}
+          </p>
+        ) : null}
+
+        <div className="mt-2 max-w-2xl">
+          <ProductInfoPopover
+            ingredients={article.ingredients}
+            allergenes={article.allergenes}
+          />
+        </div>
+      </div>
+
+      <div className="col-span-2 flex items-end justify-between gap-3 sm:col-span-1 sm:flex-col sm:items-end">
+        <div className="sm:text-right">
+          <p className="text-lg font-black text-[#b5006e]">
+            {formatCurrency(article.prix)}
+          </p>
+
+          {availabilityLabel ? (
+            <p
+              className={`text-xs font-semibold ${
+                article.stock <= 0 ? 'text-red-600' : 'text-amber-700'
+              }`}
+            >
+              {availabilityLabel}
+            </p>
+          ) : null}
+        </div>
+
+        {quantity === 0 ? (
+          <button
+            type="button"
+            onClick={onIncrease}
+            disabled={disabled}
+            className="rounded-full bg-[#b5006e] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#8c0055] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Ajouter
+          </button>
+        ) : (
+          <QuantityStepper
+            quantity={quantity}
+            max={article.stock}
+            onDecrease={onDecrease}
+            onIncrease={onIncrease}
+          />
+        )}
+      </div>
+    </article>
+  )
+}
+
+function ProductThumbnail({ article }: { article: ShopArticle }) {
+  if (article.imageUrl) {
+    return (
+      <div className="relative h-[4.5rem] w-[4.5rem] overflow-hidden rounded-2xl bg-[#fceef6]">
+        <Image
+          src={article.imageUrl}
+          alt={article.nom}
+          fill
+          sizes="72px"
+          className="object-cover"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid h-[4.5rem] w-[4.5rem] place-items-center rounded-2xl bg-[#fceef6] text-lg font-black uppercase text-[#b5006e]">
+      {article.nom.slice(0, 2)}
+    </div>
   )
 }
 
