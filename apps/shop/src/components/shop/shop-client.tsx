@@ -13,7 +13,7 @@ import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
 import ProductInfoPopover from './product-info-popover'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useMemo, useState, FormEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type ShopClientProps = {
   articles: ShopArticle[]
