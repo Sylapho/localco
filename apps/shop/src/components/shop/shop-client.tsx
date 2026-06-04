@@ -13,7 +13,7 @@ import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
 import ProductInfoPopover from './product-info-popover'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, FormEvent } from 'react'
 
 type ShopClientProps = {
   articles: ShopArticle[]
@@ -94,6 +94,9 @@ export default function ShopClient({ articles }: ShopClientProps) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<CategoryFilter>('Toutes')
   const [onlyAvailable, setOnlyAvailable] = useState(false)
+  const [openCategories, setOpenCategories] = useState<
+    Partial<Record<ProductCategory, boolean>>
+  >({})
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -139,6 +142,19 @@ export default function ShopClient({ articles }: ShopClientProps) {
       ),
     }))
     .filter((group) => group.articles.length > 0)
+
+  function isCategoryOpen(categoryName: ProductCategory, index: number) {
+    return openCategories[categoryName] ?? index === 0
+  }
+
+  function toggleCategory(categoryName: ProductCategory, index: number) {
+    const currentlyOpen = isCategoryOpen(categoryName, index)
+
+    setOpenCategories((currentCategories) => ({
+      ...currentCategories,
+      [categoryName]: !currentlyOpen,
+    }))
+  }
 
   function updateCart(article: ShopArticle, delta: number) {
     setCart((current) => {
@@ -339,35 +355,57 @@ export default function ShopClient({ articles }: ShopClientProps) {
           <EmptyState message="Aucun produit ne correspond à cette recherche." />
         ) : (
           <div className="grid gap-5">
-            {groupedArticles.map((group) => (
-              <section
-                key={group.category}
-                className="overflow-hidden rounded-[1.5rem] border border-[#eee2e7] bg-white shadow-sm"
-              >
-                <div className="flex items-center justify-between gap-3 border-b border-[#eee2e7] bg-[#fffafb] px-4 py-3">
-                  <h3 className="text-lg font-black text-[#181014]">
-                    {group.category}
-                  </h3>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#7a6d73]">
-                    {group.articles.length} produit
-                    {group.articles.length > 1 ? 's' : ''}
-                  </span>
-                </div>
+            {groupedArticles.map((group, index) => {
+              const isOpen = isCategoryOpen(group.category, index)
 
-                <div className="divide-y divide-[#eee2e7]">
-                  {group.articles.map((article) => (
-                    <ProductRow
-                      key={article.id}
-                      article={article}
-                      quantity={cart[article.id] ?? 0}
-                      availabilityLabel={getAvailabilityLabel(article.stock)}
-                      onDecrease={() => updateCart(article, -1)}
-                      onIncrease={() => updateCart(article, 1)}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
+              return (
+                <section
+                  key={group.category}
+                  className="overflow-hidden rounded-[1.5rem] border border-[#eee2e7] bg-white shadow-sm"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(group.category, index)}
+                    className="flex w-full items-center justify-between gap-3 border-b border-[#eee2e7] bg-[#fffafb] px-4 py-3 text-left transition hover:bg-[#fceef6]"
+                    aria-expanded={isOpen}
+                  >
+                    <div>
+                      <h3 className="text-lg font-black text-[#181014]">
+                        {group.category}
+                      </h3>
+                      <p className="mt-0.5 text-xs font-semibold text-[#7a6d73]">
+                        {group.articles.length} produit
+                        {group.articles.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-lg font-black text-[#5a0037] transition ${
+                        isOpen ? 'rotate-180' : ''
+                      }`}
+                      aria-hidden="true"
+                    >
+                      ⌄
+                    </span>
+                  </button>
+
+                  {isOpen ? (
+                    <div className="divide-y divide-[#eee2e7]">
+                      {group.articles.map((article) => (
+                        <ProductRow
+                          key={article.id}
+                          article={article}
+                          quantity={cart[article.id] ?? 0}
+                          availabilityLabel={getAvailabilityLabel(article.stock)}
+                          onDecrease={() => updateCart(article, -1)}
+                          onIncrease={() => updateCart(article, 1)}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </section>
+              )
+            })}
           </div>
         )}
       </section>
