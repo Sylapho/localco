@@ -2,7 +2,7 @@
 
 import type { CreateCommandePayload, ShopArticle } from '@/lib/api'
 import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
-import ArticleImage from './article-image'
+import ArticleImage from '../article-image'
 import Image from 'next/image'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 
@@ -36,7 +36,7 @@ function normalizeSearch(value: string) {
     .trim()
 }
 
-export default function ShopClient({ articles, apiUrl }: ShopClientProps) {
+export default function ShopClientClassic({ articles, apiUrl }: ShopClientProps) {
   const [cart, setCart] = useState<Cart>({})
   const [panelOpen, setPanelOpen] = useState(false)
   const [nom, setNom] = useState('')
@@ -177,31 +177,31 @@ export default function ShopClient({ articles, apiUrl }: ShopClientProps) {
         onCartClick={() => setPanelOpen(true)}
       />
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch lg:px-6 lg:py-12">
-        <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
-          <div className="grid min-h-full gap-8 p-6 sm:p-8 lg:p-10">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:gap-6 sm:py-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch lg:px-6 lg:py-12">
+        <div className="overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm sm:rounded-[2rem]">
+          <div className="grid min-h-full gap-6 p-5 sm:gap-8 sm:p-8 lg:p-10">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <Image
                 src="/logo.svg"
                 alt="Les Cocottes de Diane"
                 width={116}
                 height={116}
                 priority
-                className="h-24 w-24 rounded-full border border-stone-200 bg-white object-contain p-2 shadow-sm sm:h-28 sm:w-28"
+                className="h-20 w-20 rounded-full border border-stone-200 bg-white object-contain p-2 shadow-sm sm:h-28 sm:w-28"
               />
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-800">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-800 sm:tracking-[0.28em]">
                   Boutique en ligne
                 </p>
 
-                <h1 className="font-display mt-4 max-w-2xl text-5xl font-semibold leading-none tracking-tight text-stone-950 sm:text-6xl">
+                <h1 className="font-display mt-3 max-w-2xl text-4xl font-semibold leading-none tracking-tight text-stone-950 sm:mt-4 sm:text-6xl">
                   Les Cocottes de Diane
                 </h1>
 
-                <p className="mt-5 max-w-xl text-sm leading-7 text-stone-600 sm:text-base">
+                <p className="mt-4 max-w-xl text-sm leading-7 text-stone-600 sm:mt-5 sm:text-base">
                   Commandez vos produits en ligne, choisissez votre lieu de
-                  retrait, puis validez votre paiement de manière sécurisée.
+                  retrait, puis validez votre commande simplement.
                 </p>
               </div>
             </div>
@@ -219,19 +219,19 @@ export default function ShopClient({ articles, apiUrl }: ShopClientProps) {
               />
               <StepCard
                 number="03"
-                title="Paiement"
-                text="Finalisez votre commande en ligne."
+                title="Validation"
+                text="Renseignez vos informations et finalisez."
               />
             </div>
           </div>
         </div>
 
-        <aside className="rounded-[2rem] border border-stone-200 bg-[#2f211d] p-6 text-white shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-100">
+        <aside className="rounded-[1.75rem] border border-stone-200 bg-[#2f211d] p-5 text-white shadow-sm sm:rounded-[2rem] sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-100 sm:tracking-[0.28em]">
             Informations retrait
           </p>
 
-          <h2 className="font-display mt-4 text-4xl font-semibold">
+          <h2 className="font-display mt-4 text-3xl font-semibold leading-tight sm:text-4xl">
             Une commande simple, un retrait local.
           </h2>
 
@@ -254,18 +254,18 @@ export default function ShopClient({ articles, apiUrl }: ShopClientProps) {
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <InfoPill label="Retrait" value="Boutique / marchés" />
-            <InfoPill label="Paiement" value="Sécurisé" />
+            <InfoPill label="Commande" value="En ligne" />
           </div>
         </aside>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pb-12 lg:px-6">
-        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-6 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-800">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-800 sm:tracking-[0.28em]">
               Nos produits
             </p>
-            <h2 className="font-display mt-2 text-4xl font-semibold text-stone-950">
+            <h2 className="font-display mt-2 text-3xl font-semibold text-stone-950 sm:text-4xl">
               Sélection du moment
             </h2>
           </div>
@@ -276,7 +276,7 @@ export default function ShopClient({ articles, apiUrl }: ShopClientProps) {
           </p>
         </div>
 
-        <div className="sticky top-[80px] z-20 mb-6 rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-sm backdrop-blur">
+        <div className="sticky top-[76px] z-20 mb-5 rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-sm backdrop-blur sm:mb-6">
           <div className="grid gap-3 lg:grid-cols-[1fr_220px_auto] lg:items-center">
             <label className="block">
               <span className="sr-only">Rechercher un produit</span>
@@ -327,7 +327,7 @@ export default function ShopClient({ articles, apiUrl }: ShopClientProps) {
             text="Essayez de modifier votre recherche ou de retirer le filtre."
           />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {filteredArticles.map((article) => {
               const quantity = cart[article.id] ?? 0
               const disabled = article.stock <= 0
@@ -345,7 +345,7 @@ export default function ShopClient({ articles, apiUrl }: ShopClientProps) {
                     </div>
                   </div>
 
-                  <div className="grid min-h-[245px] gap-5 p-5">
+                  <div className="grid min-h-[230px] gap-5 p-5 sm:min-h-[245px]">
                     <div>
                       <h3 className="font-display text-2xl font-semibold leading-tight text-stone-950">
                         {article.nom}
@@ -471,22 +471,22 @@ function Header({
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 lg:px-6">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:py-4 lg:px-6">
+        <div className="flex min-w-0 items-center gap-3">
           <Image
             src="/logo.svg"
             alt=""
             width={48}
             height={48}
-            className="h-12 w-12 rounded-full border border-stone-200 bg-white object-contain p-1"
+            className="h-10 w-10 shrink-0 rounded-full border border-stone-200 bg-white object-contain p-1 sm:h-12 sm:w-12"
             aria-hidden="true"
           />
 
-          <div>
-            <p className="font-display text-xl font-semibold leading-none text-stone-950">
+          <div className="min-w-0">
+            <p className="font-display truncate text-lg font-semibold leading-none text-stone-950 sm:text-xl">
               Les Cocottes de Diane
             </p>
-            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-stone-500">
+            <p className="mt-1 hidden text-xs uppercase tracking-[0.18em] text-stone-500 sm:block">
               Boutique en ligne
             </p>
           </div>
@@ -495,7 +495,7 @@ function Header({
         <button
           type="button"
           onClick={onCartClick}
-          className="rounded-full border border-stone-200 bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-900"
+          className="shrink-0 rounded-full border border-stone-200 bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-900"
         >
           Panier ({count})
           {count > 0 ? (
@@ -519,7 +519,7 @@ function StepCard({
   text: string
 }) {
   return (
-    <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5">
+    <div className="rounded-3xl border border-stone-200 bg-stone-50 p-4 sm:p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-rose-800">
         {number}
       </p>
@@ -558,7 +558,7 @@ function AvailabilityBadge({ available }: { available: boolean }) {
 
 function EmptyState({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded-[1.75rem] border border-dashed border-stone-300 bg-white p-10 text-center">
+    <div className="rounded-[1.75rem] border border-dashed border-stone-300 bg-white p-8 text-center sm:p-10">
       <p className="font-display text-3xl font-semibold text-stone-950">
         {title}
       </p>
@@ -621,8 +621,10 @@ function CartPanel({
         onClick={onClose}
       />
 
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-xl flex-col overflow-hidden bg-[#fffaf5] shadow-2xl">
+      <aside className="absolute inset-x-0 bottom-0 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-[#fffaf5] shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:max-w-xl sm:rounded-none">
         <div className="border-b border-stone-200 bg-white p-5">
+          <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-stone-200 sm:hidden" />
+
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-800">
@@ -727,8 +729,8 @@ function CartPanel({
                 </div>
 
                 <p className="mt-2 text-xs leading-5 text-rose-800">
-                  Le paiement est préparé après validation. Vos informations
-                  sont utilisées uniquement pour traiter cette commande.
+                  Vos informations sont utilisées uniquement pour traiter cette
+                  commande.
                 </p>
               </div>
 
@@ -811,7 +813,7 @@ function CartPanel({
                 disabled={loading || lines.length === 0}
                 className="rounded-full bg-stone-950 px-5 py-4 font-semibold text-white transition hover:bg-rose-900 disabled:bg-stone-200 disabled:text-stone-500"
               >
-                {loading ? 'Préparation du paiement...' : 'Payer ma commande'}
+                {loading ? 'Préparation de la commande...' : 'Valider ma commande'}
               </button>
             </form>
           </div>

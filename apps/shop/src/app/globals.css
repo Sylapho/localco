@@ -1,15 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a1a;
+  --background: #fffaf5;
+  --foreground: #221817;
+  --brand: #9f1239;
+  --brand-dark: #7f0f2f;
+  --brand-soft: #fff1f2;
+  --cream: #fffaf5;
+  --border: #eadbd2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
 
 button,
@@ -22,9 +35,17 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(181, 0, 110, 0.18);
+  box-shadow: 0 0 0 3px rgba(159, 18, 57, 0.18);
+}
+
+.font-display {
+  font-family: var(--font-playfair), Georgia, serif;
 }
