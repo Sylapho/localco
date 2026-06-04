@@ -15,6 +15,7 @@ import {
   getAllowedPickupWeekdays,
   getNextPickupDates,
   pickupPoints,
+  type PickupPoint,
 } from '@/lib/pickup-points'
 import Link from 'next/link'
 import type * as React from 'react'
@@ -34,24 +35,30 @@ export default function CheckoutClient({
 }: CheckoutClientProps) {
   const [cart, setCart] = useState<Cart>({})
   const [cartReady, setCartReady] = useState(false)
+
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [tel, setTel] = useState('')
+
   const [lieu, setLieu] = useState(formatPickupPoint(pickupPoints[0]))
   const [dateRetrait, setDateRetrait] = useState(
     getNextPickupDates(pickupPoints[0], 1)[0],
   )
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const lines = useMemo(() => buildCartLines(cart, articles), [cart, articles])
   const total = lines.reduce((sum, line) => sum + line.total, 0)
   const itemCount = lines.reduce((sum, line) => sum + line.quantite, 0)
+
   const selectedPickupPoint = findPickupPoint(lieu) ?? pickupPoints[0]
+
   const pickupDateOptions = useMemo(
     () => getNextPickupDates(selectedPickupPoint),
     [selectedPickupPoint],
   )
+
   const selectedDateRetrait = pickupDateOptions.includes(dateRetrait)
     ? dateRetrait
     : pickupDateOptions[0]
@@ -67,6 +74,7 @@ export default function CheckoutClient({
 
   function handlePickupPointChange(value: string) {
     const nextPickupPoint = findPickupPoint(value) ?? pickupPoints[0]
+
     setLieu(value)
     setDateRetrait(getNextPickupDates(nextPickupPoint, 1)[0])
   }
@@ -129,7 +137,7 @@ export default function CheckoutClient({
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#fffafb_0%,#faf7f8_38%,#f7edf2_100%)] px-4 py-6 sm:py-8">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 rounded-[1.5rem] border border-[#f0dbe6] bg-white/85 p-5 shadow-sm backdrop-blur sm:p-6">
+        <header className="mb-6 rounded-[1.5rem] border border-[#f0dbe6] bg-white/85 p-5 shadow-sm backdrop-blur sm:p-6">
           <Link
             href="/"
             className="inline-flex rounded-full bg-[#fceef6] px-4 py-2 text-sm font-bold text-[#8c0055] hover:text-[#5a0037]"
@@ -140,31 +148,24 @@ export default function CheckoutClient({
           <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.22em] text-[#b5006e]">
-                Paiement sécurisé
+                Click & Collect
               </p>
+
               <h1 className="mt-2 text-3xl font-black tracking-tight text-[#181014] sm:text-4xl">
-                Finaliser ma commande
+                Finaliser mon retrait
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#7a6d73]">
-                Renseignez vos informations, choisissez votre retrait, puis vous
-                serez redirigé vers le paiement sécurisé.
+                Choisissez où et quand récupérer votre commande, renseignez vos
+                coordonnées, puis validez le paiement.
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-[#5a0037] sm:min-w-80">
-              <div className="rounded-2xl bg-[#fceef6] px-3 py-3">
-                1. Coordonnées
-              </div>
-              <div className="rounded-2xl bg-[#fceef6] px-3 py-3">
-                2. Retrait
-              </div>
-              <div className="rounded-2xl bg-[#fceef6] px-3 py-3">
-                3. Paiement
-              </div>
+            <div className="rounded-2xl border border-[#eee2e7] bg-white px-4 py-3 text-sm font-bold text-[#5a0037] shadow-sm">
+              Retrait local → Coordonnées → Paiement
             </div>
           </div>
-        </div>
+        </header>
 
         {!cartReady ? (
           <div className="rounded-[1.5rem] border border-[#eee2e7] bg-white p-8 shadow-sm">
@@ -200,8 +201,61 @@ export default function CheckoutClient({
               <section>
                 <StepHeader
                   eyebrow="Étape 1"
-                  title="Vos informations"
-                  description="Ces informations servent uniquement à préparer votre retrait et à vous contacter si besoin."
+                  title="Choisir mon retrait"
+                  description="Sélectionnez un point de retrait, puis une date compatible avec ce lieu."
+                />
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {pickupPoints.map((point) => {
+                    const value = formatPickupPoint(point)
+                    const selected = value === lieu
+
+                    return (
+                      <PickupPointCard
+                        key={value}
+                        point={point}
+                        selected={selected}
+                        onSelect={() => handlePickupPointChange(value)}
+                      />
+                    )
+                  })}
+                </div>
+
+                <div className="mt-5 grid gap-1.5">
+                  <label
+                    htmlFor="dateRetrait"
+                    className="text-sm font-bold text-[#181014]"
+                  >
+                    Date disponible *
+                  </label>
+
+                  <select
+                    id="dateRetrait"
+                    value={selectedDateRetrait}
+                    onChange={(event) => setDateRetrait(event.target.value)}
+                    className={inputClassName}
+                    required
+                  >
+                    {pickupDateOptions.map((date) => (
+                      <option key={date} value={date}>
+                        {formatPickupDateLabel(date)}
+                      </option>
+                    ))}
+                  </select>
+
+                  <p className="text-xs leading-5 text-[#7a6d73]">
+                    Dates proposées uniquement le{' '}
+                    {getAllowedPickupWeekdays(selectedPickupPoint)} pour ce
+                    point de retrait.
+                  </p>
+                </div>
+              </section>
+
+              <section className="border-t border-[#eee2e7] pt-5">
+                <StepHeader
+                  eyebrow="Étape 2"
+                  title="Vos coordonnées"
+                  description="Ces informations servent à confirmer la commande et à vous contacter uniquement si nécessaire."
                 />
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -220,7 +274,11 @@ export default function CheckoutClient({
                     />
                   </Field>
 
-                  <Field label="Email *" htmlFor="email">
+                  <Field
+                    label="Email *"
+                    htmlFor="email"
+                    hint="Pour recevoir la confirmation de commande."
+                  >
                     <input
                       id="email"
                       type="email"
@@ -232,7 +290,11 @@ export default function CheckoutClient({
                     />
                   </Field>
 
-                  <Field label="Téléphone" htmlFor="tel">
+                  <Field
+                    label="Téléphone — optionnel"
+                    htmlFor="tel"
+                    hint="Utile uniquement en cas de problème sur le retrait."
+                  >
                     <input
                       id="tel"
                       type="tel"
@@ -247,71 +309,35 @@ export default function CheckoutClient({
 
               <section className="border-t border-[#eee2e7] pt-5">
                 <StepHeader
-                  eyebrow="Étape 2"
-                  title="Retrait"
-                  description="La date proposée dépend du lieu sélectionné, pour éviter une commande sur un jour impossible."
+                  eyebrow="Étape 3"
+                  title="Validation"
+                  description="Vérifiez votre retrait et votre panier avant d’être redirigé vers le paiement sécurisé."
                 />
 
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Lieu de retrait *" htmlFor="lieu">
-                    <select
-                      id="lieu"
-                      value={lieu}
-                      onChange={(event) =>
-                        handlePickupPointChange(event.target.value)
-                      }
-                      className={inputClassName}
-                      required
-                    >
-                      {pickupPoints.map((point) => {
-                        const value = formatPickupPoint(point)
-
-                        return (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        )
-                      })}
-                    </select>
-                  </Field>
-
-                  <Field label="Date souhaitée *" htmlFor="dateRetrait">
-                    <select
-                      id="dateRetrait"
-                      value={selectedDateRetrait}
-                      onChange={(event) => setDateRetrait(event.target.value)}
-                      className={inputClassName}
-                      required
-                    >
-                      {pickupDateOptions.map((date) => (
-                        <option key={date} value={date}>
-                          {formatPickupDateLabel(date)}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-[#7a6d73]">
-                      Dates proposées uniquement le{' '}
-                      {getAllowedPickupWeekdays(selectedPickupPoint)} pour ce
-                      point de retrait.
-                    </p>
-                  </Field>
-                </div>
-              </section>
-
-              <section className="grid gap-3 rounded-2xl bg-[#fceef6] p-4 text-sm leading-6 text-[#8c0055] sm:grid-cols-[auto_1fr] sm:items-start">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-white font-black">
-                  ✓
-                </span>
-                <div>
+                <div className="mt-4 rounded-2xl bg-[#fceef6] p-4 text-sm leading-6 text-[#8c0055]">
                   <p className="font-black text-[#5a0037]">
-                    Paiement sécurisé par Stripe
+                    Paiement par Stripe
                   </p>
                   <p>
-                    Vous allez être redirigé vers le paiement sécurisé. Vos
-                    informations sont utilisées uniquement pour traiter cette
-                    commande.
+                    Vous serez redirigé vers une page de paiement sécurisée.
+                    Votre commande sera confirmée après validation du paiement.
                   </p>
                 </div>
+
+                <p className="mt-3 text-xs leading-5 text-[#7a6d73]">
+                  En continuant, vous acceptez les{' '}
+                  <Link href="/cgv" className="font-bold text-[#8c0055]">
+                    CGV
+                  </Link>{' '}
+                  et la{' '}
+                  <Link
+                    href="/confidentialite"
+                    className="font-bold text-[#8c0055]"
+                  >
+                    politique de confidentialité
+                  </Link>
+                  .
+                </p>
               </section>
 
               {error ? (
@@ -319,16 +345,6 @@ export default function CheckoutClient({
                   {error}
                 </p>
               ) : null}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="rounded-full bg-[#b5006e] px-5 py-4 font-black text-white shadow-sm transition hover:bg-[#8c0055] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading
-                  ? 'Préparation du paiement...'
-                  : `Payer ${formatCurrency(total)}`}
-              </button>
             </form>
 
             <aside className="rounded-[1.5rem] border border-[#eee2e7] bg-white p-5 shadow-sm lg:sticky lg:top-24">
@@ -361,6 +377,7 @@ export default function CheckoutClient({
                         {line.quantite} x {formatCurrency(line.article.prix)}
                       </p>
                     </div>
+
                     <p className="font-black text-[#b5006e]">
                       {formatCurrency(line.total)}
                     </p>
@@ -368,17 +385,27 @@ export default function CheckoutClient({
                 ))}
               </ul>
 
+              <Link
+                href="/#produits"
+                className="mt-3 inline-flex text-sm font-bold text-[#8c0055] hover:text-[#5a0037]"
+              >
+                Modifier mon panier
+              </Link>
+
               <div className="mt-5 grid gap-3 rounded-2xl bg-[#faf7f8] p-4 text-sm">
-                <div className="flex justify-between gap-4">
+                <div className="grid gap-1">
                   <span className="text-[#7a6d73]">Retrait</span>
-                  <span className="max-w-48 text-right font-bold text-[#181014]">
-                    {lieu}
+                  <span className="font-bold text-[#181014]">
+                    {selectedPickupPoint.label}
+                  </span>
+                  <span className="text-xs text-[#7a6d73]">
+                    {selectedPickupPoint.schedule}
                   </span>
                 </div>
 
-                <div className="flex justify-between gap-4">
+                <div className="flex justify-between gap-4 border-t border-[#eee2e7] pt-3">
                   <span className="text-[#7a6d73]">Date</span>
-                  <span className="font-bold text-[#181014]">
+                  <span className="text-right font-bold text-[#181014]">
                     {formatPickupDateLabel(selectedDateRetrait)}
                   </span>
                 </div>
@@ -397,15 +424,67 @@ export default function CheckoutClient({
                 type="submit"
                 form="checkout-form"
                 disabled={loading}
-                className="mt-5 hidden w-full rounded-full bg-[#181014] px-5 py-3 text-sm font-black text-white transition hover:bg-[#3a2a31] disabled:cursor-not-allowed disabled:opacity-50 lg:block"
+                className="mt-5 w-full rounded-full bg-[#b5006e] px-5 py-4 text-sm font-black text-white shadow-sm transition hover:bg-[#8c0055] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading ? 'Préparation...' : 'Continuer vers le paiement'}
+                {loading
+                  ? 'Préparation du paiement...'
+                  : 'Continuer vers le paiement sécurisé'}
               </button>
+
+              <p className="mt-3 text-center text-xs leading-5 text-[#7a6d73]">
+                Total à payer :{' '}
+                <span className="font-black text-[#181014]">
+                  {formatCurrency(total)}
+                </span>
+              </p>
             </aside>
           </div>
         )}
       </div>
     </main>
+  )
+}
+
+function PickupPointCard({
+  point,
+  selected,
+  onSelect,
+}: {
+  point: PickupPoint
+  selected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`rounded-2xl border p-4 text-left shadow-sm transition ${
+        selected
+          ? 'border-[#b5006e] bg-[#fceef6] ring-4 ring-[#fceef6]'
+          : 'border-[#eee2e7] bg-[#faf7f8] hover:border-[#b5006e] hover:bg-white'
+      }`}
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span>
+          <span className="block text-sm font-black text-[#181014]">
+            {point.label}
+          </span>
+          <span className="mt-1 block text-sm text-[#7a6d73]">
+            {point.schedule}
+          </span>
+        </span>
+
+        <span
+          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black ${
+            selected
+              ? 'bg-[#b5006e] text-white'
+              : 'border border-[#e8e1e4] bg-white text-transparent'
+          }`}
+        >
+          ✓
+        </span>
+      </span>
+    </button>
   )
 }
 
@@ -434,11 +513,13 @@ function StepHeader({
 function Field({
   label,
   htmlFor,
+  hint,
   className,
   children,
 }: {
   label: string
   htmlFor: string
+  hint?: string
   className?: string
   children: React.ReactNode
 }) {
@@ -447,6 +528,9 @@ function Field({
       <label htmlFor={htmlFor} className="text-sm font-bold text-[#181014]">
         {label}
       </label>
+
+      {hint ? <p className="text-xs text-[#7a6d73]">{hint}</p> : null}
+
       {children}
     </div>
   )
