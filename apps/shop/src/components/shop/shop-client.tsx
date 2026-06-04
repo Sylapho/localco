@@ -1,8 +1,10 @@
 'use client'
 
 import type { CreateCommandePayload, ShopArticle } from '@/lib/api'
+import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
 import ArticleImage from './article-image'
 import { FormEvent, useMemo, useState } from 'react'
+import Image from 'next/image'
 
 type ShopClientProps = {
   articles: ShopArticle[]
@@ -31,7 +33,7 @@ export default function ShopClient({
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [tel, setTel] = useState('')
-  const [lieu, setLieu] = useState('En boutique')
+  const [lieu, setLieu] = useState(formatPickupPoint(pickupPoints[0]))
   const [dateRetrait, setDateRetrait] = useState(todayInputValue())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -131,14 +133,39 @@ export default function ShopClient({
 
       <section className="mx-auto max-w-5xl px-4 py-6">
         <div className="mb-5 rounded-lg bg-[#fceef6] p-5">
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#b5006e]">
-            Commande en ligne
-          </p>
-          <h1 className="mt-1 text-3xl font-bold">Les Cocottes de Diane</h1>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-            Choisissez vos produits, puis indiquez votre lieu et date de
-            retrait. Le paiement sécurisé se fait en ligne.
-          </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <Image
+              src="/logo.svg"
+              alt="Les Cocottes de Diane"
+              width={96}
+              height={96}
+              className="h-24 w-24 rounded-full bg-white object-contain p-2 shadow-sm"
+            />
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-[#b5006e]">
+                Commande en ligne
+              </p>
+              <h1 className="mt-1 text-3xl font-bold">
+                Les Cocottes de Diane
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-zinc-600">
+                Choisissez vos produits, puis indiquez votre lieu et date de
+                retrait. Le paiement sécurisé se fait en ligne.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2 text-sm text-zinc-700 sm:grid-cols-2">
+            {pickupPoints.slice(0, 4).map((point) => (
+              <p
+                key={formatPickupPoint(point)}
+                className="rounded bg-white/70 px-3 py-2"
+              >
+                <span className="font-medium">{point.label}</span>
+                <br />
+                <span>{point.schedule}</span>
+              </p>
+            ))}
+          </div>
         </div>
 
         {articles.length === 0 ? (
@@ -312,11 +339,15 @@ export default function ShopClient({
                   onChange={(event) => setLieu(event.target.value)}
                   className="rounded border px-3 py-2"
                 >
-                  <option value="En boutique">En boutique</option>
-                  <option value="Marche du samedi matin">
-                    Marche du samedi matin
-                  </option>
-                  <option value="Marche du dimanche">Marche du dimanche</option>
+                  {pickupPoints.map((point) => {
+                    const value = formatPickupPoint(point)
+
+                    return (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
 
@@ -365,11 +396,21 @@ function Header({
   return (
     <header className="sticky top-0 z-30 bg-[#b5006e] text-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
-        <div>
-          <p className="font-bold">
-            Les Cocottes de <span className="text-[#fde68a]">Diane</span>
-          </p>
-          <p className="text-xs text-white/70">Commande en ligne</p>
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo.svg"
+            alt=""
+            width={48}
+            height={48}
+            className="h-12 w-12 rounded-full bg-white object-contain p-1"
+            aria-hidden="true"
+          />
+          <div>
+            <p className="font-bold">
+              Les Cocottes de <span className="text-[#fde68a]">Diane</span>
+            </p>
+            <p className="text-xs text-white/70">Commande en ligne</p>
+          </div>
         </div>
         <button
           type="button"

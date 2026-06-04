@@ -62,7 +62,9 @@ async function main() {
   await prisma.$disconnect()
   await pool.end()
 
-  console.log('Seed terminé avec catalogue, ventes, lots DLC et historique de caisse')
+  console.log(
+    'Seed terminé avec catalogue, ventes, lots DLC et historique de caisse',
+  )
 }
 
 async function resetDatabase(prisma: PrismaClient) {
@@ -140,7 +142,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       prix: 1.2,
       tva: 0.055,
       stock: 120,
-      online: true,
+      online: false,
       emoji: 'BT',
       description: 'Baguette tradition croustillante',
     },
@@ -152,7 +154,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       prix: 1.1,
       tva: 0.055,
       stock: 90,
-      online: true,
+      online: false,
       emoji: 'CR',
       description: 'Croissant pur beurre',
     },
@@ -164,7 +166,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       prix: 1.2,
       tva: 0.055,
       stock: 80,
-      online: true,
+      online: false,
       emoji: 'PC',
       description: 'Pain au chocolat pur beurre',
     },
@@ -176,11 +178,13 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       prix: 3.5,
       tva: 0.055,
       stock: 25,
-      online: true,
+      online: false,
       emoji: 'FL',
       description: 'Part de flan maison',
     },
   })
+
+  await seedShopCatalogue(prisma)
 
   await prisma.nomenclature.createMany({
     data: [
@@ -227,6 +231,86 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       lait,
     },
   }
+}
+
+async function seedShopCatalogue(prisma: PrismaClient) {
+  const shopArticles = [
+    ['Gésiers de poulet confits', 8.3, '+/- 350 g'],
+    ['Mousse de foie de volaille', 5.3, 'Pot 180 g'],
+    ['Terrine de poulet normande', 5.3, 'Pot 200 g'],
+    ['Rillettes de poulet', 5.3, 'Pot 200 g'],
+    ["Rillettes de poulet piment d'Espelette", 5.9, 'Pot 200 g'],
+    ['Terrine de poulet au thym', 5.9, 'Pot 200 g'],
+    ['Terrine de poulet noisette', 5.9, 'Pot 200 g'],
+    ['Poulet prêt à cuire 4/6 personnes', 15.5, '+/- 1,4 à 1,6 kg'],
+    ['Poulet prêt à cuire 6/8 personnes', 17.5, '+/- 1,7 à 1,8 kg'],
+    ['Poulet prêt à cuire 8 personnes et plus', 18.5, '+/- 1,9 à 2,1 kg'],
+    ['Blanc de poulet x2', 7.5, '+/- 350 g'],
+    ['Blanc de poulet x4', 14, '+/- 700 g'],
+    ['Cuisse entière x2', 8, '+/- 550 g'],
+    ['Cuisse entière x4', 15, '+/- 1,1 kg'],
+    ['Cuisse désossée x2', 5.5, '+/- 350 g'],
+    ['Haut de cuisse x2', 4.5, '+/- 500 g'],
+    ['Pilons de poulet x2', 3.3, '+/- 250 g'],
+    ['Ailes de poulet x3', 4, '+/- 400 g'],
+    ['Saucisse nature x6', 6.5, '+/- 500 g'],
+    ['Saucisse aux herbes x6', 6.3, 'Préparation bouchère'],
+    ['Saucisse provençale x6', 6.3, 'Préparation bouchère'],
+    ['Volaille façon merguez x6', 6.5, 'Préparation bouchère'],
+    ['Paupiette chorizo x2', 6.5, '+/- 450 g'],
+    ['Paupiette camembert x2', 6.5, '+/- 450 g'],
+    ['Paupiette bacon x2', 6.5, '+/- 450 g'],
+    ['Ballotine chorizo', 9.5, '+/- 350 g'],
+    ['Ballotine camembert', 9.5, '+/- 350 g'],
+    ['Ballotine bacon', 9.5, '+/- 350 g'],
+    ['Cordon bleu x2', 9, '+/- 500 g'],
+    ['Chicken x6', 7.5, '+/- 400 g'],
+    ['Escalope milanaise x2', 5.5, '+/- 350 g'],
+    ['Brochette thym citron x2', 4.5, '+/- 250 g'],
+    ['Brochette curry coco x2', 4.5, '+/- 250 g'],
+    ['Brochette x2', 4.5, '+/- 250 g'],
+    ['Œufs x6', 2, 'Boîte de 6 œufs'],
+    ['Œufs x12', 3.6, 'Boîte de 12 œufs'],
+    ['Œufs x24', 6.8, 'Plateau de 24 œufs'],
+    ['Œufs x30', 8.2, 'Plateau de 30 œufs'],
+    [
+      'BBQ Pack',
+      12,
+      'Pack grillades : brochettes, saucisses nature, saucisses aux herbes et volaille façon merguez',
+    ],
+    [
+      'Ado Pack',
+      28,
+      'Pack grillades familial : brochettes et assortiments de saucisses',
+    ],
+    [
+      'Family Pack',
+      40,
+      'Grand pack grillades : brochettes, saucisses nature, herbes, provençales et volaille façon merguez',
+    ],
+    [
+      'Maxi Pack',
+      78,
+      'Pack grillades maxi pour grands repas, avec assortiment de brochettes et saucisses',
+    ],
+  ] as const
+
+  await prisma.article.createMany({
+    data: shopArticles.map(([nom, prix, description]) => ({
+      nom,
+      prix,
+      tva: 0.055,
+      stock: nom === 'Maxi Pack' ? 10 : 20,
+      online: true,
+      emoji: nom
+        .split(' ')
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 3)
+        .toUpperCase(),
+      description,
+    })),
+  })
 }
 
 async function seedStockLots(prisma: PrismaClient, catalogue: SeedCatalogue) {
@@ -582,7 +666,7 @@ function getTimeZoneOffsetMs(date: Date, timeZone: string) {
   return asUtc - date.getTime()
 }
 
-main().catch(async (e) => {
+main().catch((e) => {
   console.error(e)
   process.exit(1)
 })

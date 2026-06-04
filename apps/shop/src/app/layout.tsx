@@ -5,6 +5,11 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Les Cocottes de Diane',
   description: 'Commande en ligne',
+  icons: {
+    icon: '/logo.svg',
+    shortcut: '/logo.svg',
+    apple: '/logo.svg',
+  },
 }
 
 export default function RootLayout({

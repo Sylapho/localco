@@ -2,6 +2,7 @@ import LegalPage, {
   LegalSection,
   ToComplete,
 } from '@/components/shop/legal-page'
+import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -58,9 +59,11 @@ export default function CgvPage() {
           Les commandes sont à retirer au lieu et à la date choisis lors de la
           commande, sous réserve de confirmation.
         </p>
-        <p>
-          Lieux et horaires de retrait : <ToComplete>à compléter</ToComplete>
-        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          {pickupPoints.map((point) => (
+            <li key={formatPickupPoint(point)}>{formatPickupPoint(point)}</li>
+          ))}
+        </ul>
       </LegalSection>
 
       <LegalSection title="Droit de rétractation">
