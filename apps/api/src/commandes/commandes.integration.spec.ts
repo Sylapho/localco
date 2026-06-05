@@ -536,6 +536,83 @@ describe('Commandes integration', () => {
     expect(mockStripeCheckoutSessionsCreate).not.toHaveBeenCalled()
   })
 
+  it('GET /api/commandes/checkout-session/:sessionId should return public order summary', async () => {
+    const createdAt = new Date('2026-06-05T10:00:00.000Z')
+    const dateRetrait = new Date('2026-06-09T00:00:00.000Z')
+
+    prismaMock.commande.findFirst.mockResolvedValue({
+      id: 505,
+      totalTTC: 12.5,
+      lieu: validPickupPoint,
+      dateRetrait,
+      statut: 'nouvelle',
+      createdAt,
+      lignes: [
+        {
+          quantite: 5,
+          prixUnit: 2.5,
+          article: {
+            nom: 'Baguette',
+          },
+        },
+      ],
+    })
+
+    const response = await request(app.getHttpServer())
+      .get('/api/commandes/checkout-session/cs_paid')
+      .expect(200)
+
+    expect(response.body).toEqual({
+      id: 505,
+      reference: 'CMD-000505',
+      totalTTC: 12.5,
+      lieu: validPickupPoint,
+      dateRetrait: dateRetrait.toISOString(),
+      statut: 'nouvelle',
+      paiementStatut: 'confirme',
+      createdAt: createdAt.toISOString(),
+      lignes: [
+        {
+          nom: 'Baguette',
+          quantite: 5,
+          prixUnit: 2.5,
+          total: 12.5,
+        },
+      ],
+    })
+
+    expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
+      where: { stripeId: 'cs_paid' },
+      select: {
+        id: true,
+        totalTTC: true,
+        lieu: true,
+        dateRetrait: true,
+        statut: true,
+        createdAt: true,
+        lignes: {
+          select: {
+            quantite: true,
+            prixUnit: true,
+            article: {
+              select: {
+                nom: true,
+              },
+            },
+          },
+        },
+      },
+    })
+  })
+
+  it('GET /api/commandes/checkout-session/:sessionId should return 404 for unknown order', async () => {
+    prismaMock.commande.findFirst.mockResolvedValue(null)
+
+    await request(app.getHttpServer())
+      .get('/api/commandes/checkout-session/cs_unknown')
+      .expect(404)
+  })
+
   it('POST /api/commandes/stripe/webhook should reject missing Stripe signature', async () => {
     await request(app.getHttpServer())
       .post('/api/commandes/stripe/webhook')

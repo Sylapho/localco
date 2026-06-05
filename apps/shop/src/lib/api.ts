@@ -25,6 +25,23 @@ export type CreateCommandePayload = {
   }[]
 }
 
+export type CheckoutSummary = {
+  id: number
+  reference: string
+  totalTTC: number
+  lieu: string
+  dateRetrait: string | null
+  statut: string
+  paiementStatut: 'confirme' | 'en_attente' | 'a_verifier' | 'annule'
+  createdAt: string
+  lignes: {
+    nom: string
+    quantite: number
+    prixUnit: number
+    total: number
+  }[]
+}
+
 export async function getShopArticles(): Promise<ShopArticle[]> {
   const response = await fetch(`${API_URL}/boutique/articles`, {
     cache: 'no-store',
@@ -32,6 +49,27 @@ export async function getShopArticles(): Promise<ShopArticle[]> {
 
   if (!response.ok) {
     throw new Error('Impossible de charger les articles')
+  }
+
+  return response.json()
+}
+
+export async function getCheckoutSummary(
+  sessionId: string,
+): Promise<CheckoutSummary | null> {
+  const response = await fetch(
+    `${API_URL}/commandes/checkout-session/${encodeURIComponent(sessionId)}`,
+    {
+      cache: 'no-store',
+    },
+  )
+
+  if (response.status === 404) {
+    return null
+  }
+
+  if (!response.ok) {
+    throw new Error('Impossible de charger la commande')
   }
 
   return response.json()

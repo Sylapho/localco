@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import Stripe from 'stripe'
 import { EmailsService } from '../emails/emails.service'
@@ -96,6 +100,58 @@ export class CommandesService {
         },
       },
     })
+  }
+
+  async findPublicCheckoutSummary(sessionId: string) {
+    const normalizedSessionId = sessionId.trim()
+
+    if (!normalizedSessionId) {
+      throw new BadRequestException('Session de paiement invalide')
+    }
+
+    const commande = await this.prisma.commande.findFirst({
+      where: { stripeId: normalizedSessionId },
+      select: {
+        id: true,
+        totalTTC: true,
+        lieu: true,
+        dateRetrait: true,
+        statut: true,
+        createdAt: true,
+        lignes: {
+          select: {
+            quantite: true,
+            prixUnit: true,
+            article: {
+              select: {
+                nom: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!commande) {
+      throw new NotFoundException('Commande introuvable')
+    }
+
+    return {
+      id: commande.id,
+      reference: this.formatCommandeReference(commande.id),
+      totalTTC: commande.totalTTC,
+      lieu: commande.lieu,
+      dateRetrait: commande.dateRetrait?.toISOString() ?? null,
+      statut: commande.statut,
+      paiementStatut: this.getPublicPaymentStatus(commande.statut),
+      createdAt: commande.createdAt.toISOString(),
+      lignes: commande.lignes.map((ligne) => ({
+        nom: ligne.article.nom,
+        quantite: ligne.quantite,
+        prixUnit: ligne.prixUnit,
+        total: ligne.prixUnit * ligne.quantite,
+      })),
+    }
   }
 
   async create(data: CreateCommandeDto) {
@@ -671,6 +727,26 @@ export class CommandesService {
 
   private getReservationReleaseReference(commandeId: number) {
     return `commande:${commandeId}:reservation:release`
+  }
+
+  private formatCommandeReference(id: number) {
+    return `CMD-${String(id).padStart(6, '0')}`
+  }
+
+  private getPublicPaymentStatus(statut: string) {
+    if (statut === 'annulee') {
+      return 'annule'
+    }
+
+    if (statut === 'paiement_en_attente') {
+      return 'en_attente'
+    }
+
+    if (statut === 'paiement_a_verifier') {
+      return 'a_verifier'
+    }
+
+    return 'confirme'
   }
 
   private async recordStatusHistory(

@@ -11,6 +11,7 @@ describe('CommandesController', () => {
     create: jest.fn(),
     createCheckout: jest.fn(),
     handleStripeWebhook: jest.fn(),
+    findPublicCheckoutSummary: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
     updateStatut: jest.fn(),
@@ -86,6 +87,23 @@ describe('CommandesController', () => {
 
     await expect(controller.findOne(1)).resolves.toEqual(result)
     expect(commandesServiceMock.findOne).toHaveBeenCalledWith(1)
+  })
+
+  it('findCheckoutSessionSummary should return public checkout summary', async () => {
+    const result = {
+      id: 1,
+      reference: 'CMD-000001',
+      paiementStatut: 'confirme',
+    }
+
+    commandesServiceMock.findPublicCheckoutSummary.mockResolvedValue(result)
+
+    await expect(
+      controller.findCheckoutSessionSummary('cs_test_123'),
+    ).resolves.toEqual(result)
+    expect(commandesServiceMock.findPublicCheckoutSummary).toHaveBeenCalledWith(
+      'cs_test_123',
+    )
   })
 
   it('cleanupAbandoned should cleanup pending commandes', async () => {

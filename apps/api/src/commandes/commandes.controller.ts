@@ -55,6 +55,11 @@ export class CommandesController {
     return this.commandesService.cleanupAbandonedCommandes()
   }
 
+  @Get('checkout-session/:sessionId')
+  findCheckoutSessionSummary(@Param('sessionId') sessionId: string) {
+    return this.commandesService.findPublicCheckoutSummary(sessionId)
+  }
+
   @Get(':id')
   @UseGuards(BetterAuthGuard, RolesGuard)
   @Roles(ROLES.GERANT, ROLES.VENDEUR, ROLES.PRODUCTION, ROLES.COMPTABLE)

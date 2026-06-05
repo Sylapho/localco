@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common'
+import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
 import Stripe from 'stripe'
@@ -269,6 +269,81 @@ describe('CommandesService', () => {
         },
       },
     })
+  })
+
+  it('findPublicCheckoutSummary should return a safe post-payment summary', async () => {
+    const createdAt = new Date('2026-06-05T10:00:00.000Z')
+    const dateRetrait = new Date('2026-06-06T00:00:00.000Z')
+
+    prismaMock.commande.findFirst.mockResolvedValue({
+      id: 8,
+      totalTTC: 15,
+      lieu: validPickupPoint,
+      dateRetrait,
+      statut: 'nouvelle',
+      createdAt,
+      lignes: [
+        {
+          quantite: 2,
+          prixUnit: 7.5,
+          article: {
+            nom: 'Terrine de volaille',
+          },
+        },
+      ],
+    })
+
+    await expect(
+      service.findPublicCheckoutSummary(' cs_paid '),
+    ).resolves.toEqual({
+      id: 8,
+      reference: 'CMD-000008',
+      totalTTC: 15,
+      lieu: validPickupPoint,
+      dateRetrait: dateRetrait.toISOString(),
+      statut: 'nouvelle',
+      paiementStatut: 'confirme',
+      createdAt: createdAt.toISOString(),
+      lignes: [
+        {
+          nom: 'Terrine de volaille',
+          quantite: 2,
+          prixUnit: 7.5,
+          total: 15,
+        },
+      ],
+    })
+
+    expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
+      where: { stripeId: 'cs_paid' },
+      select: {
+        id: true,
+        totalTTC: true,
+        lieu: true,
+        dateRetrait: true,
+        statut: true,
+        createdAt: true,
+        lignes: {
+          select: {
+            quantite: true,
+            prixUnit: true,
+            article: {
+              select: {
+                nom: true,
+              },
+            },
+          },
+        },
+      },
+    })
+  })
+
+  it('findPublicCheckoutSummary should reject an unknown checkout session', async () => {
+    prismaMock.commande.findFirst.mockResolvedValue(null)
+
+    await expect(
+      service.findPublicCheckoutSummary('cs_unknown'),
+    ).rejects.toBeInstanceOf(NotFoundException)
   })
 
   it('create should aggregate duplicated lines, compute total, decrement stock and record movement', async () => {
