@@ -463,9 +463,6 @@ function Header({
           <a href="#retrait" className="hover:text-white">
             Retrait
           </a>
-          <Link href="/compte" className="hover:text-white">
-            Compte
-          </Link>
         </nav>
 
         <button

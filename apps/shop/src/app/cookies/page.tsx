@@ -48,8 +48,8 @@ export default function CookiesPage() {
         <p>
           Vous pouvez à tout moment configurer votre navigateur pour bloquer ou
           supprimer les cookies. Toutefois, le blocage de certains cookies
-          nécessaires peut empêcher le fonctionnement normal du panier, du compte
-          client ou du paiement.
+          nécessaires peut empêcher le fonctionnement normal du panier ou du
+          paiement.
         </p>
       </LegalSection>
 
