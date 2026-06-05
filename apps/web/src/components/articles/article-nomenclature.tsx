@@ -4,6 +4,7 @@ import type {
   MatierePremiere,
   NomenclatureLine,
 } from '@/lib/api'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -47,7 +48,12 @@ export default function ArticleNomenclature({
     )
 
     if (!response.ok) {
-      setError(await response.text())
+      setError(
+        await getApiErrorMessage(
+          response,
+          'Impossible d’ajouter cette matière première.',
+        ),
+      )
       return
     }
 
@@ -71,7 +77,12 @@ export default function ArticleNomenclature({
     )
 
     if (!response.ok) {
-      setError(await response.text())
+      setError(
+        await getApiErrorMessage(
+          response,
+          'Impossible de modifier cette matière première.',
+        ),
+      )
       return
     }
 
@@ -94,7 +105,12 @@ export default function ArticleNomenclature({
     )
 
     if (!response.ok) {
-      setError(await response.text())
+      setError(
+        await getApiErrorMessage(
+          response,
+          'Impossible de supprimer cette matière première.',
+        ),
+      )
       return
     }
 

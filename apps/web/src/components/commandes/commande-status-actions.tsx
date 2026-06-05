@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import type { CommandeStatut } from '@/lib/api'
 import { useRouter } from 'next/navigation'
@@ -49,13 +50,12 @@ export default function CommandeStatusActions({
       )
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Impossible de modifier la commande')
+        throw new Error(await getApiErrorMessage(response))
       }
 
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoadingStatus(null)
     }

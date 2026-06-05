@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -37,15 +38,16 @@ export default function ProduceArticleForm({ articleId, maxQuantity }: Props) {
       })
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Erreur lors de la production')
+        throw new Error(
+          await getApiErrorMessage(response, 'Erreur lors de la production.'),
+        )
       }
 
       setMessage(`Production de ${quantite} article(s) réussie`)
       setQuantite('1')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }

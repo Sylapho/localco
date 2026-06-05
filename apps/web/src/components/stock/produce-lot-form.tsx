@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -47,15 +48,14 @@ export default function ProduceLotForm({ articles }: ProduceLotFormProps) {
       )
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Impossible d’ajouter ce lot')
+        throw new Error(await getApiErrorMessage(response))
       }
 
       setQuantite('')
       setMessage('Lot article ajouté au stock.')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }

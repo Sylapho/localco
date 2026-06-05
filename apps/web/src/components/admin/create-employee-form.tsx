@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import { roleLabels, roles, type Role } from '@/lib/roles'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -35,8 +36,7 @@ export default function CreateEmployeeForm() {
       })
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Impossible de créer cet employé')
+        throw new Error(await getApiErrorMessage(response))
       }
 
       setName('')
@@ -46,7 +46,7 @@ export default function CreateEmployeeForm() {
       setMessage('Employé créé avec succès.')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }

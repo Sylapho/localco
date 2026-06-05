@@ -1,5 +1,6 @@
 'use client'
 
+import { getUnknownErrorMessage } from '@/lib/api-error'
 import { authClient } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -30,7 +31,7 @@ export default function AuthForm() {
       router.push('/')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }

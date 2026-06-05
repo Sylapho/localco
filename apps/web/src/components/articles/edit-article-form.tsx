@@ -1,6 +1,7 @@
 'use client'
 
 import type { Article } from '@/lib/api'
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -48,14 +49,15 @@ export default function EditArticleForm({
       })
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Erreur lors de la mise à jour')
+        throw new Error(
+          await getApiErrorMessage(response, 'Erreur lors de la mise à jour.'),
+        )
       }
 
       router.push(`/articles/${article.id}`)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }

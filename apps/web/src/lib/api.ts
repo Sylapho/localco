@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { getApiErrorMessage } from '@/lib/api-error'
 import { headers as nextHeaders } from 'next/headers'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -53,10 +54,7 @@ export type ArticlePayload = {
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const text = await response.text()
-    throw new Error(
-      `Erreur API - status ${response.status} - body: ${text || 'vide'}`,
-    )
+    throw new Error(await getApiErrorMessage(response))
   }
 
   return response.json()

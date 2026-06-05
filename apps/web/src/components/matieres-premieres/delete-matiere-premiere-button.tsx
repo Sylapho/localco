@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -32,14 +33,13 @@ export default function DeleteMatierePremiereButton({ matiereId }: Props) {
       })
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Erreur lors de la suppression')
+        throw new Error(await getApiErrorMessage(response))
       }
 
       router.push('/matieres-premieres')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }
