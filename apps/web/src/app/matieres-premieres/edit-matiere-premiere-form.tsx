@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import type { MatierePremiere } from '@/lib/api'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
@@ -53,14 +54,13 @@ export default function EditMatierePremiereForm({ matiere }: Props) {
       )
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Erreur lors de la mise à jour')
+        throw new Error(await getApiErrorMessage(response))
       }
 
       router.push(`/matieres-premieres/${matiere.id}`)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }

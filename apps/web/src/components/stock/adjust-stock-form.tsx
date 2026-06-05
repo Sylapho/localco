@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useMemo, useState } from 'react'
@@ -87,8 +88,12 @@ export default function AdjustStockForm({
       )
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Impossible d’ajuster le stock')
+        throw new Error(
+          await getApiErrorMessage(
+            response,
+            'Impossible d’ajuster le stock.',
+          ),
+        )
       }
 
       setQuantite('')
@@ -97,7 +102,7 @@ export default function AdjustStockForm({
       setMessage('Ajustement enregistré.')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }

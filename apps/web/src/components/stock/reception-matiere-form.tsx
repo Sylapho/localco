@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useMemo, useState } from 'react'
@@ -57,8 +58,7 @@ export default function ReceptionMatiereForm({
       )
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Impossible d’enregistrer la réception')
+        throw new Error(await getApiErrorMessage(response))
       }
 
       setQuantite('')
@@ -67,7 +67,7 @@ export default function ReceptionMatiereForm({
       setMessage('Réception enregistrée.')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setError(getUnknownErrorMessage(err))
     } finally {
       setLoading(false)
     }

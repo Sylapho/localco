@@ -1,5 +1,6 @@
 'use client'
 
+import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
@@ -339,13 +340,12 @@ export default function StockDashboard({
       )
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Impossible de passer ce lot en perte')
+        throw new Error(await getApiErrorMessage(response))
       }
 
       router.refresh()
     } catch (err) {
-      setLossError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setLossError(getUnknownErrorMessage(err))
     } finally {
       setLossLotId(null)
     }
