@@ -225,13 +225,17 @@ http://localhost:3000
 ```bash
 pnpm install
 
+pnpm check
+
 pnpm dev
 pnpm dev:api
 pnpm dev:web
+pnpm dev:shop
 
 pnpm build
 pnpm build:api
 pnpm build:web
+pnpm build:shop
 
 pnpm lint
 pnpm lint:api
@@ -269,6 +273,22 @@ pnpm --filter web build
 pnpm --filter web start
 pnpm --filter web lint
 ```
+
+### Vérification complète
+
+Avant d'ouvrir une pull request, lance la vérification complète depuis la racine :
+
+```bash
+pnpm check
+```
+
+Cette commande exécute :
+
+- le lint de tout le workspace ;
+- les tests API en série ;
+- le build API ;
+- le build web ;
+- le build shop.
 
 ## Tests
 

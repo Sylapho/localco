@@ -8,6 +8,7 @@
     "dev:api": "pnpm --filter @localco/api start:dev",
     "dev:web": "pnpm --filter web dev",
     "dev:shop": "pnpm --filter shop dev",
+    "check": "pnpm lint && pnpm test:api --runInBand && pnpm build:api && pnpm build:web && pnpm build:shop",
     "build": "pnpm build:api && pnpm build:web",
     "build:api": "pnpm --filter @localco/api build",
     "build:web": "pnpm --filter web build",
