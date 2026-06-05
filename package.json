@@ -4,18 +4,19 @@
   "version": "1.0.0",
   "description": "LocalCo monorepo",
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
+    "dev": "pnpm -r --parallel --if-present dev",
     "dev:api": "pnpm --filter @localco/api start:dev",
-    "dev:web": "pnpm --filter web dev",
-    "dev:shop": "pnpm --filter shop dev",
-    "check": "pnpm lint && pnpm test:api --runInBand && pnpm build:api && pnpm build:web && pnpm build:shop",
-    "build": "pnpm build:api && pnpm build:web",
+    "dev:web": "pnpm --filter @localco/web dev",
+    "dev:shop": "pnpm --filter @localco/shop dev",
+    "check": "pnpm lint && pnpm test:api --runInBand && pnpm build",
+    "build": "pnpm build:api && pnpm build:web && pnpm build:shop",
     "build:api": "pnpm --filter @localco/api build",
-    "build:web": "pnpm --filter web build",
-    "build:shop": "pnpm --filter shop build",
-    "lint": "pnpm -r lint",
+    "build:web": "pnpm --filter @localco/web build",
+    "build:shop": "pnpm --filter @localco/shop build",
+    "lint": "pnpm -r --if-present lint",
     "lint:api": "pnpm --filter @localco/api lint",
-    "lint:web": "pnpm --filter web lint",
+    "lint:web": "pnpm --filter @localco/web lint",
+    "lint:shop": "pnpm --filter @localco/shop lint",
     "test": "pnpm test:api",
     "test:api": "pnpm --filter @localco/api test",
     "test:api:e2e": "pnpm --filter @localco/api test:e2e",
@@ -32,15 +33,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.33.0",
-  "dependencies": {
-    "@nestjs/config": "^4.0.4",
-    "@nestjs/mapped-types": "^2.1.1",
-    "@prisma/client": "^7.7.0",
-    "class-transformer": "^0.5.1",
-    "class-validator": "^0.15.1"
-  },
-  "devDependencies": {
-    "prisma": "^7.7.0"
-  }
+  "packageManager": "pnpm@10.33.0"
 }
