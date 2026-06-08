@@ -724,6 +724,29 @@ describe('Commandes integration', () => {
     expect(prismaMock.stripeWebhookEvent.create).not.toHaveBeenCalled()
   })
 
+  it('POST /api/commandes/stripe/webhook should reject invalid Stripe signature', async () => {
+    mockStripeConstructEvent.mockImplementation(() => {
+      throw new Error('No signatures found matching the expected signature')
+    })
+
+    await request(app.getHttpServer())
+      .post('/api/commandes/stripe/webhook')
+      .set('stripe-signature', 'invalid-signature')
+      .send({})
+      .expect(400)
+
+    expect(mockStripeConstructEvent).toHaveBeenCalledWith(
+      expect.any(Buffer),
+      'invalid-signature',
+      'whsec_test_localco',
+    )
+    expect(prismaMock.stripeWebhookEvent.create).not.toHaveBeenCalled()
+    expect(prismaMock.commande.findFirst).not.toHaveBeenCalled()
+    expect(prismaMock.commande.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
+  })
+
   it('POST /api/commandes/stripe/webhook should ignore duplicate Stripe events', async () => {
     mockStripeConstructEvent.mockReturnValue({
       id: 'evt_duplicate',
@@ -846,6 +869,43 @@ describe('Commandes integration', () => {
     expect(emailsServiceMock.sendOrderConfirmation).toHaveBeenCalledWith(
       updatedCommande,
     )
+  })
+
+  it('POST /api/commandes/stripe/webhook should ignore completed event for unknown session safely', async () => {
+    mockStripeConstructEvent.mockReturnValue({
+      id: 'evt_unknown_session',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_unknown',
+        },
+      },
+    })
+
+    prismaMock.commande.findFirst.mockResolvedValue(null)
+
+    const response = await request(app.getHttpServer())
+      .post('/api/commandes/stripe/webhook')
+      .set('stripe-signature', 'stripe-signature')
+      .send({})
+      .expect(201)
+
+    expect(response.body).toEqual({
+      received: true,
+    })
+    expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
+      where: { stripeId: 'cs_unknown' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
+    })
+    expect(prismaMock.article.update).not.toHaveBeenCalled()
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
   })
 
   it('POST /api/commandes/stripe/webhook should expire pending checkout and release reserved stock', async () => {

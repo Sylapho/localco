@@ -1058,6 +1058,29 @@ describe('CommandesService', () => {
     expect(prismaMock.stripeWebhookEvent.create).not.toHaveBeenCalled()
   })
 
+  it('handleStripeWebhook should reject invalid Stripe signature without side effects', async () => {
+    const rawBody = Buffer.from('{}')
+
+    mockStripeConstructEvent.mockImplementation(() => {
+      throw new Error('No signatures found matching the expected signature')
+    })
+
+    await expect(
+      service.handleStripeWebhook(rawBody, 'invalid-signature'),
+    ).rejects.toBeInstanceOf(BadRequestException)
+
+    expect(mockStripeConstructEvent).toHaveBeenCalledWith(
+      rawBody,
+      'invalid-signature',
+      'whsec_test_localco',
+    )
+    expect(prismaMock.stripeWebhookEvent.create).not.toHaveBeenCalled()
+    expect(prismaMock.commande.findFirst).not.toHaveBeenCalled()
+    expect(prismaMock.commande.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
+  })
+
   it('handleStripeWebhook should ignore duplicate Stripe events', async () => {
     mockStripeConstructEvent.mockReturnValue({
       id: 'evt_duplicate',
