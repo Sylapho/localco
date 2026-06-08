@@ -5,7 +5,7 @@ import type {
   NomenclatureLine,
 } from '@/lib/api'
 import { getApiErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -23,7 +23,7 @@ export default function ArticleNomenclature({
   matieres,
 }: Props) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
 
   const [mpId, setMpId] = useState('')
   const [quantite, setQuantite] = useState('')
@@ -35,7 +35,7 @@ export default function ArticleNomenclature({
     e.preventDefault()
     setError('')
 
-    const response = await authenticatedFetch(
+    const response = await sessionFetch(
       `${API_URL}/articles/${articleId}/nomenclature`,
       {
         method: 'POST',
@@ -65,7 +65,7 @@ export default function ArticleNomenclature({
   async function updateLine(line: NomenclatureLine) {
     setError('')
 
-    const response = await authenticatedFetch(
+    const response = await sessionFetch(
       `${API_URL}/articles/${articleId}/nomenclature/${line.mpId}`,
       {
         method: 'PATCH',
@@ -97,7 +97,7 @@ export default function ArticleNomenclature({
 
     setError('')
 
-    const response = await authenticatedFetch(
+    const response = await sessionFetch(
       `${API_URL}/articles/${articleId}/nomenclature/${line.mpId}`,
       {
         method: 'DELETE',

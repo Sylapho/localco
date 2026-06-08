@@ -1,7 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -18,7 +18,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function ProduceLotForm({ articles }: ProduceLotFormProps) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
   const [articleId, setArticleId] = useState(articles[0]?.id.toString() ?? '')
   const [quantite, setQuantite] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
@@ -33,7 +33,7 @@ export default function ProduceLotForm({ articles }: ProduceLotFormProps) {
     setError('')
 
     try {
-      const response = await authenticatedFetch(
+      const response = await sessionFetch(
         `${API_URL}/articles/${articleId}/produce`,
         {
           method: 'POST',

@@ -12,7 +12,7 @@ import type {
   MouvementStockType,
   StockLot,
 } from '@/lib/api'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import ArticleImage from '@/components/articles/article-image'
 import AdjustStockForm from './adjust-stock-form'
 import ProduceLotForm from './produce-lot-form'
@@ -220,7 +220,7 @@ export default function StockDashboard({
   lots,
 }: StockDashboardProps) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
   const [tab, setTab] = useState<StockTab>('mp')
   const [filter, setFilter] = useState<StockFilter>('all')
   const [sort, setSort] = useState<SortMode>('nom')
@@ -332,7 +332,7 @@ export default function StockDashboard({
     setLossError('')
 
     try {
-      const response = await authenticatedFetch(
+      const response = await sessionFetch(
         `${API_URL}/mouvements-stock/lots/${lot.id}/perte`,
         {
           method: 'POST',

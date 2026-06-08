@@ -1,7 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -14,7 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function ProduceArticleForm({ articleId, maxQuantity }: Props) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
   const [quantite, setQuantite] = useState('1')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -27,7 +27,7 @@ export default function ProduceArticleForm({ articleId, maxQuantity }: Props) {
     setError('')
 
     try {
-      const response = await authenticatedFetch(`${API_URL}/articles/${articleId}/produce`, {
+      const response = await sessionFetch(`${API_URL}/articles/${articleId}/produce`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

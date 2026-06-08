@@ -2,7 +2,7 @@
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import type { MatierePremiere } from '@/lib/api'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -14,7 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function EditMatierePremiereForm({ matiere }: Props) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
 
   const [nom, setNom] = useState(matiere.nom)
   const [stock, setStock] = useState(String(matiere.stock))
@@ -35,7 +35,7 @@ export default function EditMatierePremiereForm({ matiere }: Props) {
     setLoading(true)
 
     try {
-      const response = await authenticatedFetch(
+      const response = await sessionFetch(
         `${API_URL}/matieres-premieres/${matiere.id}`,
         {
           method: 'PATCH',

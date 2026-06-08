@@ -1,7 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useMemo, useState } from 'react'
 
@@ -32,7 +32,7 @@ export default function AdjustStockForm({
   matieres,
 }: AdjustStockFormProps) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
   const [cible, setCible] = useState<CibleStock>('matiere_premiere')
   const [cibleId, setCibleId] = useState(matieres[0]?.id.toString() ?? '')
   const [quantite, setQuantite] = useState('')
@@ -70,7 +70,7 @@ export default function AdjustStockForm({
     setError('')
 
     try {
-      const response = await authenticatedFetch(
+      const response = await sessionFetch(
         `${API_URL}/mouvements-stock/ajustement`,
         {
           method: 'POST',

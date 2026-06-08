@@ -2,7 +2,7 @@
 
 import type { Article } from '@/lib/api'
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -16,7 +16,7 @@ export default function EditArticleForm({
   article,
 }: EditArticleFormProps) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
 
   const [nom, setNom] = useState(article.nom)
   const [prix, setPrix] = useState(String(article.prix))
@@ -33,7 +33,7 @@ export default function EditArticleForm({
     setLoading(true)
 
     try {
-      const response = await authenticatedFetch(`${API_URL}/articles/${article.id}`, {
+      const response = await sessionFetch(`${API_URL}/articles/${article.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
