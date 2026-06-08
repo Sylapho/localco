@@ -37,7 +37,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(value)
+  }).format(value / 100)
 }
 
 function formatDate(value: string | Date) {
@@ -148,7 +148,7 @@ export default async function Home() {
           <div className="rounded border bg-white p-4 shadow-sm">
             <p className="text-sm text-gray-600">Ventes du jour</p>
             <p className="mt-2 text-2xl font-bold">
-              {formatCurrency(caisse.totals.totalTTC)}
+              {formatCurrency(caisse.totals.totalTtcCents)}
             </p>
             <p className="mt-1 text-sm text-gray-600">
               {caisse.totals.nbVentes} vente(s)
@@ -257,7 +257,7 @@ export default async function Home() {
                     <div>
                       <p className="font-medium">Commande #{commande.id}</p>
                       <p className="text-sm text-gray-600">
-                        {commande.nom} - {formatCurrency(commande.totalTTC)}
+                        {commande.nom} - {formatCurrency(commande.totalTtcCents)}
                       </p>
                     </div>
                     <Link

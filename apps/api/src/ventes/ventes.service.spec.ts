@@ -77,7 +77,7 @@ describe('VentesService', () => {
       {
         id: 1,
         mode: 'cb',
-        totalTTC: 12,
+        totalTtcCents: 1200,
         lignes: [],
       },
     ]
@@ -104,7 +104,7 @@ describe('VentesService', () => {
     const vente = {
       id: 1,
       mode: 'especes',
-      totalTTC: 8,
+      totalTtcCents: 800,
       lignes: [],
       user: null,
     }
@@ -128,7 +128,7 @@ describe('VentesService', () => {
   it('create should calculate totals, create lines and decrement article stock', async () => {
     const body: CreateVenteDto = {
       mode: 'cb',
-      remise: 1,
+      remiseCents: 100,
       lignes: [
         { articleId: 1, quantite: 2 },
         { articleId: 2, quantite: 1 },
@@ -139,15 +139,15 @@ describe('VentesService', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2.1,
-        tva: 0.055,
+        prixCents: 210,
+        tvaBps: 550,
         stock: 5,
       },
       {
         id: 2,
         nom: 'Croissant',
-        prix: 1.5,
-        tva: 0.2,
+        prixCents: 150,
+        tvaBps: 2000,
         stock: 3,
       },
     ]
@@ -155,10 +155,10 @@ describe('VentesService', () => {
     const created = {
       id: 10,
       mode: 'cb',
-      remise: 1,
-      totalTTC: 4.7,
-      totalHT: 4.313315872619938,
-      tva: 0.38668412738006186,
+      remiseCents: 100,
+      totalTtcCents: 470,
+      totalHtCents: 431,
+      tvaCents: 39,
       lignes: [],
     }
 
@@ -193,24 +193,24 @@ describe('VentesService', () => {
     expect(prismaMock.vente.create).toHaveBeenCalledWith({
       data: {
         mode: 'cb',
-        remise: 1,
-        totalTTC: 4.7,
-        totalHT: 4.313315872619938,
-        tva: 0.38668412738006186,
+        remiseCents: 100,
+        totalTtcCents: 470,
+        totalHtCents: 431,
+        tvaCents: 39,
         userId: undefined,
         lignes: {
           create: [
             {
               articleId: 1,
               quantite: 2,
-              prixUnit: 2.1,
-              tva: 0.055,
+              prixUnitCents: 210,
+              tvaBps: 550,
             },
             {
               articleId: 2,
               quantite: 1,
-              prixUnit: 1.5,
-              tva: 0.2,
+              prixUnitCents: 150,
+              tvaBps: 2000,
             },
           ],
         },
@@ -247,6 +247,71 @@ describe('VentesService', () => {
       motif: 'Vente #10',
       reference: 'vente:10',
       createdByUserId: undefined,
+    })
+  })
+
+  it('create should keep decimal-sensitive totals exact by using cents', async () => {
+    const body: CreateVenteDto = {
+      mode: 'cb',
+      lignes: [
+        { articleId: 1, quantite: 1 },
+        { articleId: 2, quantite: 1 },
+      ],
+    }
+
+    prismaMock.article.findMany.mockResolvedValue([
+      {
+        id: 1,
+        nom: 'Petit prix',
+        prixCents: 10,
+        tvaBps: 550,
+        stock: 5,
+      },
+      {
+        id: 2,
+        nom: 'Autre petit prix',
+        prixCents: 20,
+        tvaBps: 550,
+        stock: 5,
+      },
+    ])
+    prismaMock.vente.create.mockResolvedValue({ id: 11 })
+
+    await service.create(body)
+
+    expect(prismaMock.vente.create).toHaveBeenCalledWith({
+      data: {
+        mode: 'cb',
+        remiseCents: 0,
+        totalTtcCents: 30,
+        totalHtCents: 28,
+        tvaCents: 2,
+        userId: undefined,
+        lignes: {
+          create: [
+            {
+              articleId: 1,
+              quantite: 1,
+              prixUnitCents: 10,
+              tvaBps: 550,
+            },
+            {
+              articleId: 2,
+              quantite: 1,
+              prixUnitCents: 20,
+              tvaBps: 550,
+            },
+          ],
+        },
+      },
+      include: {
+        user: true,
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
   })
 
@@ -287,8 +352,8 @@ describe('VentesService', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2.1,
-        tva: 0.055,
+        prixCents: 210,
+        tvaBps: 550,
         stock: 5,
       },
     ])

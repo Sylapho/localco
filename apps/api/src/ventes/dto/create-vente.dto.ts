@@ -25,7 +25,7 @@ export class CreateVenteDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  remise?: number
+  remiseCents?: number
 
   @IsOptional()
   @IsInt()

@@ -1,6 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
+import { eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -32,7 +33,7 @@ export default function NewArticlePage() {
         },
         body: JSON.stringify({
           nom,
-          prix: Number(prix),
+          prixCents: eurosToCents(Number(prix)),
           stock: Number(stock || 0),
           online: true,
           imageUrl: imageUrl || undefined,

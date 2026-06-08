@@ -41,7 +41,7 @@ describe('CaisseController', () => {
     const result = {
       status: 'open',
       totals: {
-        totalTTC: 0,
+        totalTtcCents: 0,
       },
     }
 
@@ -54,7 +54,7 @@ describe('CaisseController', () => {
   it('cloturer should close today cash register', async () => {
     const result = {
       id: 1,
-      totalTTC: 42,
+      totalTtcCents: 4200,
     }
 
     caisseServiceMock.closeToday.mockResolvedValue(result)
@@ -64,7 +64,7 @@ describe('CaisseController', () => {
   })
 
   it('findClosedDays should return closed cash register days', async () => {
-    const result = [{ id: 1, totalTTC: 42 }]
+    const result = [{ id: 1, totalTtcCents: 4200 }]
     caisseServiceMock.findClosedDays.mockResolvedValue(result)
 
     await expect(controller.findClosedDays()).resolves.toEqual(result)

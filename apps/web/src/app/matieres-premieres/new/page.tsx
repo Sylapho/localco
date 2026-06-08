@@ -1,6 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
+import { eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -35,7 +36,7 @@ export default function NewMatierePremierePage() {
           nom,
           stock: Number(stock),
           unite,
-          coutUnitaire: Number(coutUnitaire),
+          coutUnitaireCents: eurosToCents(Number(coutUnitaire)),
           seuil: Number(seuil),
           conditionnement,
         }),

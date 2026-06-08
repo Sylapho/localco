@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import type { ShopArticle } from '@/lib/api'
 import {
@@ -108,7 +108,7 @@ export default function ShopClient({ articles }: ShopClientProps) {
   }, [cart, cartReady])
 
   const lines = useMemo(() => buildCartLines(cart, articles), [cart, articles])
-  const total = lines.reduce((sum, line) => sum + line.total, 0)
+  const total = lines.reduce((sum, line) => sum + line.totalCents, 0)
   const count = getCartCount(cart)
 
   const filteredArticles = articles.filter((article) => {
@@ -379,7 +379,7 @@ export default function ShopClient({ articles }: ShopClientProps) {
                       }`}
                       aria-hidden="true"
                     >
-                      ⌄
+                      ?
                     </span>
                   </button>
 
@@ -520,7 +520,7 @@ function ProductRow({
       <div className="col-span-2 flex items-end justify-between gap-3 sm:col-span-1 sm:flex-col sm:items-end">
         <div className="sm:text-right">
           <p className="text-lg font-black text-[#b5006e]">
-            {formatCurrency(article.prix)}
+            {formatCurrency(article.prixCents)}
           </p>
 
         </div>
@@ -613,7 +613,7 @@ function CartDrawer({
   lines: {
     article: ShopArticle
     quantite: number
-    total: number
+    totalCents: number
   }[]
   total: number
   onClose: () => void
@@ -667,12 +667,12 @@ function CartDrawer({
                         {line.article.nom}
                       </p>
                       <p className="text-sm text-[#7a6d73]">
-                        {line.quantite} x {formatCurrency(line.article.prix)}
+                        {line.quantite} x {formatCurrency(line.article.prixCents)}
                       </p>
                     </div>
 
                     <p className="font-black text-[#b5006e]">
-                      {formatCurrency(line.total)}
+                      {formatCurrency(line.totalCents)}
                     </p>
                   </div>
 

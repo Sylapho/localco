@@ -28,7 +28,7 @@ jest.mock('stripe', () => {
 type ArticleMock = {
   id: number
   nom: string
-  prix: number
+  prixCents: number
   stock: number
   online?: boolean
   imageUrl?: string | null
@@ -46,7 +46,7 @@ type CommandeMock = {
   id: number
   statut: string
   stripeId?: string | null
-  totalTTC?: number
+  totalTtcCents?: number
   lignes: CommandeLigneMock[]
 }
 
@@ -277,7 +277,7 @@ describe('CommandesService', () => {
 
     prismaMock.commande.findFirst.mockResolvedValue({
       id: 8,
-      totalTTC: 15,
+      totalTtcCents: 1500,
       lieu: validPickupPoint,
       dateRetrait,
       statut: 'nouvelle',
@@ -285,7 +285,7 @@ describe('CommandesService', () => {
       lignes: [
         {
           quantite: 2,
-          prixUnit: 7.5,
+          prixUnitCents: 750,
           article: {
             nom: 'Terrine de volaille',
           },
@@ -298,7 +298,7 @@ describe('CommandesService', () => {
     ).resolves.toEqual({
       id: 8,
       reference: 'CMD-000008',
-      totalTTC: 15,
+      totalTtcCents: 1500,
       lieu: validPickupPoint,
       dateRetrait: dateRetrait.toISOString(),
       statut: 'nouvelle',
@@ -308,8 +308,8 @@ describe('CommandesService', () => {
         {
           nom: 'Terrine de volaille',
           quantite: 2,
-          prixUnit: 7.5,
-          total: 15,
+          prixUnitCents: 750,
+          totalCents: 1500,
         },
       ],
     })
@@ -318,7 +318,7 @@ describe('CommandesService', () => {
       where: { stripeId: 'cs_paid' },
       select: {
         id: true,
-        totalTTC: true,
+        totalTtcCents: true,
         lieu: true,
         dateRetrait: true,
         statut: true,
@@ -326,7 +326,7 @@ describe('CommandesService', () => {
         lignes: {
           select: {
             quantite: true,
-            prixUnit: true,
+            prixUnitCents: true,
             article: {
               select: {
                 nom: true,
@@ -358,14 +358,14 @@ describe('CommandesService', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2,
+        prixCents: 200,
         stock: 8,
       },
     ]
 
     const created = {
       id: 12,
-      totalTTC: 6,
+      totalTtcCents: 600,
       statut: 'nouvelle',
       lignes: [],
     }
@@ -391,14 +391,14 @@ describe('CommandesService', () => {
         tel: '0612345678',
         lieu: validPickupPoint,
         dateRetrait: new Date(validPickupDate),
-        totalTTC: 6,
+        totalTtcCents: 600,
         statut: 'nouvelle',
         lignes: {
           create: [
             {
               articleId: 1,
               quantite: 3,
-              prixUnit: 2,
+              prixUnitCents: 200,
             },
           ],
         },
@@ -452,14 +452,14 @@ describe('CommandesService', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2,
+        prixCents: 200,
         stock: 3,
       },
     ]
 
     const created = {
       id: 99,
-      totalTTC: 10,
+      totalTtcCents: 1000,
       statut: 'nouvelle',
       lignes: [],
     }
@@ -480,14 +480,14 @@ describe('CommandesService', () => {
         tel: '0612345678',
         lieu: validPickupPoint,
         dateRetrait: new Date(validPickupDate),
-        totalTTC: 10,
+        totalTtcCents: 1000,
         statut: 'nouvelle',
         lignes: {
           create: [
             {
               articleId: 1,
               quantite: 5,
-              prixUnit: 2,
+              prixUnitCents: 200,
             },
           ],
         },
@@ -582,7 +582,7 @@ describe('CommandesService', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2.5,
+        prixCents: 250,
         stock: 10,
         imageUrl: 'https://example.com/baguette.jpg',
       },
@@ -591,7 +591,7 @@ describe('CommandesService', () => {
     const pendingCommande = {
       id: 33,
       statut: 'paiement_en_attente',
-      totalTTC: 7.5,
+      totalTtcCents: 750,
       lignes: [],
     }
 
@@ -615,14 +615,14 @@ describe('CommandesService', () => {
         tel: '0612345678',
         lieu: validPickupPoint,
         dateRetrait: new Date(validPickupDate),
-        totalTTC: 7.5,
+        totalTtcCents: 750,
         statut: 'paiement_en_attente',
         lignes: {
           create: [
             {
               articleId: 1,
               quantite: 3,
-              prixUnit: 2.5,
+              prixUnitCents: 250,
             },
           ],
         },
@@ -704,7 +704,7 @@ describe('CommandesService', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2,
+        prixCents: 200,
         stock: 3,
         imageUrl: null,
       },
@@ -713,7 +713,7 @@ describe('CommandesService', () => {
     const pendingCommande = {
       id: 44,
       statut: 'paiement_en_attente',
-      totalTTC: 10,
+      totalTtcCents: 1000,
       lignes: [],
     }
 
@@ -775,7 +775,7 @@ describe('CommandesService', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2,
+        prixCents: 200,
         stock: 10,
         imageUrl: '/images/baguette.jpg',
       },
@@ -785,7 +785,7 @@ describe('CommandesService', () => {
     prismaMock.commande.create.mockResolvedValue({
       id: 45,
       statut: 'paiement_en_attente',
-      totalTTC: 4,
+      totalTtcCents: 400,
       lignes: [],
     })
     mockStripeCheckoutSessionsCreate.mockResolvedValue({

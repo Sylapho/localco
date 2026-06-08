@@ -17,7 +17,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(value)
+  }).format(value / 100)
 }
 
 function formatDateTime(value: string) {
@@ -70,7 +70,7 @@ export default async function CommandeDetailPage({ params }: PageProps) {
           </div>
 
           <p className="text-2xl font-bold">
-            {formatCurrency(commande.totalTTC)}
+            {formatCurrency(commande.totalTtcCents)}
           </p>
         </div>
 
@@ -147,13 +147,13 @@ export default async function CommandeDetailPage({ params }: PageProps) {
                 <div>
                   <p className="font-medium">{ligne.article.nom}</p>
                   <p className="text-sm text-gray-600">
-                    {ligne.quantite} x {formatCurrency(ligne.prixUnit)}
+                    {ligne.quantite} x {formatCurrency(ligne.prixUnitCents)}
                   </p>
                 </div>
               </div>
 
               <p className="font-semibold">
-                {formatCurrency(ligne.prixUnit * ligne.quantite)}
+                {formatCurrency(ligne.prixUnitCents * ligne.quantite)}
               </p>
             </li>
           ))}

@@ -62,7 +62,7 @@ describe('MatieresPremieresController', () => {
       nom: 'Farine',
       stock: 10,
       unite: 'kg',
-      coutUnitaire: 1.2,
+      coutUnitaireCents: 120,
       seuil: 2,
       conditionnement: 'sac',
     }

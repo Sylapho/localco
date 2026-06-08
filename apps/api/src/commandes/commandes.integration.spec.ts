@@ -31,7 +31,7 @@ jest.mock('stripe', () => {
 type ArticleMock = {
   id: number
   nom: string
-  prix: number
+  prixCents: number
   stock: number
   online?: boolean
   imageUrl?: string | null
@@ -236,7 +236,7 @@ describe('Commandes integration', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2,
+        prixCents: 200,
         stock: 3,
       },
     ]
@@ -244,7 +244,7 @@ describe('Commandes integration', () => {
     const createdCommande = {
       id: 101,
       statut: 'nouvelle',
-      totalTTC: 10,
+      totalTtcCents: 1000,
       lignes: [],
     }
 
@@ -281,14 +281,14 @@ describe('Commandes integration', () => {
         tel: '0612345678',
         lieu: validPickupPoint,
         dateRetrait: new Date(validPickupDate),
-        totalTTC: 10,
+        totalTtcCents: 1000,
         statut: 'nouvelle',
         lignes: {
           create: [
             {
               articleId: 1,
               quantite: 5,
-              prixUnit: 2,
+              prixUnitCents: 200,
             },
           ],
         },
@@ -396,7 +396,7 @@ describe('Commandes integration', () => {
       {
         id: 1,
         nom: 'Baguette',
-        prix: 2.5,
+        prixCents: 250,
         stock: 3,
         imageUrl: 'https://example.com/baguette.jpg',
       },
@@ -405,7 +405,7 @@ describe('Commandes integration', () => {
     const pendingCommande = {
       id: 202,
       statut: 'paiement_en_attente',
-      totalTTC: 12.5,
+      totalTtcCents: 1250,
       lignes: [],
     }
 
@@ -441,14 +441,14 @@ describe('Commandes integration', () => {
         tel: '0612345678',
         lieu: validPickupPoint,
         dateRetrait: new Date(validPickupDate),
-        totalTTC: 12.5,
+        totalTtcCents: 1250,
         statut: 'paiement_en_attente',
         lignes: {
           create: [
             {
               articleId: 1,
               quantite: 5,
-              prixUnit: 2.5,
+              prixUnitCents: 250,
             },
           ],
         },
@@ -542,7 +542,7 @@ describe('Commandes integration', () => {
 
     prismaMock.commande.findFirst.mockResolvedValue({
       id: 505,
-      totalTTC: 12.5,
+      totalTtcCents: 1250,
       lieu: validPickupPoint,
       dateRetrait,
       statut: 'nouvelle',
@@ -550,7 +550,7 @@ describe('Commandes integration', () => {
       lignes: [
         {
           quantite: 5,
-          prixUnit: 2.5,
+          prixUnitCents: 250,
           article: {
             nom: 'Baguette',
           },
@@ -565,7 +565,7 @@ describe('Commandes integration', () => {
     expect(response.body).toEqual({
       id: 505,
       reference: 'CMD-000505',
-      totalTTC: 12.5,
+      totalTtcCents: 1250,
       lieu: validPickupPoint,
       dateRetrait: dateRetrait.toISOString(),
       statut: 'nouvelle',
@@ -575,8 +575,8 @@ describe('Commandes integration', () => {
         {
           nom: 'Baguette',
           quantite: 5,
-          prixUnit: 2.5,
-          total: 12.5,
+          prixUnitCents: 250,
+          totalCents: 1250,
         },
       ],
     })
@@ -585,7 +585,7 @@ describe('Commandes integration', () => {
       where: { stripeId: 'cs_paid' },
       select: {
         id: true,
-        totalTTC: true,
+        totalTtcCents: true,
         lieu: true,
         dateRetrait: true,
         statut: true,
@@ -593,7 +593,7 @@ describe('Commandes integration', () => {
         lignes: {
           select: {
             quantite: true,
-            prixUnit: true,
+            prixUnitCents: true,
             article: {
               select: {
                 nom: true,

@@ -76,7 +76,7 @@ export default function CheckoutClient({
   const [error, setError] = useState<CheckoutError | null>(null)
 
   const lines = useMemo(() => buildCartLines(cart, articles), [cart, articles])
-  const total = lines.reduce((sum, line) => sum + line.total, 0)
+  const total = lines.reduce((sum, line) => sum + line.totalCents, 0)
   const itemCount = lines.reduce((sum, line) => sum + line.quantite, 0)
 
   const selectedPickupPoint = findPickupPoint(lieu) ?? pickupPoints[0]
@@ -406,12 +406,12 @@ export default function CheckoutClient({
                         {line.article.nom}
                       </p>
                       <p className="text-sm text-[#7a6d73]">
-                        {line.quantite} x {formatCurrency(line.article.prix)}
+                        {line.quantite} x {formatCurrency(line.article.prixCents)}
                       </p>
                     </div>
 
                     <p className="font-black text-[#b5006e]">
-                      {formatCurrency(line.total)}
+                      {formatCurrency(line.totalCents)}
                     </p>
                   </li>
                 ))}

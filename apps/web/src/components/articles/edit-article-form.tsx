@@ -2,6 +2,7 @@
 
 import type { Article } from '@/lib/api'
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
+import { centsToEuros, eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -19,7 +20,7 @@ export default function EditArticleForm({
   const sessionFetch = useSessionFetch()
 
   const [nom, setNom] = useState(article.nom)
-  const [prix, setPrix] = useState(String(article.prix))
+  const [prix, setPrix] = useState(String(centsToEuros(article.prixCents)))
   const [stock, setStock] = useState(String(article.stock))
   const [imageUrl, setImageUrl] = useState(article.imageUrl ?? '')
   const [description, setDescription] = useState(article.description ?? '')
@@ -40,7 +41,7 @@ export default function EditArticleForm({
         },
         body: JSON.stringify({
           nom,
-          prix: Number(prix),
+          prixCents: eurosToCents(Number(prix)),
           stock: Number(stock),
           imageUrl: imageUrl || null,
           description: description || undefined,

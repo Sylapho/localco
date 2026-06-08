@@ -6,12 +6,12 @@ export class CreateArticleDto {
 
   @IsNumber()
   @Min(0)
-  prix: number
+  prixCents: number
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  tva?: number
+  tvaBps?: number
 
   @IsOptional()
   @IsNumber()

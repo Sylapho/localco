@@ -56,7 +56,7 @@ describe('ArticlesController', () => {
   })
 
   it('create should return created article', async () => {
-    const body = { nom: 'Croissant', prix: 1.1 }
+    const body = { nom: 'Croissant', prixCents: 110 }
     const result = { id: 2, ...body }
 
     articlesServiceMock.create.mockResolvedValue(result)
@@ -65,8 +65,8 @@ describe('ArticlesController', () => {
   })
 
   it('update should return updated article', async () => {
-    const body = { prix: 1.3 }
-    const result = { id: 1, nom: 'Baguette', prix: 1.3 }
+    const body = { prixCents: 130 }
+    const result = { id: 1, nom: 'Baguette', prixCents: 130 }
 
     articlesServiceMock.update.mockResolvedValue(result)
 

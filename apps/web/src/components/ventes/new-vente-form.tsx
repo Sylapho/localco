@@ -2,6 +2,7 @@
 
 import type { Article, VenteMode } from '@/lib/api'
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
+import { calculateHtFromTtcCents, eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useMemo, useState } from 'react'
@@ -27,7 +28,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(value)
+  }).format(value / 100)
 }
 
 function createEmptyLine(): SaleLineForm {
@@ -60,11 +61,11 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
         return total
       }
 
-      return total + article.prix * quantite
+      return total + article.prixCents * quantite
     }, 0)
 
-    const remiseValue = Math.max(0, Number(remise) || 0)
-    const totalTTC = Math.max(0, totalAvantRemiseTTC - remiseValue)
+    const remiseCents = eurosToCents(Math.max(0, Number(remise) || 0))
+    const totalTTC = Math.max(0, totalAvantRemiseTTC - remiseCents)
     const ratio =
       totalAvantRemiseTTC > 0 ? totalTTC / totalAvantRemiseTTC : 1
 
@@ -76,13 +77,16 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
         return total
       }
 
-      return total + (article.prix * quantite) / (1 + article.tva)
+      return (
+        total +
+        calculateHtFromTtcCents(article.prixCents * quantite, article.tvaBps)
+      )
     }, 0)
 
-    const totalHT = totalAvantRemiseHT * ratio
+    const totalHT = Math.round(totalAvantRemiseHT * ratio)
 
     return {
-      remise: remiseValue,
+      remiseCents,
       totalAvantRemiseTTC,
       totalHT,
       totalTTC,
@@ -150,7 +154,7 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
         },
         body: JSON.stringify({
           mode,
-          remise: totals.remise,
+          remiseCents: totals.remiseCents,
           lignes: normalizedLines,
         }),
       })
@@ -209,7 +213,9 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
           {lignes.map((ligne, index) => {
             const selectedArticle = articleById.get(Number(ligne.articleId))
             const quantite = Number(ligne.quantite) || 0
-            const lineTotal = selectedArticle ? selectedArticle.prix * quantite : 0
+            const lineTotal = selectedArticle
+              ? selectedArticle.prixCents * quantite
+              : 0
             const isOverStock = selectedArticle
               ? quantite > selectedArticle.stock
               : false
@@ -231,7 +237,7 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
                       <option value="">Choisir un article</option>
                       {articles.map((article) => (
                         <option key={article.id} value={article.id}>
-                          {article.nom} - {formatCurrency(article.prix)} -
+                          {article.nom} - {formatCurrency(article.prixCents)} -
                           stock {article.stock}
                         </option>
                       ))}

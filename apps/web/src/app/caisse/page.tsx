@@ -18,7 +18,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(value)
+  }).format(value / 100)
 }
 
 function formatDateTime(value: string) {
@@ -45,7 +45,7 @@ function getTopArticles(ventes: Vente[]) {
       nom: string
       imageUrl?: string | null
       quantite: number
-      totalTTC: number
+      totalTtcCents: number
     }
   >()
 
@@ -55,19 +55,20 @@ function getTopArticles(ventes: Vente[]) {
         nom: ligne.article.nom,
         imageUrl: ligne.article.imageUrl,
         quantite: 0,
-        totalTTC: 0,
+        totalTtcCents: 0,
       }
 
       articles.set(ligne.articleId, {
         ...current,
         quantite: current.quantite + ligne.quantite,
-        totalTTC: current.totalTTC + ligne.prixUnit * ligne.quantite,
+        totalTtcCents:
+          current.totalTtcCents + ligne.prixUnitCents * ligne.quantite,
       })
     }
   }
 
   return Array.from(articles.values())
-    .sort((a, b) => b.totalTTC - a.totalTTC)
+    .sort((a, b) => b.totalTtcCents - a.totalTtcCents)
     .slice(0, 5)
 }
 
@@ -77,17 +78,17 @@ export default async function CaissePage() {
     (vente) => getDayKey(vente.date) === caisse.dayKey,
   )
   const totalsByMode: Record<VenteMode, number> = {
-    cb: caisse.totals.cb,
-    especes: caisse.totals.especes,
-    cheque: caisse.totals.cheques,
+    cb: caisse.totals.cbCents,
+    especes: caisse.totals.especesCents,
+    cheque: caisse.totals.chequesCents,
   }
   const topArticles = getTopArticles(ventesDuJour)
 
-  const totalTTC = caisse.totals.totalTTC
-  const totalHT = caisse.totals.totalHT
-  const totalTVA = caisse.totals.tva
+  const totalTTC = caisse.totals.totalTtcCents
+  const totalHT = caisse.totals.totalHtCents
+  const totalTVA = caisse.totals.tvaCents
   const totalRemise = ventesDuJour.reduce(
-    (total, vente) => total + vente.remise,
+    (total, vente) => total + vente.remiseCents,
     0,
   )
   const nbArticles = ventesDuJour.reduce(
@@ -97,7 +98,9 @@ export default async function CaissePage() {
     0,
   )
   const panierMoyen =
-    caisse.totals.nbVentes > 0 ? totalTTC / caisse.totals.nbVentes : 0
+    caisse.totals.nbVentes > 0
+      ? Math.round(totalTTC / caisse.totals.nbVentes)
+      : 0
 
   return (
     <main className="p-8">
@@ -191,7 +194,7 @@ export default async function CaissePage() {
             <div className="flex justify-between gap-4">
               <dt>Marge estimée</dt>
               <dd className="font-medium">
-                {formatCurrency(caisse.totals.marge)}
+                {formatCurrency(caisse.totals.margeCents)}
               </dd>
             </div>
           </dl>
@@ -227,7 +230,9 @@ export default async function CaissePage() {
                       {article.quantite} vendu(s)
                     </p>
                   </div>
-                  <p className="font-medium">{formatCurrency(article.totalTTC)}</p>
+                  <p className="font-medium">
+                    {formatCurrency(article.totalTtcCents)}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -262,7 +267,7 @@ export default async function CaissePage() {
                       {formatDateTime(vente.date)} - {modeLabels[vente.mode]}
                     </p>
                   </div>
-                  <p className="font-medium">{formatCurrency(vente.totalTTC)}</p>
+                  <p className="font-medium">{formatCurrency(vente.totalTtcCents)}</p>
                 </li>
               ))}
             </ul>

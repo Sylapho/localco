@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import ArticleImage from '@/components/articles/article-image'
 import { getArticles } from '@/lib/api'
+import { formatCurrencyFromCents } from '@/lib/money'
 
 export default async function ArticlesPage() {
   const articles = await getArticles()
@@ -28,7 +29,9 @@ export default async function ArticlesPage() {
                 <h2 className="text-lg font-semibold">{article.nom}</h2>
               </div>
 
-              <p className="mt-2">Prix : {article.prix.toFixed(2)} €</p>
+              <p className="mt-2">
+                Prix : {formatCurrencyFromCents(article.prixCents)}
+              </p>
               <p>Stock : {article.stock}</p>
               <p>En ligne : {article.online ? 'Oui' : 'Non'}</p>
 

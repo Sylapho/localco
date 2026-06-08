@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
 import { CreateVenteDto } from './dto/create-vente.dto'
+import { calculateHtFromTtcCents } from '../money'
 
 @Injectable()
 export class VentesService {
@@ -99,38 +100,46 @@ export class VentesService {
     const lignesCalculees = data.lignes.map((ligne) => {
       const article = articles.find((a) => a.id === ligne.articleId)!
 
-      const prixUnitTTC = article.prix
-      const totalLigneTTC = prixUnitTTC * ligne.quantite
-      const totalLigneHT = totalLigneTTC / (1 + article.tva)
-      const tvaLigne = totalLigneTTC - totalLigneHT
+      const prixUnitTtcCents = article.prixCents
+      const totalLigneTtcCents = prixUnitTtcCents * ligne.quantite
+      const totalLigneHtCents = calculateHtFromTtcCents(
+        totalLigneTtcCents,
+        article.tvaBps,
+      )
+      const tvaLigneCents = totalLigneTtcCents - totalLigneHtCents
 
       return {
         article,
         quantite: ligne.quantite,
-        prixUnit: prixUnitTTC,
-        totalLigneTTC,
-        totalLigneHT,
-        tvaLigne,
+        prixUnitCents: prixUnitTtcCents,
+        totalLigneTtcCents,
+        totalLigneHtCents,
+        tvaLigneCents,
       }
     })
 
-    const remise = data.remise ?? 0
+    const remiseCents = data.remiseCents ?? 0
 
-    const totalAvantRemiseTTC = lignesCalculees.reduce(
-      (total, ligne) => total + ligne.totalLigneTTC,
+    const totalAvantRemiseTtcCents = lignesCalculees.reduce(
+      (total, ligne) => total + ligne.totalLigneTtcCents,
       0,
     )
 
-    const totalTTC = Math.max(0, totalAvantRemiseTTC - remise)
+    const totalTtcCents = Math.max(0, totalAvantRemiseTtcCents - remiseCents)
 
-    const totalAvantRemiseHT = lignesCalculees.reduce(
-      (total, ligne) => total + ligne.totalLigneHT,
+    const totalAvantRemiseHtCents = lignesCalculees.reduce(
+      (total, ligne) => total + ligne.totalLigneHtCents,
       0,
     )
 
-    const ratio = totalAvantRemiseTTC > 0 ? totalTTC / totalAvantRemiseTTC : 1
-    const totalHT = totalAvantRemiseHT * ratio
-    const tva = totalTTC - totalHT
+    const totalHtCents =
+      totalAvantRemiseTtcCents > 0
+        ? Math.round(
+            (totalAvantRemiseHtCents * totalTtcCents) /
+              totalAvantRemiseTtcCents,
+          )
+        : totalAvantRemiseHtCents
+    const tvaCents = totalTtcCents - totalHtCents
 
     return this.prisma.$transaction(async (tx) => {
       for (const ligne of data.lignes) {
@@ -147,17 +156,17 @@ export class VentesService {
       const vente = await tx.vente.create({
         data: {
           mode: data.mode,
-          remise,
-          totalTTC,
-          totalHT,
-          tva,
+          remiseCents,
+          totalTtcCents,
+          totalHtCents,
+          tvaCents,
           userId: data.userId,
           lignes: {
             create: lignesCalculees.map((ligne) => ({
               articleId: ligne.article.id,
               quantite: ligne.quantite,
-              prixUnit: ligne.prixUnit,
-              tva: ligne.article.tva,
+              prixUnitCents: ligne.prixUnitCents,
+              tvaBps: ligne.article.tvaBps,
             })),
           },
         },

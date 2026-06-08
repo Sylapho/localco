@@ -12,7 +12,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(value)
+  }).format(value / 100)
 }
 
 function formatDate(value: string) {
@@ -25,7 +25,7 @@ function formatDate(value: string) {
 export default async function VentesPage() {
   const ventes = await getVentes()
 
-  const totalTTC = ventes.reduce((total, vente) => total + vente.totalTTC, 0)
+  const totalTTC = ventes.reduce((total, vente) => total + vente.totalTtcCents, 0)
 
   return (
     <main className="p-8">
@@ -64,7 +64,7 @@ export default async function VentesPage() {
 
                 <div className="text-right">
                   <p className="text-lg font-bold">
-                    {formatCurrency(vente.totalTTC)}
+                    {formatCurrency(vente.totalTtcCents)}
                   </p>
                   <p className="text-sm text-gray-600">
                     {modeLabels[vente.mode]}
@@ -75,15 +75,15 @@ export default async function VentesPage() {
               <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
                 <div>
                   <dt className="text-gray-600">Total HT</dt>
-                  <dd className="font-medium">{formatCurrency(vente.totalHT)}</dd>
+                  <dd className="font-medium">{formatCurrency(vente.totalHtCents)}</dd>
                 </div>
                 <div>
                   <dt className="text-gray-600">TVA</dt>
-                  <dd className="font-medium">{formatCurrency(vente.tva)}</dd>
+                  <dd className="font-medium">{formatCurrency(vente.tvaCents)}</dd>
                 </div>
                 <div>
                   <dt className="text-gray-600">Remise</dt>
-                  <dd className="font-medium">{formatCurrency(vente.remise)}</dd>
+                  <dd className="font-medium">{formatCurrency(vente.remiseCents)}</dd>
                 </div>
               </dl>
 
@@ -111,10 +111,10 @@ export default async function VentesPage() {
                         </td>
                         <td className="py-2 pr-3">{ligne.quantite}</td>
                         <td className="py-2 pr-3">
-                          {formatCurrency(ligne.prixUnit)}
+                          {formatCurrency(ligne.prixUnitCents)}
                         </td>
                         <td className="py-2">
-                          {formatCurrency(ligne.prixUnit * ligne.quantite)}
+                          {formatCurrency(ligne.prixUnitCents * ligne.quantite)}
                         </td>
                       </tr>
                     ))}
