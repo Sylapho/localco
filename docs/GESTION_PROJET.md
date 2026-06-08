@@ -96,7 +96,6 @@ L'utilisateur voit la capacite de production, saisit une quantite, puis confirme
 
 - [ ] Les matieres premieres sont decrementees.
 - [ ] Le stock article est incremente.
-- [ ] La production est refusee si le stock est insuffisant.
 - [ ] Un message clair explique l'erreur.
 ```
 
@@ -119,7 +118,6 @@ Convention proposee :
 - Branches : `codex/<courte-description>` ou `feature/<courte-description>`.
 - Commits :
   - `feat: add production capacity`
-  - `fix: handle insufficient stock`
   - `docs: add roadmap`
   - `test: cover article production`
   - `chore: update tooling`

@@ -443,7 +443,7 @@ describe('CommandesService', () => {
     })
   })
 
-  it('create should accept order even when stock becomes negative', async () => {
+  it('create should allow direct preorder when requested quantity exceeds current stock', async () => {
     const dto = baseDto({
       lignes: [{ articleId: 1, quantite: 5 }],
     })
@@ -695,7 +695,7 @@ describe('CommandesService', () => {
     })
   })
 
-  it('createCheckout should accept and reserve stock even when stock becomes negative', async () => {
+  it('createCheckout should allow preorder when requested quantity exceeds current stock', async () => {
     const dto = baseDto({
       lignes: [{ articleId: 1, quantite: 5 }],
     })

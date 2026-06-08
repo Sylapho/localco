@@ -214,7 +214,7 @@ export default function ShopClient({ articles }: ShopClientProps) {
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {['Paiement sécurisé', 'Stocks en temps réel', 'Retrait local'].map(
+            {['Paiement sécurisé', 'Préparation selon retrait', 'Retrait local'].map(
               (item) => (
                 <div
                   key={item}

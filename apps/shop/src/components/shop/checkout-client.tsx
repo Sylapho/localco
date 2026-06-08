@@ -43,12 +43,12 @@ type StockIssue = {
 type ApiErrorPayload = {
   statusCode?: number
   message?:
-    | string
-    | string[]
-    | {
-        message?: string
-        insufficientStock?: StockIssue[]
-      }
+  | string
+  | string[]
+  | {
+    message?: string
+    insufficientStock?: StockIssue[]
+  }
   error?: string
   insufficientStock?: StockIssue[]
 }
@@ -359,6 +359,32 @@ export default function CheckoutClient({
                     Votre commande sera confirmée après validation du paiement.
                   </p>
                 </div>
+
+                <div className="mt-3 rounded-2xl border border-[#f0dbe6] bg-white p-4 text-sm leading-6 text-[#4a3d43]">
+                  <p className="font-black text-[#181014]">
+                    Préparation de votre commande
+                  </p>
+                  <p>
+                    Certains produits peuvent nécessiter une préparation avant le retrait. La
+                    date proposée permet à l’équipe de préparer votre commande dans les
+                    meilleures conditions.
+                  </p>
+                </div>
+
+                <p className="mt-3 text-xs leading-5 text-[#7a6d73]">
+                  En continuant, vous acceptez les{' '}
+                  <Link href="/cgv" className="font-bold text-[#8c0055]">
+                    CGV
+                  </Link>{' '}
+                  et la{' '}
+                  <Link
+                    href="/confidentialite"
+                    className="font-bold text-[#8c0055]"
+                  >
+                    politique de confidentialité
+                  </Link>
+                  .
+                </p>
 
                 <p className="mt-3 text-xs leading-5 text-[#7a6d73]">
                   En continuant, vous acceptez les{' '}
@@ -746,11 +772,10 @@ function PickupPointCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`rounded-2xl border p-4 text-left shadow-sm transition ${
-        selected
+      className={`rounded-2xl border p-4 text-left shadow-sm transition ${selected
           ? 'border-[#b5006e] bg-[#fceef6] ring-4 ring-[#fceef6]'
           : 'border-[#eee2e7] bg-[#faf7f8] hover:border-[#b5006e] hover:bg-white'
-      }`}
+        }`}
     >
       <span className="flex items-start justify-between gap-3">
         <span>
@@ -763,11 +788,10 @@ function PickupPointCard({
         </span>
 
         <span
-          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black ${
-            selected
+          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-black ${selected
               ? 'bg-[#b5006e] text-white'
               : 'border border-[#e8e1e4] bg-white text-transparent'
-          }`}
+            }`}
         >
           ✓
         </span>

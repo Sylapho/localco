@@ -43,7 +43,7 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 ### Partiellement en place
 
 - Gestion des commandes : création, checkout, suivi de statut et détails existent, mais le dashboard interne doit être renforcé pour un usage quotidien.
-- Stock : les mouvements, lots et ajustements existent, mais le stock disponible doit être verrouillé avant checkout pour éviter les stocks négatifs.
+- Stock : les mouvements, lots et ajustements existent. Le stock peut être négatif.
 - Auth : Better Auth est la cible active, avec une dette historique d'ancien fournisseur à terminer de nettoyer dans le modèle utilisateur et les migrations.
 - Tests API : les tests existent sur plusieurs flux critiques, mais les cas stock avant checkout et webhooks doivent être durcis.
 - Pages légales : les pages existent, mais leur contenu doit être audité avant production.
@@ -52,7 +52,6 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 
 ### Risqué / à sécuriser
 
-- Le checkout peut réserver du stock sans refuser explicitement une quantité supérieure au stock disponible.
 - Le rate limiting checkout est en mémoire ; il n'est pas adapté à plusieurs instances ou à une production distribuée.
 - Les logs, métriques et alertes ne sont pas encore structurés pour la production.
 - La procédure de déploiement, rollback, sauvegarde et restauration PostgreSQL doit être écrite.
@@ -64,7 +63,7 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 
 ### P0 — bloquant production
 
-- Refuser tout checkout si le stock demandé dépasse le stock vendable.
+- Assumer les commandes dépassant le stock disponible comme précommandes, et les afficher comme besoins de production..
 - Couvrir les webhooks Stripe `completed`, `expired`, doublons et signatures invalides.
 - Remplacer ou externaliser le rate limit checkout en mémoire pour la production.
 - Finaliser la configuration d'environnement production : API, web, shop, Stripe, Resend, CORS, Better Auth.
@@ -110,7 +109,7 @@ Tâches :
 - Clarifier Better Auth comme solution active d'authentification.
 - Supprimer ou migrer toute dette historique d'ancien fournisseur si elle est encore présente dans le schéma ou le code.
 - Ajouter une validation stricte du stock disponible avant checkout.
-- Aligner les tests API sur le comportement attendu : aucun stock négatif au checkout.
+- Aligner les tests API sur le comportement attendu : possibilité de précommande, càd, possibilité d'avoir une valeur négative en stock.
 - Couvrir les webhooks Stripe critiques et les doublons.
 - Vérifier que la CI reste fiable sur API, web et shop.
 - Identifier les commandes de développement réellement supportées.
@@ -121,7 +120,7 @@ Critère de validation :
 
 - Un développeur peut installer, configurer, lancer et vérifier le projet avec la documentation.
 - `pnpm check` est vert.
-- Un checkout avec stock insuffisant est refusé avant création de session Stripe.
+- Un checkout avec stock insuffisant est considéré comme une précommande avant création de session Stripe.
 - Les anciens choix d'auth ne créent plus d'ambiguïté produit ou technique.
 
 Risque si ignoré :
@@ -235,7 +234,6 @@ Risque si ignoré :
 
 | Titre | Type | Priorité | Estimation | Branch name | Commit recommandé |
 | --- | --- | --- | --- | --- | --- |
-| Validate stock before checkout | Bug / API | P0 | M | `fix/validate-stock-before-checkout` | `fix: validate stock before checkout` |
 | Cover Stripe webhook events | Test / API | P0 | M | `test/cover-stripe-webhooks` | `test: cover stripe webhook events` |
 | Complete legal pages | Legal / Shop | P0 | S | `docs/complete-legal-pages` | `docs: complete legal pages` |
 | Add legal notice page | Legal / Shop | P1 | S | `docs/add-legal-notice-page` | `docs: add legal notice page` |
@@ -273,9 +271,6 @@ Notes :
 
 ## 7. Prochaines actions concrètes
 
-1. Corriger la validation de stock avant `POST /api/commandes/checkout`.
-2. Modifier les tests existants qui acceptent aujourd'hui un stock négatif au checkout.
-3. Ajouter les tests API de refus de checkout avec stock insuffisant.
 4. Rejouer et compléter les tests webhook Stripe : completed, expired, duplicate, signature invalide.
 5. Auditer les champs et migrations liés à l'ancienne dette d'authentification.
 6. Vérifier les `.env.example` pour API, web et shop avant pré-production.
