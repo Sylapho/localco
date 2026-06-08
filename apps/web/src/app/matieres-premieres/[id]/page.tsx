@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getMatierePremiere } from '@/lib/api'
 import DeleteMatierePremiereButton from '@/components/matieres-premieres/delete-matiere-premiere-button'
+import { formatCurrencyFromCents } from '@/lib/money'
 
 type PageProps = {
   params: Promise<{
@@ -43,7 +44,7 @@ export default async function MatierePremiereDetailPage({
           </p>
           <p>
             <span className="font-medium">Coût unitaire :</span>{' '}
-            {matiere.coutUnitaire.toFixed(2)} €
+            {formatCurrencyFromCents(matiere.coutUnitaireCents)}
           </p>
           <p>
             <span className="font-medium">Seuil :</span> {matiere.seuil}

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getMatieresPremieres } from '@/lib/api'
+import { formatCurrencyFromCents } from '@/lib/money'
 
 export default async function MatieresPremieresPage() {
   const matieres = await getMatieresPremieres()
@@ -26,7 +27,10 @@ export default async function MatieresPremieresPage() {
               <p className="mt-2">
                 Stock : {matiere.stock} {matiere.unite}
               </p>
-              <p>Coût unitaire : {matiere.coutUnitaire.toFixed(2)} €</p>
+              <p>
+                Coût unitaire :{' '}
+                {formatCurrencyFromCents(matiere.coutUnitaireCents)}
+              </p>
               <p>Seuil : {matiere.seuil}</p>
               <p>Conditionnement : {matiere.conditionnement}</p>
 

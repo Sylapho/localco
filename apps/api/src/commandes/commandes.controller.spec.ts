@@ -50,7 +50,7 @@ describe('CommandesController', () => {
       lieu: 'En boutique',
       lignes: [{ articleId: 1, quantite: 2 }],
     }
-    const result = { id: 1, totalTTC: 4, lignes: [] }
+    const result = { id: 1, totalTtcCents: 400, lignes: [] }
 
     commandesServiceMock.create.mockResolvedValue(result)
 

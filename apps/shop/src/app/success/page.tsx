@@ -1,3 +1,4 @@
+import { formatCurrencyFromCents } from '@/lib/money'
 import Link from 'next/link'
 import {
   getCheckoutSummary,
@@ -105,7 +106,7 @@ function ConfirmedOrder({ summary }: { summary: CheckoutSummary }) {
             </p>
             <dl className="mt-4 grid gap-3 text-sm">
               <SummaryRow label="Commande" value={summary.reference} />
-              <SummaryRow label="Total TTC" value={formatCurrency(summary.totalTTC)} />
+              <SummaryRow label="Total TTC" value={formatCurrency(summary.totalTtcCents)} />
               <SummaryRow label="Paiement" value={paymentStatus.label} />
               <SummaryRow label="Statut" value={orderStatus.label} />
             </dl>
@@ -134,17 +135,17 @@ function ConfirmedOrder({ summary }: { summary: CheckoutSummary }) {
             <ul className="mt-5 grid gap-3">
               {summary.lignes.map((line) => (
                 <li
-                  key={`${line.nom}-${line.quantite}-${line.prixUnit}`}
+                  key={`${line.nom}-${line.quantite}-${line.prixUnitCents}`}
                   className="grid gap-3 rounded-2xl border border-[#eee2e7] p-4 sm:grid-cols-[1fr_auto] sm:items-center"
                 >
                   <div>
                     <p className="font-black text-[#181014]">{line.nom}</p>
                     <p className="mt-1 text-sm text-[#7a6d73]">
-                      {line.quantite} x {formatCurrency(line.prixUnit)}
+                      {line.quantite} x {formatCurrency(line.prixUnitCents)}
                     </p>
                   </div>
                   <p className="font-black text-[#b5006e]">
-                    {formatCurrency(line.total)}
+                    {formatCurrency(line.totalCents)}
                   </p>
                 </li>
               ))}
@@ -324,10 +325,7 @@ function getFallbackContent(kind: Exclude<SuccessPageState['kind'], 'confirmed'>
 }
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(value)
+  return formatCurrencyFromCents(value)
 }
 
 function formatDate(value: string) {

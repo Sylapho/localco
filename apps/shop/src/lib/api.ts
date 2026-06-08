@@ -3,8 +3,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 export type ShopArticle = {
   id: number
   nom: string
-  prix: number
-  tva: number
+  prixCents: number
+  tvaBps: number
   stock: number
   online: boolean
   imageUrl?: string | null
@@ -28,7 +28,7 @@ export type CreateCommandePayload = {
 export type CheckoutSummary = {
   id: number
   reference: string
-  totalTTC: number
+  totalTtcCents: number
   lieu: string
   dateRetrait: string | null
   statut: string
@@ -37,8 +37,8 @@ export type CheckoutSummary = {
   lignes: {
     nom: string
     quantite: number
-    prixUnit: number
-    total: number
+    prixUnitCents: number
+    totalCents: number
   }[]
 }
 

@@ -5,7 +5,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(value)
+  }).format(value / 100)
 }
 
 function formatDate(value: string) {
@@ -25,8 +25,8 @@ function formatDateTime(value: string) {
 
 export default async function JourneesCaissePage() {
   const journees = await getJourneesCaisse()
-  const totalTTC = journees.reduce((total, journee) => total + journee.totalTTC, 0)
-  const totalMarge = journees.reduce((total, journee) => total + journee.marge, 0)
+  const totalTTC = journees.reduce((total, journee) => total + journee.totalTtcCents, 0)
+  const totalMarge = journees.reduce((total, journee) => total + journee.margeCents, 0)
   const totalVentes = journees.reduce(
     (total, journee) => total + journee.nbVentes,
     0,
@@ -105,21 +105,21 @@ export default async function JourneesCaissePage() {
                     </td>
                     <td className="py-3 pr-3">{journee.nbVentes}</td>
                     <td className="py-3 pr-3">
-                      {formatCurrency(journee.totalTTC)}
+                      {formatCurrency(journee.totalTtcCents)}
                     </td>
                     <td className="py-3 pr-3">
-                      {formatCurrency(journee.totalHT)}
+                      {formatCurrency(journee.totalHtCents)}
                     </td>
-                    <td className="py-3 pr-3">{formatCurrency(journee.tva)}</td>
-                    <td className="py-3 pr-3">{formatCurrency(journee.cb)}</td>
+                    <td className="py-3 pr-3">{formatCurrency(journee.tvaCents)}</td>
+                    <td className="py-3 pr-3">{formatCurrency(journee.cbCents)}</td>
                     <td className="py-3 pr-3">
-                      {formatCurrency(journee.especes)}
-                    </td>
-                    <td className="py-3 pr-3">
-                      {formatCurrency(journee.cheques)}
+                      {formatCurrency(journee.especesCents)}
                     </td>
                     <td className="py-3 pr-3">
-                      {formatCurrency(journee.marge)}
+                      {formatCurrency(journee.chequesCents)}
+                    </td>
+                    <td className="py-3 pr-3">
+                      {formatCurrency(journee.margeCents)}
                     </td>
                     <td className="py-3">{formatDateTime(journee.clotureeA)}</td>
                   </tr>

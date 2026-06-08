@@ -1,14 +1,12 @@
 import type { ShopArticle } from '@/lib/api'
+import { formatCurrencyFromCents } from '@/lib/money'
 
 export type Cart = Record<number, number>
 
 export const CART_STORAGE_KEY = 'localco-shop-cart'
 
 export function formatCurrency(value: number) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(value)
+  return formatCurrencyFromCents(value)
 }
 
 export function readStoredCart(): Cart {
@@ -46,7 +44,7 @@ export function buildCartLines(cart: Cart, articles: ShopArticle[]) {
       return {
         article,
         quantite,
-        total: article.prix * quantite,
+        totalCents: article.prixCents * quantite,
       }
     })
     .filter((line): line is NonNullable<typeof line> => Boolean(line))
@@ -58,6 +56,6 @@ export function getCartCount(cart: Cart) {
 
 export function getCartTotal(cart: Cart, articles: ShopArticle[]) {
   return buildCartLines(cart, articles).reduce((sum, line) => {
-    return sum + line.total
+    return sum + line.totalCents
   }, 0)
 }

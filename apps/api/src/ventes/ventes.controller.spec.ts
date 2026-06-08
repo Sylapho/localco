@@ -39,7 +39,7 @@ describe('VentesController', () => {
   })
 
   it('findAll should return ventes', async () => {
-    const result = [{ id: 1, totalTTC: 12, lignes: [] }]
+    const result = [{ id: 1, totalTtcCents: 1200, lignes: [] }]
     ventesServiceMock.findAll.mockResolvedValue(result)
 
     await expect(controller.findAll()).resolves.toEqual(result)
@@ -47,7 +47,7 @@ describe('VentesController', () => {
   })
 
   it('findOne should return one vente', async () => {
-    const result = { id: 1, totalTTC: 12, lignes: [] }
+    const result = { id: 1, totalTtcCents: 1200, lignes: [] }
     ventesServiceMock.findOne.mockResolvedValue(result)
 
     await expect(controller.findOne(1)).resolves.toEqual(result)
@@ -57,10 +57,10 @@ describe('VentesController', () => {
   it('create should return created vente', async () => {
     const body: CreateVenteDto = {
       mode: 'cb',
-      remise: 0,
+      remiseCents: 0,
       lignes: [{ articleId: 1, quantite: 2 }],
     }
-    const result = { id: 1, totalTTC: 4.2, lignes: [] }
+    const result = { id: 1, totalTtcCents: 420, lignes: [] }
 
     ventesServiceMock.create.mockResolvedValue(result)
 

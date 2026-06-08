@@ -10,13 +10,13 @@ type DayBounds = {
 }
 
 type CaisseTotals = {
-  totalTTC: number
-  totalHT: number
-  tva: number
-  especes: number
-  cb: number
-  cheques: number
-  marge: number
+  totalTtcCents: number
+  totalHtCents: number
+  tvaCents: number
+  especesCents: number
+  cbCents: number
+  chequesCents: number
+  margeCents: number
   nbVentes: number
 }
 
@@ -50,13 +50,13 @@ export class CaisseService {
       closedDay,
       totals: closedDay
         ? {
-            totalTTC: closedDay.totalTTC,
-            totalHT: closedDay.totalHT,
-            tva: closedDay.tva,
-            especes: closedDay.especes,
-            cb: closedDay.cb,
-            cheques: closedDay.cheques,
-            marge: closedDay.marge,
+            totalTtcCents: closedDay.totalTtcCents,
+            totalHtCents: closedDay.totalHtCents,
+            tvaCents: closedDay.tvaCents,
+            especesCents: closedDay.especesCents,
+            cbCents: closedDay.cbCents,
+            chequesCents: closedDay.chequesCents,
+            margeCents: closedDay.margeCents,
             nbVentes: closedDay.nbVentes,
           }
         : totals,
@@ -80,13 +80,13 @@ export class CaisseService {
     return this.prisma.journeeCaisse.create({
       data: {
         date: bounds.start,
-        totalTTC: totals.totalTTC,
-        totalHT: totals.totalHT,
-        tva: totals.tva,
-        especes: totals.especes,
-        cb: totals.cb,
-        cheques: totals.cheques,
-        marge: totals.marge,
+        totalTtcCents: totals.totalTtcCents,
+        totalHtCents: totals.totalHtCents,
+        tvaCents: totals.tvaCents,
+        especesCents: totals.especesCents,
+        cbCents: totals.cbCents,
+        chequesCents: totals.chequesCents,
+        margeCents: totals.margeCents,
         nbVentes: totals.nbVentes,
       },
     })
@@ -120,37 +120,43 @@ export class CaisseService {
     return ventes.reduce<CaisseTotals>(
       (totals, vente) => {
         const coutMatieres = vente.lignes.reduce((venteCost, ligne) => {
-          const coutUnitaire = ligne.article.nomen.reduce(
+          const coutUnitaireCents = ligne.article.nomen.reduce(
             (lineCost, nomenclatureLine) =>
               lineCost +
-              nomenclatureLine.quantite * nomenclatureLine.mp.coutUnitaire,
+              Math.round(
+                nomenclatureLine.quantite *
+                  nomenclatureLine.mp.coutUnitaireCents,
+              ),
             0,
           )
 
-          return venteCost + coutUnitaire * ligne.quantite
+          return venteCost + coutUnitaireCents * ligne.quantite
         }, 0)
 
         return {
-          totalTTC: totals.totalTTC + vente.totalTTC,
-          totalHT: totals.totalHT + vente.totalHT,
-          tva: totals.tva + vente.tva,
-          especes:
-            totals.especes + (vente.mode === 'especes' ? vente.totalTTC : 0),
-          cb: totals.cb + (vente.mode === 'cb' ? vente.totalTTC : 0),
-          cheques:
-            totals.cheques + (vente.mode === 'cheque' ? vente.totalTTC : 0),
-          marge: totals.marge + (vente.totalHT - coutMatieres),
+          totalTtcCents: totals.totalTtcCents + vente.totalTtcCents,
+          totalHtCents: totals.totalHtCents + vente.totalHtCents,
+          tvaCents: totals.tvaCents + vente.tvaCents,
+          especesCents:
+            totals.especesCents +
+            (vente.mode === 'especes' ? vente.totalTtcCents : 0),
+          cbCents:
+            totals.cbCents + (vente.mode === 'cb' ? vente.totalTtcCents : 0),
+          chequesCents:
+            totals.chequesCents +
+            (vente.mode === 'cheque' ? vente.totalTtcCents : 0),
+          margeCents: totals.margeCents + (vente.totalHtCents - coutMatieres),
           nbVentes: totals.nbVentes + 1,
         }
       },
       {
-        totalTTC: 0,
-        totalHT: 0,
-        tva: 0,
-        especes: 0,
-        cb: 0,
-        cheques: 0,
-        marge: 0,
+        totalTtcCents: 0,
+        totalHtCents: 0,
+        tvaCents: 0,
+        especesCents: 0,
+        cbCents: 0,
+        chequesCents: 0,
+        margeCents: 0,
         nbVentes: 0,
       },
     )

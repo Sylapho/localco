@@ -2,6 +2,7 @@
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import type { MatierePremiere } from '@/lib/api'
+import { centsToEuros, eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -20,7 +21,7 @@ export default function EditMatierePremiereForm({ matiere }: Props) {
   const [stock, setStock] = useState(String(matiere.stock))
   const [unite, setUnite] = useState(matiere.unite)
   const [coutUnitaire, setCoutUnitaire] = useState(
-    String(matiere.coutUnitaire),
+    String(centsToEuros(matiere.coutUnitaireCents)),
   )
   const [seuil, setSeuil] = useState(String(matiere.seuil))
   const [conditionnement, setConditionnement] = useState(
@@ -46,7 +47,7 @@ export default function EditMatierePremiereForm({ matiere }: Props) {
             nom,
             stock: Number(stock),
             unite,
-            coutUnitaire: Number(coutUnitaire),
+            coutUnitaireCents: eurosToCents(Number(coutUnitaire)),
             seuil: Number(seuil),
             conditionnement,
           }),

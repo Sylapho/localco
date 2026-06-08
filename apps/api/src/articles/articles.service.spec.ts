@@ -79,8 +79,8 @@ describe('ArticlesService', () => {
 
   it('findAll should return articles', async () => {
     const articles = [
-      { id: 1, nom: 'Baguette', prix: 1.2 },
-      { id: 2, nom: 'Croissant', prix: 1.1 },
+      { id: 1, nom: 'Baguette', prixCents: 120 },
+      { id: 2, nom: 'Croissant', prixCents: 110 },
     ]
 
     prismaMock.article.findMany.mockResolvedValue(articles)
@@ -101,7 +101,7 @@ describe('ArticlesService', () => {
   })
 
   it('findOne should return one article', async () => {
-    const article = { id: 1, nom: 'Baguette', prix: 1.2 }
+    const article = { id: 1, nom: 'Baguette', prixCents: 120 }
 
     prismaMock.article.findUniqueOrThrow.mockResolvedValue(article)
 
@@ -121,14 +121,14 @@ describe('ArticlesService', () => {
   it('create should create an article with defaults', async () => {
     const input: CreateArticleDto = {
       nom: 'Pain au chocolat',
-      prix: 1.5,
+      prixCents: 150,
     }
 
     const created = {
       id: 1,
       nom: 'Pain au chocolat',
-      prix: 1.5,
-      tva: 0.055,
+      prixCents: 150,
+      tvaBps: 550,
       stock: 0,
       online: true,
       imageUrl: null,
@@ -140,8 +140,8 @@ describe('ArticlesService', () => {
     expect(prismaMock.article.create).toHaveBeenCalledWith({
       data: {
         nom: 'Pain au chocolat',
-        prix: 1.5,
-        tva: 0.055,
+        prixCents: 150,
+        tvaBps: 550,
         stock: 0,
         online: true,
         description: undefined,
@@ -156,20 +156,22 @@ describe('ArticlesService', () => {
     const updated = {
       id: 1,
       nom: 'Baguette tradition',
-      prix: 1.3,
+      prixCents: 130,
     }
 
     prismaMock.article.update.mockResolvedValue(updated)
 
-    await expect(service.update(1, { prix: 1.3 })).resolves.toEqual(updated)
+    await expect(service.update(1, { prixCents: 130 })).resolves.toEqual(
+      updated,
+    )
     expect(prismaMock.article.update).toHaveBeenCalledWith({
       where: { id: 1 },
-      data: { prix: 1.3 },
+      data: { prixCents: 130 },
     })
   })
 
   it('remove should delete an article', async () => {
-    const deleted = { id: 1, nom: 'Baguette', prix: 1.2 }
+    const deleted = { id: 1, nom: 'Baguette', prixCents: 120 }
 
     prismaMock.article.delete.mockResolvedValue(deleted)
 

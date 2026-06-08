@@ -16,13 +16,13 @@ describe('EmailsService', () => {
     id: 42,
     nom: 'Marie Dupont',
     email: 'marie@example.fr',
-    totalTTC: 12,
+    totalTtcCents: 1200,
     lieu: 'En boutique',
     dateRetrait: new Date('2026-06-01'),
     lignes: [
       {
         quantite: 2,
-        prixUnit: 6,
+        prixUnitCents: 600,
         article: {
           nom: 'Brioche',
         },

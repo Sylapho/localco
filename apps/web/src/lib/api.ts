@@ -28,8 +28,8 @@ async function apiFetch(path: string, init: RequestInit = {}) {
 export type Article = {
   id: number
   nom: string
-  prix: number
-  tva: number
+  prixCents: number
+  tvaBps: number
   stock: number
   online: boolean
   imageUrl?: string | null
@@ -42,14 +42,14 @@ export type Article = {
 
 export type ArticlePayload = {
   nom: string
-  prix: number
+  prixCents: number
   stock?: number
   online?: boolean
   imageUrl?: string | null
   description?: string
   ingredients?: string | null
   allergenes?: string | null
-  tva?: number
+  tvaBps?: number
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -116,7 +116,7 @@ export type MatierePremiere = {
   nom: string
   stock: number
   unite: string
-  coutUnitaire: number
+  coutUnitaireCents: number
   seuil: number
   conditionnement: string
 }
@@ -125,7 +125,7 @@ export type MatierePremierePayload = {
   nom: string
   stock: number
   unite: string
-  coutUnitaire: number
+  coutUnitaireCents: number
   seuil: number
   conditionnement: string
 }
@@ -323,8 +323,8 @@ export type LigneVente = {
   venteId: number
   articleId: number
   quantite: number
-  prixUnit: number
-  tva: number
+  prixUnitCents: number
+  tvaBps: number
   article: Article
 }
 
@@ -339,11 +339,11 @@ export type VenteUser = {
 export type Vente = {
   id: number
   date: string
-  totalTTC: number
-  totalHT: number
-  tva: number
+  totalTtcCents: number
+  totalHtCents: number
+  tvaCents: number
   mode: VenteMode
-  remise: number
+  remiseCents: number
   userId?: number | null
   user?: VenteUser | null
   lignes: LigneVente[]
@@ -351,7 +351,7 @@ export type Vente = {
 
 export type VentePayload = {
   mode: VenteMode
-  remise?: number
+  remiseCents?: number
   userId?: number
   lignes: {
     articleId: number
@@ -402,7 +402,7 @@ export type LigneCommande = {
   commandeId: number
   articleId: number
   quantite: number
-  prixUnit: number
+  prixUnitCents: number
   article: Article
 }
 
@@ -411,7 +411,7 @@ export type Commande = {
   nom: string
   email: string
   tel?: string | null
-  totalTTC: number
+  totalTtcCents: number
   lieu: string
   dateRetrait?: string | null
   statut: CommandeStatut
@@ -440,25 +440,25 @@ export async function getCommande(id: number): Promise<Commande> {
 export type JourneeCaisse = {
   id: number
   date: string
-  totalTTC: number
-  totalHT: number
-  tva: number
-  especes: number
-  cb: number
-  cheques: number
-  marge: number
+  totalTtcCents: number
+  totalHtCents: number
+  tvaCents: number
+  especesCents: number
+  cbCents: number
+  chequesCents: number
+  margeCents: number
   nbVentes: number
   clotureeA: string
 }
 
 export type CaisseTotals = {
-  totalTTC: number
-  totalHT: number
-  tva: number
-  especes: number
-  cb: number
-  cheques: number
-  marge: number
+  totalTtcCents: number
+  totalHtCents: number
+  tvaCents: number
+  especesCents: number
+  cbCents: number
+  chequesCents: number
+  margeCents: number
   nbVentes: number
 }
 

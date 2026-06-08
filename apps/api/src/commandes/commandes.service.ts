@@ -36,6 +36,9 @@ type ReservationLine = {
 type ReservationArticle = {
   id: number
   stock: number
+  prixCents: number
+  nom: string
+  imageUrl?: string | null
 }
 
 type StripeCheckoutWebhookEvent = {
@@ -113,7 +116,7 @@ export class CommandesService {
       where: { stripeId: normalizedSessionId },
       select: {
         id: true,
-        totalTTC: true,
+        totalTtcCents: true,
         lieu: true,
         dateRetrait: true,
         statut: true,
@@ -121,7 +124,7 @@ export class CommandesService {
         lignes: {
           select: {
             quantite: true,
-            prixUnit: true,
+            prixUnitCents: true,
             article: {
               select: {
                 nom: true,
@@ -139,7 +142,7 @@ export class CommandesService {
     return {
       id: commande.id,
       reference: this.formatCommandeReference(commande.id),
-      totalTTC: commande.totalTTC,
+      totalTtcCents: commande.totalTtcCents,
       lieu: commande.lieu,
       dateRetrait: commande.dateRetrait?.toISOString() ?? null,
       statut: commande.statut,
@@ -148,14 +151,14 @@ export class CommandesService {
       lignes: commande.lignes.map((ligne) => ({
         nom: ligne.article.nom,
         quantite: ligne.quantite,
-        prixUnit: ligne.prixUnit,
-        total: ligne.prixUnit * ligne.quantite,
+        prixUnitCents: ligne.prixUnitCents,
+        totalCents: ligne.prixUnitCents * ligne.quantite,
       })),
     }
   }
 
   async create(data: CreateCommandeDto) {
-    const { lignesAgregees, articles, totalTTC } =
+    const { lignesAgregees, articles, totalTtcCents } =
       await this.prepareCommande(data)
 
     return this.prisma.$transaction(async (tx) => {
@@ -168,7 +171,7 @@ export class CommandesService {
           dateRetrait: data.dateRetrait
             ? new Date(data.dateRetrait)
             : undefined,
-          totalTTC,
+          totalTtcCents,
           statut: 'nouvelle',
           lignes: {
             create: lignesAgregees.map((ligne) => {
@@ -179,7 +182,7 @@ export class CommandesService {
               return {
                 articleId: article.id,
                 quantite: ligne.quantite,
-                prixUnit: article.prix,
+                prixUnitCents: article.prixCents,
               }
             }),
           },
@@ -232,7 +235,7 @@ export class CommandesService {
     const shopUrl =
       this.configService.get<string>('SHOP_PUBLIC_URL') ??
       'http://localhost:3001'
-    const { lignesAgregees, articles, totalTTC } =
+    const { lignesAgregees, articles, totalTtcCents } =
       await this.prepareCommande(data)
 
     const commande = await this.prisma.$transaction(async (tx) => {
@@ -245,7 +248,7 @@ export class CommandesService {
           dateRetrait: data.dateRetrait
             ? new Date(data.dateRetrait)
             : undefined,
-          totalTTC,
+          totalTtcCents,
           statut: 'paiement_en_attente',
           lignes: {
             create: lignesAgregees.map((ligne) => {
@@ -256,7 +259,7 @@ export class CommandesService {
               return {
                 articleId: article.id,
                 quantite: ligne.quantite,
-                prixUnit: article.prix,
+                prixUnitCents: article.prixCents,
               }
             }),
           },
@@ -295,7 +298,7 @@ export class CommandesService {
             quantity: ligne.quantite,
             price_data: {
               currency: 'eur',
-              unit_amount: Math.round(article.prix * 100),
+              unit_amount: article.prixCents,
               product_data: {
                 name: article.nom,
                 images,
@@ -811,13 +814,13 @@ export class CommandesService {
       )
     }
 
-    const totalTTC = lignesAgregees.reduce((total, ligne) => {
+    const totalTtcCents = lignesAgregees.reduce((total, ligne) => {
       const article = articles.find((item) => item.id === ligne.articleId)!
 
-      return total + article.prix * ligne.quantite
+      return total + article.prixCents * ligne.quantite
     }, 0)
 
-    return { lignesAgregees, articles, totalTTC }
+    return { lignesAgregees, articles, totalTtcCents }
   }
 
   private aggregateLines(lignes: CreateCommandeDto['lignes']) {

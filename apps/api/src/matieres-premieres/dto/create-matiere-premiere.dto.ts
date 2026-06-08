@@ -13,7 +13,7 @@ export class CreateMatierePremiereDto {
 
   @IsNumber()
   @Min(0)
-  coutUnitaire: number
+  coutUnitaireCents: number
 
   @IsNumber()
   @Min(0)

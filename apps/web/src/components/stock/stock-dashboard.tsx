@@ -13,6 +13,7 @@ import type {
   StockLot,
 } from '@/lib/api'
 import { useSessionFetch } from '@/lib/use-session-fetch'
+import { centsToEuros } from '@/lib/money'
 import ArticleImage from '@/components/articles/article-image'
 import AdjustStockForm from './adjust-stock-form'
 import ProduceLotForm from './produce-lot-form'
@@ -61,7 +62,7 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-  }).format(value)
+  }).format(value / 100)
 }
 
 function formatDateTime(value: string) {
@@ -307,8 +308,8 @@ export default function StockDashboard({
       .sort((a, b) => {
         if (sort === 'stock-asc') return a.stock - b.stock
         if (sort === 'stock-desc') return b.stock - a.stock
-        if (sort === 'prix-asc') return a.prix - b.prix
-        if (sort === 'prix-desc') return b.prix - a.prix
+        if (sort === 'prix-asc') return a.prixCents - b.prixCents
+        if (sort === 'prix-desc') return b.prixCents - a.prixCents
         if (sort === 'statut') {
           const aStock = Math.max(0, a.stock - (expiredQuantityByArticle.get(a.id) ?? 0))
           const bStock = Math.max(0, b.stock - (expiredQuantityByArticle.get(b.id) ?? 0))
@@ -382,7 +383,7 @@ export default function StockDashboard({
         article.nom,
         String(article.stock),
         String(sellableArticleStock(article)),
-        String(article.prix),
+        String(centsToEuros(article.prixCents)),
         article.online ? 'Oui' : 'Non',
         statusLabel(articleStatus(article, sellableArticleStock(article))),
       ]),
@@ -713,7 +714,7 @@ export default function StockDashboard({
                       </td>
                       <td className="py-3 pr-4">{article.stock}</td>
                       <td className="py-3 pr-4">{formatNumber(sellableStock)}</td>
-                      <td className="py-3 pr-4">{formatCurrency(article.prix)}</td>
+                      <td className="py-3 pr-4">{formatCurrency(article.prixCents)}</td>
                       <td className="py-3 pr-4">{article.online ? 'Oui' : 'Non'}</td>
                       <td className="py-3 pr-4">
                         <span className={`rounded px-2 py-1 text-xs font-semibold ${statusClass(status)}`}>

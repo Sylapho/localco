@@ -5,6 +5,7 @@ import type {
   NomenclatureLine,
 } from '@/lib/api'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { formatCurrencyFromCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
@@ -140,7 +141,9 @@ export default function ArticleNomenclature({
                 </p>
                 <p className="text-sm text-gray-600">
                   Coût estimé :{' '}
-                  {(line.quantite * line.mp.coutUnitaire).toFixed(2)} €
+                  {formatCurrencyFromCents(
+                    Math.round(line.quantite * line.mp.coutUnitaireCents),
+                  )}
                 </p>
               </div>
 

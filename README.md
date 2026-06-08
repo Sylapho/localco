@@ -248,6 +248,8 @@ pnpm prisma:migrate
 
 Le schéma Prisma est dans `apps/api/prisma/schema.prisma`. Il couvre notamment les articles, matières premières, nomenclatures, ventes, commandes, lignes de commandes, historique de statuts, lots de stock et événements webhook Stripe.
 
+Les montants financiers sont stockés et échangés en centimes avec des champs `*Cents` (`prixCents`, `totalTtcCents`, `prixUnitCents`, etc.). Les taux de TVA sont stockés en basis points avec `tvaBps` (`550` = 5,5 %). Les interfaces web et shop convertissent ces valeurs uniquement pour l'affichage en euros lisibles.
+
 ## Parcours Click & Collect
 
 La boutique `apps/shop` consomme l'API via `NEXT_PUBLIC_API_URL`.
@@ -373,6 +375,7 @@ API_CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 
 - Utiliser pnpm pour toutes les commandes du monorepo.
 - Garder Prisma et les accès métier à la base côté API.
+- Stocker les montants financiers en centimes et les taux en basis points ; convertir en euros uniquement à l'affichage.
 - Ne pas mélanger les vues internes de gestion et la boutique client.
 - Ne jamais exposer les coûts, marges et données financières internes dans les vues client.
 - Préserver le préfixe global `/api` côté backend.

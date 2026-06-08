@@ -1,6 +1,7 @@
-﻿'use client'
+'use client'
 
 import type { CreateCommandePayload, ShopArticle } from '@/lib/api'
+import { formatCurrencyFromCents } from '@/lib/money'
 import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
 import ArticleImage from '../article-image'
 import Image from 'next/image'
@@ -17,10 +18,7 @@ type SortMode = 'recommended' | 'price-asc' | 'price-desc'
 const maxCartQuantity = 99
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(value)
+  return formatCurrencyFromCents(value)
 }
 
 function todayInputValue() {
@@ -68,12 +66,12 @@ export default function ShopClientPremium({
       return {
         article,
         quantite,
-        total: article.prix * quantite,
+        totalCents: article.prixCents * quantite,
       }
     })
     .filter((line): line is NonNullable<typeof line> => Boolean(line))
 
-  const total = lines.reduce((sum, line) => sum + line.total, 0)
+  const total = lines.reduce((sum, line) => sum + line.totalCents, 0)
   const count = lines.reduce((sum, line) => sum + line.quantite, 0)
 
   const filteredArticles = useMemo(() => {
@@ -91,8 +89,8 @@ export default function ShopClientPremium({
     })
 
     return filtered.sort((a, b) => {
-      if (sortMode === 'price-asc') return a.prix - b.prix
-      if (sortMode === 'price-desc') return b.prix - a.prix
+      if (sortMode === 'price-asc') return a.prixCents - b.prixCents
+      if (sortMode === 'price-desc') return b.prixCents - a.prixCents
 
       return Number(b.stock > 0) - Number(a.stock > 0)
     })
@@ -392,7 +390,7 @@ export default function ShopClientPremium({
                         <div className="flex items-end justify-between gap-4">
                           <div>
                             <p className="text-2xl font-semibold text-rose-900">
-                              {formatCurrency(article.prix)}
+                              {formatCurrency(article.prixCents)}
                             </p>
                             <p className="mt-1 text-xs text-stone-500">
                               Prix TTC · Retrait sur place
@@ -416,7 +414,7 @@ export default function ShopClientPremium({
                               className="grid h-9 w-9 place-items-center rounded-full bg-white font-semibold text-rose-800 shadow-sm"
                               aria-label={`Retirer ${article.nom}`}
                             >
-                              −
+                              -
                             </button>
 
                             <div className="text-center">
@@ -584,7 +582,7 @@ function CartPanel({
   lines: {
     article: ShopArticle
     quantite: number
-    total: number
+    totalCents: number
   }[]
   total: number
   loading: boolean
@@ -663,12 +661,12 @@ function CartPanel({
                           {line.article.nom}
                         </p>
                         <p className="mt-1 text-sm text-stone-600">
-                          {formatCurrency(line.article.prix)} l’unité
+                          {formatCurrency(line.article.prixCents)} l’unité
                         </p>
                       </div>
 
                       <p className="font-semibold text-rose-900">
-                        {formatCurrency(line.total)}
+                        {formatCurrency(line.totalCents)}
                       </p>
                     </div>
 
@@ -680,7 +678,7 @@ function CartPanel({
                           className="grid h-9 w-9 place-items-center rounded-full border border-stone-200 bg-white font-semibold text-rose-800"
                           aria-label={`Retirer ${line.article.nom}`}
                         >
-                          −
+                          -
                         </button>
 
                         <span className="min-w-6 text-center font-semibold">

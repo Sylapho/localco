@@ -2,16 +2,17 @@ import 'dotenv/config'
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from './generated/prisma/client'
+import { calculateHtFromTtcCents, eurosToCents } from '../src/money'
 
 type SeedArticle = {
   id: number
   nom: string
-  prix: number
-  tva: number
+  prixCents: number
+  tvaBps: number
   nomen: {
     quantite: number
     mp: {
-      coutUnitaire: number
+      coutUnitaireCents: number
     }
   }[]
 }
@@ -36,7 +37,7 @@ type SaleLineSeed = {
 type SaleSeed = {
   date: Date
   mode: 'cb' | 'especes' | 'cheque'
-  remise: number
+  remiseCents: number
   lignes: SaleLineSeed[]
 }
 
@@ -86,7 +87,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       nom: 'Farine T65',
       stock: 80,
       unite: 'kg',
-      coutUnitaire: 1.2,
+      coutUnitaireCents: eurosToCents(1.2),
       seuil: 10,
       conditionnement: 'sac de 25 kg',
     },
@@ -97,7 +98,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       nom: 'Beurre AOP',
       stock: 25,
       unite: 'kg',
-      coutUnitaire: 8.5,
+      coutUnitaireCents: eurosToCents(8.5),
       seuil: 4,
       conditionnement: 'carton',
     },
@@ -108,7 +109,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       nom: 'Levure boulangere',
       stock: 6,
       unite: 'kg',
-      coutUnitaire: 6.2,
+      coutUnitaireCents: eurosToCents(6.2),
       seuil: 1,
       conditionnement: 'sachet sous vide',
     },
@@ -119,7 +120,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       nom: 'Sucre',
       stock: 40,
       unite: 'kg',
-      coutUnitaire: 1.6,
+      coutUnitaireCents: eurosToCents(1.6),
       seuil: 8,
       conditionnement: 'sac de 5 kg',
     },
@@ -130,7 +131,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
       nom: 'Lait entier',
       stock: 35,
       unite: 'L',
-      coutUnitaire: 0.95,
+      coutUnitaireCents: eurosToCents(0.95),
       seuil: 8,
       conditionnement: 'brique',
     },
@@ -139,8 +140,8 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const baguette = await prisma.article.create({
     data: {
       nom: 'Baguette tradition',
-      prix: 1.2,
-      tva: 0.055,
+      prixCents: eurosToCents(1.2),
+      tvaBps: 550,
       stock: 120,
       online: false,
       emoji: 'BT',
@@ -151,8 +152,8 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const croissant = await prisma.article.create({
     data: {
       nom: 'Croissant',
-      prix: 1.1,
-      tva: 0.055,
+      prixCents: eurosToCents(1.1),
+      tvaBps: 550,
       stock: 90,
       online: false,
       emoji: 'CR',
@@ -163,8 +164,8 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const painChocolat = await prisma.article.create({
     data: {
       nom: 'Pain au chocolat',
-      prix: 1.2,
-      tva: 0.055,
+      prixCents: eurosToCents(1.2),
+      tvaBps: 550,
       stock: 80,
       online: false,
       emoji: 'PC',
@@ -175,8 +176,8 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const flan = await prisma.article.create({
     data: {
       nom: 'Flan patissier',
-      prix: 3.5,
-      tva: 0.055,
+      prixCents: eurosToCents(3.5),
+      tvaBps: 550,
       stock: 25,
       online: false,
       emoji: 'FL',
@@ -298,8 +299,8 @@ async function seedShopCatalogue(prisma: PrismaClient) {
   await prisma.article.createMany({
     data: shopArticles.map(([nom, prix, description]) => ({
       nom,
-      prix,
-      tva: 0.055,
+      prixCents: eurosToCents(prix),
+      tvaBps: 550,
       stock: nom === 'Maxi Pack' ? 10 : 20,
       online: true,
       emoji: nom
@@ -576,7 +577,7 @@ function createSaleSeed(
   return {
     date,
     mode,
-    remise,
+    remiseCents: eurosToCents(remise),
     lignes,
   }
 }
@@ -591,45 +592,56 @@ function daysFromNow(days: number) {
 
 async function createVente(prisma: PrismaClient, sale: SaleSeed) {
   const lignesCalculees = sale.lignes.map((ligne) => {
-    const totalLigneTTC = ligne.article.prix * ligne.quantite
-    const totalLigneHT = totalLigneTTC / (1 + ligne.article.tva)
+    const totalLigneTtcCents = ligne.article.prixCents * ligne.quantite
+    const totalLigneHtCents = calculateHtFromTtcCents(
+      totalLigneTtcCents,
+      ligne.article.tvaBps,
+    )
 
     return {
       article: ligne.article,
       quantite: ligne.quantite,
-      prixUnit: ligne.article.prix,
-      totalLigneTTC,
-      totalLigneHT,
+      prixUnitCents: ligne.article.prixCents,
+      totalLigneTtcCents,
+      totalLigneHtCents,
     }
   })
 
-  const totalAvantRemiseTTC = lignesCalculees.reduce(
-    (total, ligne) => total + ligne.totalLigneTTC,
+  const totalAvantRemiseTtcCents = lignesCalculees.reduce(
+    (total, ligne) => total + ligne.totalLigneTtcCents,
     0,
   )
-  const totalTTC = Math.max(0, totalAvantRemiseTTC - sale.remise)
-  const totalAvantRemiseHT = lignesCalculees.reduce(
-    (total, ligne) => total + ligne.totalLigneHT,
+  const totalTtcCents = Math.max(
+    0,
+    totalAvantRemiseTtcCents - sale.remiseCents,
+  )
+  const totalAvantRemiseHtCents = lignesCalculees.reduce(
+    (total, ligne) => total + ligne.totalLigneHtCents,
     0,
   )
-  const ratio = totalAvantRemiseTTC > 0 ? totalTTC / totalAvantRemiseTTC : 1
-  const totalHT = totalAvantRemiseHT * ratio
-  const tva = totalTTC - totalHT
+  const totalHtCents =
+    totalAvantRemiseTtcCents > 0
+      ? Math.round(
+          (totalAvantRemiseHtCents * totalTtcCents) /
+            totalAvantRemiseTtcCents,
+        )
+      : totalAvantRemiseHtCents
+  const tvaCents = totalTtcCents - totalHtCents
 
   return prisma.vente.create({
     data: {
       date: sale.date,
       mode: sale.mode,
-      remise: sale.remise,
-      totalTTC,
-      totalHT,
-      tva,
+      remiseCents: sale.remiseCents,
+      totalTtcCents,
+      totalHtCents,
+      tvaCents,
       lignes: {
         create: lignesCalculees.map((ligne) => ({
           articleId: ligne.article.id,
           quantite: ligne.quantite,
-          prixUnit: ligne.prixUnit,
-          tva: ligne.article.tva,
+          prixUnitCents: ligne.prixUnitCents,
+          tvaBps: ligne.article.tvaBps,
         })),
       },
     },
@@ -661,35 +673,43 @@ async function createClosedCashDay(
   const totals = ventes.reduce(
     (acc, vente) => {
       const coutMatieres = vente.lignes.reduce((venteCost, ligne) => {
-        const coutUnitaire = ligne.article.nomen.reduce(
+        const coutUnitaireCents = ligne.article.nomen.reduce(
           (lineCost, nomenclatureLine) =>
             lineCost +
-            nomenclatureLine.quantite * nomenclatureLine.mp.coutUnitaire,
+            Math.round(
+              nomenclatureLine.quantite *
+                nomenclatureLine.mp.coutUnitaireCents,
+            ),
           0,
         )
 
-        return venteCost + coutUnitaire * ligne.quantite
+        return venteCost + coutUnitaireCents * ligne.quantite
       }, 0)
 
       return {
-        totalTTC: acc.totalTTC + vente.totalTTC,
-        totalHT: acc.totalHT + vente.totalHT,
-        tva: acc.tva + vente.tva,
-        especes: acc.especes + (vente.mode === 'especes' ? vente.totalTTC : 0),
-        cb: acc.cb + (vente.mode === 'cb' ? vente.totalTTC : 0),
-        cheques: acc.cheques + (vente.mode === 'cheque' ? vente.totalTTC : 0),
-        marge: acc.marge + (vente.totalHT - coutMatieres),
+        totalTtcCents: acc.totalTtcCents + vente.totalTtcCents,
+        totalHtCents: acc.totalHtCents + vente.totalHtCents,
+        tvaCents: acc.tvaCents + vente.tvaCents,
+        especesCents:
+          acc.especesCents +
+          (vente.mode === 'especes' ? vente.totalTtcCents : 0),
+        cbCents:
+          acc.cbCents + (vente.mode === 'cb' ? vente.totalTtcCents : 0),
+        chequesCents:
+          acc.chequesCents +
+          (vente.mode === 'cheque' ? vente.totalTtcCents : 0),
+        margeCents: acc.margeCents + (vente.totalHtCents - coutMatieres),
         nbVentes: acc.nbVentes + 1,
       }
     },
     {
-      totalTTC: 0,
-      totalHT: 0,
-      tva: 0,
-      especes: 0,
-      cb: 0,
-      cheques: 0,
-      marge: 0,
+      totalTtcCents: 0,
+      totalHtCents: 0,
+      tvaCents: 0,
+      especesCents: 0,
+      cbCents: 0,
+      chequesCents: 0,
+      margeCents: 0,
       nbVentes: 0,
     },
   )

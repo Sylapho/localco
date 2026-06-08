@@ -7,6 +7,7 @@ import {
 import DeleteArticleButton from '@/components/articles/delete-article-button'
 import ArticleImage from '@/components/articles/article-image'
 import ProduceArticleForm from '@/components/articles/produce-article-form'
+import { formatCurrencyFromCents } from '@/lib/money'
 
 type PageProps = {
   params: Promise<{
@@ -24,11 +25,11 @@ export default async function ArticleDetailPage({ params }: PageProps) {
     getProductionCapacity(articleId),
   ])
 
-  const coutTotal = nomenclature.reduce((total, line) => {
-    return total + line.quantite * line.mp.coutUnitaire
+  const coutTotalCents = nomenclature.reduce((total, line) => {
+    return total + Math.round(line.quantite * line.mp.coutUnitaireCents)
   }, 0)
 
-  const marge = article.prix - coutTotal
+  const margeCents = article.prixCents - coutTotalCents
 
   return (
     <main className="p-8">
@@ -67,18 +68,18 @@ export default async function ArticleDetailPage({ params }: PageProps) {
         <div className="grid gap-2">
           <p>
             <span className="font-medium">Prix :</span>{' '}
-            {article.prix.toFixed(2)} €
+            {formatCurrencyFromCents(article.prixCents)}
           </p>
           <p>
             <span className="font-medium">Coût matières :</span>{' '}
-            {coutTotal.toFixed(2)} €
+            {formatCurrencyFromCents(coutTotalCents)}
           </p>
           <p>
             <span className="font-medium">Marge brute estimée :</span>{' '}
-            {marge.toFixed(2)} €
+            {formatCurrencyFromCents(margeCents)}
           </p>
           <p>
-            <span className="font-medium">TVA :</span> {article.tva}
+            <span className="font-medium">TVA :</span> {article.tvaBps / 100} %
           </p>
           <p>
             <span className="font-medium">Stock :</span> {article.stock}
@@ -147,12 +148,12 @@ export default async function ArticleDetailPage({ params }: PageProps) {
 
           <p>
             <span className="font-medium">Coût matières estimé :</span>{' '}
-            {coutTotal.toFixed(2)} €
+            {formatCurrencyFromCents(coutTotalCents)}
           </p>
 
           <p>
             <span className="font-medium">Marge brute estimée :</span>{' '}
-            {marge.toFixed(2)} €
+            {formatCurrencyFromCents(margeCents)}
           </p>
         </div>
       </section>

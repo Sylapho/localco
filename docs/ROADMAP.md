@@ -36,6 +36,7 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 - Historique des statuts de commande via `CommandeStatutHistorique`.
 - Déduplication des webhooks Stripe via `StripeWebhookEvent`.
 - Réservation et libération de stock lors du checkout et des expirations.
+- Montants financiers stockés en centimes côté Prisma/API et taux de TVA stockés en basis points.
 - Envoi d'e-mail de confirmation via Resend après paiement confirmé.
 - CI GitHub Actions séparée pour API, web et shop.
 
@@ -53,7 +54,6 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 
 - Le checkout peut réserver du stock sans refuser explicitement une quantité supérieure au stock disponible.
 - Le rate limiting checkout est en mémoire ; il n'est pas adapté à plusieurs instances ou à une production distribuée.
-- Les montants sont encore manipulés en `Float` côté Prisma, ce qui reste fragile pour une logique financière avancée.
 - Les logs, métriques et alertes ne sont pas encore structurés pour la production.
 - La procédure de déploiement, rollback, sauvegarde et restauration PostgreSQL doit être écrite.
 - Les webhooks Stripe doivent être validés contre un environnement réel ou Stripe CLI avant mise en ligne.

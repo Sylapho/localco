@@ -1,17 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Resend } from 'resend'
+import { formatCurrencyFromCents } from '../money'
 
 type OrderConfirmationEmail = {
   id: number
   nom: string
   email: string
-  totalTTC: number
+  totalTtcCents: number
   lieu: string
   dateRetrait?: Date | string | null
   lignes: {
     quantite: number
-    prixUnit: number
+    prixUnitCents: number
     article: {
       nom: string
     }
@@ -84,7 +85,7 @@ export class EmailsService {
               ${line.quantite}
             </td>
             <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; text-align: right;">
-              ${this.formatCurrency(line.prixUnit * line.quantite)}
+              ${formatCurrencyFromCents(line.prixUnitCents * line.quantite)}
             </td>
           </tr>
         `,
@@ -110,7 +111,7 @@ export class EmailsService {
         </table>
 
         <p style="font-size: 18px; font-weight: 700; text-align: right;">
-          Total TTC : ${this.formatCurrency(order.totalTTC)}
+          Total TTC : ${formatCurrencyFromCents(order.totalTtcCents)}
         </p>
 
         <h2 style="font-size: 18px; margin-top: 24px;">Retrait</h2>
@@ -129,7 +130,7 @@ export class EmailsService {
       .map(
         (line) =>
           `- ${line.article.nom} x${line.quantite} : ${this.formatCurrency(
-            line.prixUnit * line.quantite,
+            line.prixUnitCents * line.quantite,
           )}`,
       )
       .join('\n')
@@ -142,7 +143,7 @@ export class EmailsService {
       'Résumé :',
       lines,
       '',
-      `Total TTC : ${this.formatCurrency(order.totalTTC)}`,
+      `Total TTC : ${formatCurrencyFromCents(order.totalTtcCents)}`,
       '',
       'Retrait :',
       `Lieu : ${order.lieu}`,
@@ -154,10 +155,7 @@ export class EmailsService {
   }
 
   private formatCurrency(value: number) {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(value)
+    return formatCurrencyFromCents(value)
   }
 
   private formatDate(value?: Date | string | null) {
