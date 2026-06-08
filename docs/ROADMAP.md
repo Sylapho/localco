@@ -1,383 +1,285 @@
 # Roadmap Localco
 
-## Contexte actuel
+## 1. Vision produit
 
-Localco ressemble aujourd'hui a une application de gestion pour une activite de production/vente alimentaire ou artisanale.
+Localco est une boutique Click & Collect pour produits alimentaires locaux, adossée à un back-office interne de gestion commerciale et opérationnelle.
 
-Etat visible dans le code :
+Le produit doit servir trois usages complémentaires :
 
-- Frontend Next.js dans `apps/web`.
+- Client final : consulter le catalogue public, composer un panier, choisir un point et une date de retrait, payer en ligne, recevoir une confirmation.
+- Gérant : piloter les articles, les stocks, les commandes, la caisse, les statuts et les paramètres critiques.
+- Vendeur, production, stock, comptable : gérer les ventes, préparer les commandes, suivre les mouvements de stock, consulter les informations utiles sans accéder aux données hors périmètre.
+
+Objectif business : vendre simplement des produits alimentaires locaux en ligne, réduire les frictions de prise de commande, sécuriser le stock disponible, et donner à l'équipe interne un outil fiable pour préparer, suivre et clôturer l'activité.
+
+## 2. État actuel
+
+### Déjà en place
+
+- Monorepo pnpm avec `apps/api`, `apps/web` et `apps/shop`.
 - API NestJS dans `apps/api`.
-- Base PostgreSQL via Prisma.
-- Modules deja presents : articles, matieres premieres, nomenclatures, production d'articles.
-- Modele de donnees deja prevu pour : utilisateurs, ventes, lignes de vente, commandes, lignes de commande, journees de caisse.
-- Authentification amorcee via Clerk, mais pas encore generalisee dans les routes.
-- Page d'accueil encore issue du template Next.js.
-- Documentation projet encore tres embryonnaire.
-
-## Objectif produit propose
-
-Construire un outil simple pour gerer :
-
-- le catalogue d'articles vendus,
-- les matieres premieres,
-- les recettes/nomenclatures,
-- la production et les stocks,
-- les ventes et la caisse,
-- les commandes client,
-- les alertes de reapprovisionnement,
-- les indicateurs de pilotage.
-
-## Decisions V1
-
-- Priorite V1 : stock + production.
-- Priorite suivante : caisse.
-- Strategie domaine : espace employe sur `app.<nom-de-domaine>`, boutique publique sur `<nom-de-domaine>`.
-- API commune possible sur `api.<nom-de-domaine>`.
-- Outil de suivi projet : Trello.
-- Equipe : developpement seul.
-- V1 utilisable : creer et gerer les articles, gerer les matieres premieres, produire, voir les stocks.
-
-## Vision domaine et applications
-
-La separation cible est la suivante :
-
-- `<nom-de-domaine>` : boutique publique accessible aux clients.
-- `app.<nom-de-domaine>` : interface interne protegee pour stock, production, caisse et gestion.
-- `api.<nom-de-domaine>` : API commune consommee par l'espace employe et la boutique publique.
-
-Cette approche est faisable et recommandee, car elle separe clairement :
-
-- les usages internes, qui demandent une authentification et des droits,
-- les usages publics, qui doivent etre simples, rapides et limites aux articles vendables,
-- le backend metier, qui reste la source unique de verite.
-
-Architecture cible proposee :
-
-- `apps/web` : espace employe V1.
-- `apps/api` : API NestJS commune.
-- `apps/shop` : boutique publique a creer plus tard, quand le socle stock/production sera stable.
-
-Regles importantes :
-
-- L'espace employe peut voir et modifier les articles, les matieres premieres, les nomenclatures et les stocks.
-- La boutique publique ne doit afficher que les articles publiables, par exemple `online = true`.
-- La boutique ne doit jamais exposer les matieres premieres, les couts internes, les seuils ou les donnees de production.
-- Les stocks doivent etre mis a jour par l'API commune pour eviter les incoherences entre boutique, caisse et production.
-
-## Phase 0 - Stabilisation de la base
-
-Priorite : rendre le socle fiable avant d'ajouter trop de features.
-
-- Remplacer la page d'accueil par un vrai tableau de bord.
-- Assumer que `apps/web` est l'espace employe de la V1.
-- Preparer la configuration domaine cible : `app.<nom-de-domaine>`.
-- Preparer la configuration API cible : `api.<nom-de-domaine>`.
-- Corriger les textes encodes incorrectement visibles dans l'interface.
-- Harmoniser les gestionnaires d'erreurs API cote web.
-- Verifier les variables d'environnement necessaires et documenter `.env`.
-- Nettoyer les README generes par Nest/Next.
-- Ajouter une documentation de demarrage local : installation, base de donnees, migrations, seed, lancement.
-- Ajouter une commande de verification globale : lint, build, tests.
-- Mettre en place une convention de nommage des branches, commits et tickets.
-
-Critere de sortie :
-
-- Un nouveau developpeur peut lancer le projet en local avec la documentation.
-- L'espace employe affiche une page d'accueil utile.
-- Les erreurs les plus courantes sont comprehensibles.
-- La strategie domaine est documentee meme si elle n'est pas encore deployee.
-
-## Phase 1 - MVP stock et production
-
-Priorite : finir le coeur metier deja commence dans l'espace employe.
-
-- Articles :
-  - liste, detail, creation, modification, suppression,
-  - prix, TVA, stock, statut en ligne, description,
-  - affichage clair du stock disponible.
-- Matieres premieres :
-  - liste, detail, creation, modification, suppression,
-  - stock, unite, cout unitaire, seuil, conditionnement,
-  - mise en evidence des stocks sous seuil.
-- Nomenclatures :
-  - associer les matieres premieres a un article,
-  - modifier les quantites necessaires,
-  - supprimer une ligne de nomenclature,
-  - afficher le cout de revient estime par article.
-- Production :
-  - afficher la capacite de production selon le stock disponible,
-  - produire une quantite donnee,
-  - decrementer les matieres premieres,
-  - incrementer le stock article,
-  - bloquer la production si le stock est insuffisant.
-
-Critere de sortie :
-
-- On peut creer une recette, savoir combien on peut produire, produire, et voir les stocks evoluer correctement.
-
-Perimetre V1 :
-
-- Inclus :
-  - articles,
-  - matieres premieres,
-  - nomenclatures,
-  - capacite de production,
-  - production,
-  - visualisation des stocks,
-  - alertes de seuil simples.
-- Exclu de la V1 :
-  - caisse complete,
-  - ventes,
-  - boutique publique,
-  - commandes client,
-  - paiement en ligne,
-  - reporting avance.
-
-## Phase 2 - Ventes et caisse
-
-Priorite apres V1 : transformer les stocks en activite commerciale mesurable.
-
-- Creer un module ventes cote API.
-- Creer une interface de caisse simple :
-  - choix des articles,
-  - quantites,
-  - remise,
-  - mode de paiement,
-  - total HT, TVA, TTC.
-- A chaque vente :
-  - decrementer le stock article,
-  - enregistrer les lignes de vente,
-  - associer la vente a un utilisateur.
-- Gerer les journees de caisse :
-  - ouverture,
-  - resume de la journee,
-  - totaux par mode de paiement,
-  - cloture,
-  - export simple.
-- Ajouter des controles :
-  - impossible de vendre plus que le stock,
-  - impossible de modifier une journee cloturee sans role autorise.
-
-Critere de sortie :
-
-- Une vente peut etre saisie et retrouvee.
-- Les totaux de caisse sont coherents avec les ventes.
-
-## Phase 3 - Boutique publique
-
-Priorite apres caisse ou en parallele si le socle est stable : exposer les articles vendables sur le domaine principal.
-
-- Creer une application boutique publique, par exemple `apps/shop`.
-- Deployer la boutique sur `<nom-de-domaine>`.
-- Afficher uniquement les articles en ligne.
-- Masquer toutes les donnees internes :
-  - couts matieres,
-  - seuils,
-  - nomenclatures,
-  - capacite de production,
-  - informations de caisse.
-- Prevoir une fiche article publique :
-  - nom,
-  - prix,
-  - TVA si necessaire,
-  - disponibilite,
-  - description,
-  - image plus tard.
-- Ajouter une premiere logique de panier si la boutique doit vendre en ligne.
-- Garder l'API comme source unique des articles et stocks.
-
-Critere de sortie :
-
-- Le domaine principal affiche une boutique simple et publique.
-- Les donnees internes restent uniquement dans l'espace employe.
-
-## Phase 4 - Commandes client
-
-Priorite : preparer les ventes planifiees.
-
-- Creer un module commandes cote API.
-- Creer une interface de gestion des commandes :
-  - nouvelle,
-  - confirmee,
-  - en preparation,
-  - prete,
-  - retiree,
-  - annulee.
-- Relier les commandes aux articles et quantites.
-- Verifier les stocks disponibles lors de la confirmation/preparation.
-- Ajouter la date et le lieu de retrait.
-- Prevoir l'integration paiement plus tard via le champ `stripeId`.
-- Ajouter des filtres : statut, date de retrait, client.
-
-Critere de sortie :
-
-- Une commande peut etre creee, suivie, preparee et terminee.
-
-## Phase 5 - Authentification et roles
-
-Priorite : securiser les actions sensibles.
-
-- Finaliser l'integration Clerk.
-- Relier les utilisateurs Clerk au modele `User`.
-- Proteger l'espace employe `app.<nom-de-domaine>`.
-- Definir les roles :
-  - admin,
-  - responsable,
-  - vendeur,
-  - production.
-- Proteger les routes API.
-- Proteger les pages web selon le role.
-- Journaliser les actions critiques :
-  - production,
-  - vente,
-  - annulation,
-  - modification de stock,
-  - cloture de caisse.
-
-Critere de sortie :
-
-- Chaque utilisateur voit uniquement ce qu'il peut faire.
-- Les actions importantes sont attribuables a une personne.
-
-## Phase 6 - Pilotage et alertes
-
-Priorite : aider a prendre de meilleures decisions.
-
-- Tableau de bord :
-  - chiffre d'affaires du jour,
-  - ventes par article,
-  - stocks faibles,
-  - capacite de production,
-  - commandes a preparer.
-- Alertes :
-  - matieres premieres sous seuil,
-  - articles bientot en rupture,
-  - commandes proches du retrait,
-  - ecarts de caisse.
-- Reporting :
-  - ventes par periode,
-  - marge estimee,
-  - cout matiere par article,
-  - evolution des stocks.
-- Exports :
-  - CSV ventes,
-  - CSV stocks,
-  - resume de caisse.
-
-Critere de sortie :
-
-- L'utilisateur sait quoi produire, quoi acheter, et ce qui s'est vendu.
-
-## Phase 7 - Qualite, industrialisation et deploiement
-
-Priorite : rendre le projet durable.
-
-- Ajouter des tests unitaires sur les services metier critiques.
-- Ajouter des tests e2e sur :
-  - creation d'article,
-  - creation de nomenclature,
-  - production,
-  - vente,
-  - cloture caisse.
-- Ajouter une CI :
-  - installation,
-  - lint,
-  - tests,
-  - build.
-- Ajouter un environnement de staging.
-- Documenter le deploiement par domaine :
-  - boutique publique sur `<nom-de-domaine>`,
-  - espace employe sur `app.<nom-de-domaine>`,
-  - API sur `api.<nom-de-domaine>`.
-- Documenter la strategie de sauvegarde de la base.
-- Documenter la procedure de restauration.
-- Mettre en place des logs applicatifs utiles.
-- Ajouter un suivi d'erreurs frontend/backend.
-
-Critere de sortie :
-
-- Le projet peut etre deploye, surveille et maintenu sans improvisation.
-
-## Backlog fonctionnel
-
-### Stock
-
-- Historique des mouvements de stock.
-- Ajustement manuel avec raison obligatoire.
-- Inventaire periodique.
-- Import/export CSV des matieres premieres.
-- Gestion des fournisseurs.
-- Gestion des prix fournisseurs.
-
-### Production
-
-- Lots de production.
-- Dates de fabrication.
-- Dates limites de consommation.
-- Pertes et casse.
-- Production planifiee.
-- Suggestions de production selon les ventes passees.
-
-### Vente
-
-- Ticket de caisse.
-- Remboursement/annulation.
-- Remises nommees.
-- Moyens de paiement configurables.
-- Statistiques vendeur.
-
-### Commandes
-
-- Confirmation par email.
-- Paiement en ligne.
-- Acompte.
-- Preparation par lot.
-- Etiquettes de commande.
-
-### Catalogue
-
-- Categories d'articles.
-- Photos d'articles.
-- Disponibilite par jour.
-- Publication boutique en ligne sur `<nom-de-domaine>`.
-- Application boutique separee de l'espace employe.
-
-## Backlog technique
-
-- Clarifier la strategie Prisma Client, car le schema genere actuellement dans `prisma/generated/prisma`.
-- Centraliser les types partages ou generer les types API.
-- Ajouter une validation plus stricte des DTO.
-- Ajouter une couche de mapping pour eviter de coupler le frontend aux reponses Prisma brutes.
-- Normaliser les erreurs API.
-- Ajouter pagination et recherche sur les listes.
-- Ajouter fixtures/seed realistes.
-- Remplacer les nombres flottants par une representation plus sure pour les montants, si le projet manipule beaucoup d'argent.
-- Ajouter des migrations de donnees controlees.
-- Ajouter un design system minimal cote frontend.
-- Preparer une configuration CORS propre entre boutique, espace employe et API.
-- Preparer les variables d'environnement par application et par domaine.
-
-## Questions ouvertes
-
-- Qui sont les utilisateurs principaux : vendeur, responsable boutique, production, admin ?
-- Le projet vise-t-il une seule boutique ou plusieurs lieux de vente ?
-- Les stocks doivent-ils etre geres en temps reel ou seulement en fin de journee ?
-- Les commandes client viendront-elles de la boutique publique, d'un formulaire interne, ou des deux ?
-- Stripe est-il vraiment prevu pour la V1 ou plus tard ?
-- Le calcul de marge doit-il etre precis comptablement ou seulement indicatif ?
-- Les recettes/nomenclatures peuvent-elles varier selon les lots ou sont-elles fixes ?
-- Faut-il gerer les pertes, invendus et dons ?
-- Le projet doit-il fonctionner sur tablette/mobile en caisse ?
-- Quelle est la date cible pour une premiere version utilisable ?
-
-## Questions deja tranchees
-
-- Priorite V1 : stock + production.
-- Caisse : apres la V1.
-- Domaine principal : boutique publique.
-- Sous-domaine employe : espace interne stock, production, puis caisse.
-- API commune : option cible sur `api.<nom-de-domaine>`.
-- Outil de gestion projet : Trello.
-- Taille equipe : solo.
-- Definition pratique de la V1 : creer/gerer articles, gerer matieres premieres, produire, voir les stocks.
+- Modules API métier présents : articles, matières premières, nomenclatures, ventes, caisse, mouvements de stock, commandes, boutique, auth, emails.
+- Prisma et PostgreSQL côté API.
+- Docker Compose pour la base locale.
+- Application interne Next.js dans `apps/web`.
+- Boutique publique Next.js dans `apps/shop`.
+- Catalogue public alimenté par l'API boutique.
+- Panier côté boutique avec stockage local.
+- Page checkout côté boutique.
+- Pages success et cancel Stripe côté boutique.
+- Pages légales présentes côté boutique : CGV, confidentialité, mentions légales, cookies, Click & Collect.
+- Better Auth utilisé pour les sessions et les rôles internes.
+- Routes internes API protégées par `BetterAuthGuard` et `RolesGuard` sur plusieurs modules.
+- Stripe Checkout pour créer une session de paiement.
+- Webhook Stripe `POST /api/commandes/stripe/webhook`.
+- Gestion des événements `checkout.session.completed` et `checkout.session.expired`.
+- Historique des statuts de commande via `CommandeStatutHistorique`.
+- Déduplication des webhooks Stripe via `StripeWebhookEvent`.
+- Réservation et libération de stock lors du checkout et des expirations.
+- Envoi d'e-mail de confirmation via Resend après paiement confirmé.
+- CI GitHub Actions séparée pour API, web et shop.
+
+### Partiellement en place
+
+- Gestion des commandes : création, checkout, suivi de statut et détails existent, mais le dashboard interne doit être renforcé pour un usage quotidien.
+- Stock : les mouvements, lots et ajustements existent, mais le stock disponible doit être verrouillé avant checkout pour éviter les stocks négatifs.
+- Auth : Better Auth est la cible active, mais le modèle Prisma `User` contient encore un champ historique `clerkId` à traiter proprement.
+- Tests API : les tests existent sur plusieurs flux critiques, mais les cas stock avant checkout et webhooks doivent être durcis.
+- Pages légales : les pages existent, mais leur contenu doit être audité avant production.
+- Variables d'environnement : les exemples existent, mais ils doivent rester synchronisés avec Better Auth, Stripe, Resend, CORS et les URLs de production.
+- CI : lint, tests API et builds sont couverts, mais il manque un filet E2E navigateur pour le parcours boutique complet.
+
+### Risqué / à sécuriser
+
+- Le checkout peut réserver du stock sans refuser explicitement une quantité supérieure au stock disponible.
+- Le rate limiting checkout est en mémoire ; il n'est pas adapté à plusieurs instances ou à une production distribuée.
+- Les montants sont encore manipulés en `Float` côté Prisma, ce qui reste fragile pour une logique financière avancée.
+- Les logs, métriques et alertes ne sont pas encore structurés pour la production.
+- La procédure de déploiement, rollback, sauvegarde et restauration PostgreSQL doit être écrite.
+- Les webhooks Stripe doivent être validés contre un environnement réel ou Stripe CLI avant mise en ligne.
+- Les droits Better Auth doivent être testés sur les pages internes sensibles autant que sur les routes API.
+- Les pages légales doivent être revues avant trafic public réel.
+
+## 3. Priorités produit
+
+### P0 — bloquant production
+
+- Refuser tout checkout si le stock demandé dépasse le stock vendable.
+- Couvrir les webhooks Stripe `completed`, `expired`, doublons et signatures invalides.
+- Remplacer ou externaliser le rate limit checkout en mémoire pour la production.
+- Finaliser la configuration d'environnement production : API, web, shop, Stripe, Resend, CORS, Better Auth.
+- Écrire un runbook de déploiement, rollback, sauvegarde et restauration.
+- Vérifier les pages légales avant ouverture publique.
+
+### P1 — nécessaire MVP propre
+
+- Améliorer le dashboard interne des commandes.
+- Stabiliser le CRUD articles utilisé par le catalogue public.
+- Auditer les rôles Better Auth côté API et web.
+- Ajouter un test E2E du parcours boutique : catalogue, panier, checkout, redirection Stripe simulée.
+- Fiabiliser les messages d'erreur checkout côté shop.
+- Documenter les opérations courantes : annulation, commande abandonnée, paiement à vérifier.
+
+### P2 — amélioration post-MVP
+
+- Ajouter des exports comptables simples.
+- Ajouter des statistiques de ventes et de commandes.
+- Rendre les créneaux de retrait configurables depuis le back-office.
+- Ajouter l'upload d'images produits.
+- Améliorer le monitoring et les alertes métier.
+
+### P3 — plus tard
+
+- Comptes clients.
+- Codes promo.
+- Notifications SMS.
+- Programme fidélité.
+- Fonctionnalités multi-boutiques ou multi-tenant.
+- Application mobile.
+
+## 4. Roadmap par phases
+
+### Phase 1 — Stabilisation technique
+
+Objectif : rendre le projet fiable, installable et cohérent.
+
+Tâches :
+
+- Garder le README et les docs à jour avec `apps/api`, `apps/web` et `apps/shop`.
+- Vérifier et compléter les `.env.example` de chaque application.
+- Clarifier Better Auth comme solution active d'authentification.
+- Supprimer ou migrer la dette historique Clerk si elle est encore présente dans le schéma ou le code.
+- Ajouter une validation stricte du stock disponible avant checkout.
+- Aligner les tests API sur le comportement attendu : aucun stock négatif au checkout.
+- Couvrir les webhooks Stripe critiques et les doublons.
+- Vérifier que la CI reste fiable sur API, web et shop.
+- Identifier les commandes de développement réellement supportées.
+
+Priorité : P0.
+
+Critère de validation :
+
+- Un développeur peut installer, configurer, lancer et vérifier le projet avec la documentation.
+- `pnpm check` est vert.
+- Un checkout avec stock insuffisant est refusé avant création de session Stripe.
+- Les anciens choix d'auth ne créent plus d'ambiguïté produit ou technique.
+
+Risque si ignoré :
+
+- Le projet peut fonctionner en démo mais casser en production, créer des commandes impossibles à honorer ou laisser une dette d'auth dangereuse.
+
+### Phase 2 — MVP Click & Collect
+
+Objectif : permettre à un client de commander et payer.
+
+Tâches :
+
+- Consolider le catalogue public de `apps/shop`.
+- Stabiliser le panier et sa synchronisation avec les articles encore vendables.
+- Finaliser le checkout : coordonnées, point de retrait, date de retrait, validation côté API.
+- Stabiliser Stripe Checkout et ses URLs success/cancel.
+- Fiabiliser le webhook Stripe pour confirmer ou expirer une commande.
+- Envoyer l'e-mail de confirmation après paiement confirmé.
+- Améliorer les pages success et cancel.
+- Donner au back-office une gestion minimale des commandes.
+- Donner au back-office un CRUD articles minimal et sûr pour la boutique.
+
+Priorité : P0/P1.
+
+Critère de validation :
+
+- Un client peut partir d'un catalogue public, payer une commande, recevoir une confirmation, et l'équipe peut retrouver puis traiter la commande.
+
+Risque si ignoré :
+
+- Le paiement peut être techniquement présent sans parcours exploitable par un client ou par l'équipe de préparation.
+
+### Phase 3 — Pré-production
+
+Objectif : sécuriser avant mise en ligne.
+
+Tâches :
+
+- Ajouter des tests E2E Playwright sur le parcours shop.
+- Auditer et compléter CGV, confidentialité, mentions légales, cookies et Click & Collect.
+- Ajouter des logs structurés côté API.
+- Configurer précisément le CORS production.
+- Documenter les sauvegardes PostgreSQL.
+- Documenter la restauration PostgreSQL.
+- Écrire un runbook de déploiement.
+- Ajouter un monitoring minimal : disponibilité API, erreurs checkout, webhooks Stripe, e-mails.
+- Vérifier les variables Stripe test et production.
+
+Priorité : P0/P1.
+
+Critère de validation :
+
+- Le projet peut être déployé sur un environnement pré-production, testé de bout en bout, observé et restauré en cas d'incident.
+
+Risque si ignoré :
+
+- La mise en ligne dépendra d'interventions manuelles non documentées et les incidents seront difficiles à diagnostiquer.
+
+### Phase 4 — Production
+
+Objectif : mettre en ligne proprement.
+
+Tâches :
+
+- Déployer l'API.
+- Déployer la boutique `apps/shop`.
+- Déployer l'application interne `apps/web` si elle est nécessaire au run opérationnel.
+- Configurer les variables Stripe production.
+- Configurer Resend production.
+- Configurer domaine et HTTPS.
+- Vérifier les webhooks Stripe sur l'URL publique.
+- Préparer une procédure de rollback.
+- Préparer une procédure support commande : paiement réussi non visible, commande annulée, stock incohérent, e-mail non envoyé.
+
+Priorité : P0.
+
+Critère de validation :
+
+- Une commande réelle peut être passée, payée, confirmée, retrouvée dans le back-office et préparée par l'équipe.
+
+Risque si ignoré :
+
+- Les premières commandes réelles peuvent devenir difficiles à traiter ou à rembourser proprement.
+
+### Phase 5 — Post-lancement
+
+Objectif : améliorer après les premiers retours.
+
+Tâches :
+
+- Ajouter des comptes clients si le besoin est confirmé.
+- Ajouter des codes promo.
+- Ajouter des exports comptables.
+- Ajouter des statistiques de ventes, commandes et produits.
+- Rendre les créneaux de retrait configurables.
+- Ajouter l'upload d'images.
+- Ajouter des notifications SMS.
+- Améliorer les alertes stock et préparation.
+
+Priorité : P2/P3.
+
+Critère de validation :
+
+- Les améliorations répondent à des problèmes observés après lancement, pas à des hypothèses théoriques.
+
+Risque si ignoré :
+
+- Le produit restera utilisable pour le MVP, mais demandera plus d'opérations manuelles à moyen terme.
+
+## 5. Tickets recommandés
+
+| Titre | Type | Priorité | Estimation | Branch name | Commit recommandé |
+| --- | --- | --- | --- | --- | --- |
+| Validate stock before checkout | Bug / API | P0 | M | `fix/validate-stock-before-checkout` | `fix: validate stock before checkout` |
+| Cover Stripe webhook events | Test / API | P0 | M | `test/cover-stripe-webhooks` | `test: cover stripe webhook events` |
+| Complete legal pages | Legal / Shop | P0 | S | `docs/complete-legal-pages` | `docs: complete legal pages` |
+| Add legal notice page | Legal / Shop | P1 | S | `docs/add-legal-notice-page` | `docs: add legal notice page` |
+| Improve payment success page | UX / Shop | P1 | S | `feat/improve-payment-success-page` | `feat: improve payment success page` |
+| Improve payment cancel page | UX / Shop | P1 | S | `feat/improve-payment-cancel-page` | `feat: improve payment cancel page` |
+| Add admin article management | Feature / Web | P1 | M | `feat/admin-article-management` | `feat: add admin article management` |
+| Add admin orders dashboard | Feature / Web | P1 | M | `feat/admin-orders-dashboard` | `feat: add admin orders dashboard` |
+| Add shop checkout E2E flow | Test / Shop | P1 | L | `test/shop-checkout-e2e-flow` | `test: add shop checkout e2e flow` |
+| Add production deployment runbook | Docs / Ops | P0 | M | `docs/production-deployment-runbook` | `docs: add production deployment runbook` |
+| Add PostgreSQL backup and restore documentation | Docs / Ops | P0 | M | `docs/postgresql-backup-restore` | `docs: add postgresql backup and restore documentation` |
+| Replace in-memory checkout rate limit for production | Tech debt / API | P0 | M | `fix/production-checkout-rate-limit` | `fix: replace in-memory checkout rate limit` |
+
+Notes :
+
+- La page `apps/shop/src/app/mentions-legales/page.tsx` existe déjà. Le ticket `Add legal notice page` doit être traité comme un audit de complétude ou renommé si la page couvre déjà toutes les obligations.
+- Les estimations sont volontairement grossières : S = moins d'une demi-journée, M = une à deux journées, L = plusieurs journées.
+
+## 6. Ce qu'il ne faut pas faire maintenant
+
+À éviter avant le MVP :
+
+- Multi-tenant.
+- Application mobile.
+- Livraison.
+- Marketplace.
+- Programme fidélité.
+- Refonte totale UI.
+- Analytics avancées.
+- Codes promo.
+- Comptes clients.
+- Moteur complexe de promotions.
+- Internationalisation.
+- Système avancé de rôles configurables.
+- Refactor complet de l'architecture monorepo.
+
+## 7. Prochaines actions concrètes
+
+1. Corriger la validation de stock avant `POST /api/commandes/checkout`.
+2. Modifier les tests existants qui acceptent aujourd'hui un stock négatif au checkout.
+3. Ajouter les tests API de refus de checkout avec stock insuffisant.
+4. Rejouer et compléter les tests webhook Stripe : completed, expired, duplicate, signature invalide.
+5. Auditer les champs et migrations liés à l'ancienne dette Clerk.
+6. Vérifier les `.env.example` pour API, web et shop avant pré-production.
+7. Auditer les pages légales existantes et lister les manques juridiques.
+8. Améliorer les pages success/cancel pour le support client et les cas d'erreur.
+9. Ajouter un test E2E shop minimal du panier au checkout.
+10. Écrire le runbook production : déploiement, rollback, sauvegarde, restauration, support commande.
