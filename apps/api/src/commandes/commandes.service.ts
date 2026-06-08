@@ -382,11 +382,19 @@ export class CommandesService {
       throw new BadRequestException('Webhook Stripe invalide')
     }
 
-    const event = stripe.webhooks.constructEvent(
-      rawBody,
-      stripeSignature,
-      webhookSecret,
-    ) as StripeCheckoutWebhookEvent
+    let event: StripeCheckoutWebhookEvent
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        stripeSignature,
+        webhookSecret,
+      ) as StripeCheckoutWebhookEvent
+    } catch (error) {
+      throw new BadRequestException('Webhook Stripe invalide', {
+        cause: error,
+      })
+    }
 
     const isFreshEvent = await this.registerStripeWebhookEvent(event)
 
