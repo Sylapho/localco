@@ -278,6 +278,8 @@ Stripe est utilisé pour le paiement des commandes Click & Collect.
 
 En local, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` et `SHOP_PUBLIC_URL` doivent être configurés côté API.
 
+La procédure de test manuel avec Stripe CLI est documentée dans `docs/STRIPE_CLI_CHECKOUT.md`. Elle couvre le forwarding local des webhooks, un paiement confirmé et une session Checkout expirée.
+
 ## Better Auth
 
 Better Auth gère l'authentification et les sessions.
