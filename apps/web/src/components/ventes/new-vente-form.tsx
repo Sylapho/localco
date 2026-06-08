@@ -2,7 +2,7 @@
 
 import type { Article, VenteMode } from '@/lib/api'
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useMemo, useState } from 'react'
 
@@ -39,7 +39,7 @@ function createEmptyLine(): SaleLineForm {
 
 export default function NewVenteForm({ articles }: NewVenteFormProps) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
 
   const [mode, setMode] = useState<VenteMode>('cb')
   const [remise, setRemise] = useState('0')
@@ -143,7 +143,7 @@ export default function NewVenteForm({ articles }: NewVenteFormProps) {
     }
 
     try {
-      const response = await authenticatedFetch(`${API_URL}/ventes`, {
+      const response = await sessionFetch(`${API_URL}/ventes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 'use client'
 
-export function useAuthenticatedFetch() {
-  return async function authenticatedFetch(
+export function useSessionFetch() {
+  return async function sessionFetch(
     input: RequestInfo | URL,
     init: RequestInit = {},
   ) {

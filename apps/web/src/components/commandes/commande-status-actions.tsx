@@ -1,7 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import type { CommandeStatut } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -18,7 +18,7 @@ export default function CommandeStatusActions({
   statut,
 }: CommandeStatusActionsProps) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
   const [loadingStatus, setLoadingStatus] = useState<CommandeStatut | null>(
     null,
   )
@@ -36,7 +36,7 @@ export default function CommandeStatusActions({
     setError('')
 
     try {
-      const response = await authenticatedFetch(
+      const response = await sessionFetch(
         `${API_URL}/commandes/${commandeId}/statut`,
         {
           method: 'PATCH',

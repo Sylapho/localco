@@ -82,7 +82,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { data: session, isPending } = authClient.useSession()
   const user = session?.user
   const role = user?.role
-  const isSignedIn = Boolean(session)
+  const hasSession = Boolean(session)
   const isLoaded = !isPending
   const visibleNavItems =
     role === 'gerant' ? [...navItems, adminNavItem] : navItems
@@ -130,7 +130,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="lc-sidebar-foot">
-          {isLoaded && isSignedIn ? (
+          {isLoaded && hasSession ? (
             <div className="lc-user-chip">
               <button
                 type="button"
@@ -147,7 +147,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           ) : null}
 
-          {isLoaded && !isSignedIn ? (
+          {isLoaded && !hasSession ? (
             <div className="lc-auth-actions">
               <Link href="/sign-in" className="lc-auth-primary">
                 Se connecter
@@ -161,19 +161,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="lc-topbar">
           <div>
             <strong>LocalCo</strong>
-            {isLoaded && isSignedIn ? (
+            {isLoaded && hasSession ? (
               <span>Interface de gestion</span>
             ) : null}
-            {isLoaded && !isSignedIn ? (
+            {isLoaded && !hasSession ? (
               <span>Connecte-toi pour accéder à la gestion</span>
             ) : null}
           </div>
-          {isLoaded && isSignedIn ? (
+          {isLoaded && hasSession ? (
             <Link href="/ventes/new" className="lc-topbar-action">
               Nouvelle vente
             </Link>
           ) : null}
-          {isLoaded && !isSignedIn ? (
+          {isLoaded && !hasSession ? (
             <div className="lc-topbar-auth">
               <Link href="/sign-in" className="lc-topbar-action">
                 Connexion

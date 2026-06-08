@@ -1,7 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -13,7 +13,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function DeleteMatierePremiereButton({ matiereId }: Props) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -28,7 +28,7 @@ export default function DeleteMatierePremiereButton({ matiereId }: Props) {
     setError('')
 
     try {
-      const response = await authenticatedFetch(`${API_URL}/matieres-premieres/${matiereId}`, {
+      const response = await sessionFetch(`${API_URL}/matieres-premieres/${matiereId}`, {
         method: 'DELETE',
       })
 

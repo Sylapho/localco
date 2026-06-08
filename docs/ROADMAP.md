@@ -43,7 +43,7 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 
 - Gestion des commandes : création, checkout, suivi de statut et détails existent, mais le dashboard interne doit être renforcé pour un usage quotidien.
 - Stock : les mouvements, lots et ajustements existent, mais le stock disponible doit être verrouillé avant checkout pour éviter les stocks négatifs.
-- Auth : Better Auth est la cible active, mais le modèle Prisma `User` contient encore un champ historique `clerkId` à traiter proprement.
+- Auth : Better Auth est la cible active, avec une dette historique d'ancien fournisseur à terminer de nettoyer dans le modèle utilisateur et les migrations.
 - Tests API : les tests existent sur plusieurs flux critiques, mais les cas stock avant checkout et webhooks doivent être durcis.
 - Pages légales : les pages existent, mais leur contenu doit être audité avant production.
 - Variables d'environnement : les exemples existent, mais ils doivent rester synchronisés avec Better Auth, Stripe, Resend, CORS et les URLs de production.
@@ -108,7 +108,7 @@ Tâches :
 - Garder le README et les docs à jour avec `apps/api`, `apps/web` et `apps/shop`.
 - Vérifier et compléter les `.env.example` de chaque application.
 - Clarifier Better Auth comme solution active d'authentification.
-- Supprimer ou migrer la dette historique Clerk si elle est encore présente dans le schéma ou le code.
+- Supprimer ou migrer toute dette historique d'ancien fournisseur si elle est encore présente dans le schéma ou le code.
 - Ajouter une validation stricte du stock disponible avant checkout.
 - Aligner les tests API sur le comportement attendu : aucun stock négatif au checkout.
 - Couvrir les webhooks Stripe critiques et les doublons.
@@ -277,7 +277,7 @@ Notes :
 2. Modifier les tests existants qui acceptent aujourd'hui un stock négatif au checkout.
 3. Ajouter les tests API de refus de checkout avec stock insuffisant.
 4. Rejouer et compléter les tests webhook Stripe : completed, expired, duplicate, signature invalide.
-5. Auditer les champs et migrations liés à l'ancienne dette Clerk.
+5. Auditer les champs et migrations liés à l'ancienne dette d'authentification.
 6. Vérifier les `.env.example` pour API, web et shop avant pré-production.
 7. Auditer les pages légales existantes et lister les manques juridiques.
 8. Améliorer les pages success/cancel pour le support client et les cas d'erreur.

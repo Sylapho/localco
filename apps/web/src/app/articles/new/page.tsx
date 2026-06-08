@@ -1,7 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -9,7 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function NewArticlePage() {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
 
   const [nom, setNom] = useState('')
   const [prix, setPrix] = useState('')
@@ -25,7 +25,7 @@ export default function NewArticlePage() {
     setLoading(true)
 
     try {
-      const response = await authenticatedFetch(`${API_URL}/articles`, {
+      const response = await sessionFetch(`${API_URL}/articles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

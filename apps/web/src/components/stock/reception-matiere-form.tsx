@@ -1,7 +1,7 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
-import { useAuthenticatedFetch } from '@/lib/use-authenticated-fetch'
+import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useMemo, useState } from 'react'
 
@@ -21,7 +21,7 @@ export default function ReceptionMatiereForm({
   matieres,
 }: ReceptionMatiereFormProps) {
   const router = useRouter()
-  const authenticatedFetch = useAuthenticatedFetch()
+  const sessionFetch = useSessionFetch()
   const [matiereId, setMatiereId] = useState(matieres[0]?.id.toString() ?? '')
   const [quantite, setQuantite] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
@@ -42,7 +42,7 @@ export default function ReceptionMatiereForm({
     setError('')
 
     try {
-      const response = await authenticatedFetch(
+      const response = await sessionFetch(
         `${API_URL}/mouvements-stock/matieres-premieres/${matiereId}/reception`,
         {
           method: 'POST',
