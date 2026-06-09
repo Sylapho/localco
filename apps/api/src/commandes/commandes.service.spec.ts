@@ -71,6 +71,7 @@ describe('CommandesService', () => {
     },
     mouvementStock: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
     },
     stripeWebhookEvent: {
@@ -158,6 +159,7 @@ describe('CommandesService', () => {
     prismaMock.commande.findMany.mockResolvedValue([])
     prismaMock.commandeStatutHistorique.create.mockResolvedValue({ id: 1 })
     prismaMock.mouvementStock.findFirst.mockResolvedValue(null)
+    prismaMock.mouvementStock.findMany.mockResolvedValue([])
     prismaMock.mouvementStock.create.mockResolvedValue({ id: 1 })
     prismaMock.stripeWebhookEvent.create.mockResolvedValue({ id: 1 })
 
@@ -198,7 +200,7 @@ describe('CommandesService', () => {
   })
 
   it('findAll should cleanup abandoned commandes before listing visible commandes', async () => {
-    const commandes = [{ id: 1, statut: 'nouvelle' }]
+    const commandes = [{ id: 1, statut: 'nouvelle', lignes: [] }]
 
     prismaMock.commande.findMany
       .mockResolvedValueOnce([])
@@ -237,6 +239,124 @@ describe('CommandesService', () => {
       },
       orderBy: {
         createdAt: 'desc',
+      },
+    })
+  })
+
+  it('findAll should expose production quantities from order stock movements', async () => {
+    const commandes = [
+      {
+        id: 1,
+        statut: 'nouvelle',
+        lignes: [
+          {
+            id: 10,
+            articleId: 1,
+            quantite: 5,
+            article: {
+              id: 1,
+              stock: -2,
+            },
+          },
+          {
+            id: 11,
+            articleId: 2,
+            quantite: 1,
+            article: {
+              id: 2,
+              stock: 4,
+            },
+          },
+        ],
+      },
+      {
+        id: 2,
+        statut: 'nouvelle',
+        lignes: [
+          {
+            id: 12,
+            articleId: 1,
+            quantite: 2,
+            article: {
+              id: 1,
+              stock: -2,
+            },
+          },
+        ],
+      },
+    ]
+
+    prismaMock.commande.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(commandes)
+    prismaMock.mouvementStock.findMany.mockResolvedValue([
+      {
+        articleId: 1,
+        quantite: -5,
+        stockApres: -2,
+        reference: 'commande:1:reservation',
+      },
+      {
+        articleId: 1,
+        quantite: -2,
+        stockApres: -4,
+        reference: 'commande:2:reservation',
+      },
+      {
+        articleId: 2,
+        quantite: -1,
+        stockApres: 4,
+        reference: 'commande:1:reservation',
+      },
+    ])
+
+    await expect(service.findAll()).resolves.toEqual([
+      {
+        ...commandes[0],
+        lignes: [
+          {
+            ...commandes[0].lignes[0],
+            productionQuantity: 2,
+          },
+          {
+            ...commandes[0].lignes[1],
+            productionQuantity: 0,
+          },
+        ],
+      },
+      {
+        ...commandes[1],
+        lignes: [
+          {
+            ...commandes[1].lignes[0],
+            productionQuantity: 2,
+          },
+        ],
+      },
+    ])
+
+    expect(prismaMock.mouvementStock.findMany).toHaveBeenCalledWith({
+      where: {
+        reference: {
+          in: [
+            'commande:1',
+            'commande:1:reservation',
+            'commande:2',
+            'commande:2:reservation',
+          ],
+        },
+        articleId: {
+          not: null,
+        },
+        quantite: {
+          lt: 0,
+        },
+      },
+      select: {
+        articleId: true,
+        quantite: true,
+        stockApres: true,
+        reference: true,
       },
     })
   })

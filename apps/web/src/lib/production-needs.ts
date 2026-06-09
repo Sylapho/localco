@@ -8,6 +8,7 @@ export type ProductionNeed = {
   stock: number
   orderedQuantity: number
   quantityToProduce: number
+  quantityByCommandeId: Record<number, number>
   dueDate?: string | null
   dueDateKey: string
   commandeIds: number[]
@@ -25,6 +26,14 @@ export function getProductionNeeds(commandes: Commande[]): ProductionNeed[] {
   const activeCommandes = commandes.filter((commande) =>
     productionStatuses.has(commande.statut),
   )
+  const hasExplicitProductionData = activeCommandes.some((commande) =>
+    commande.lignes.some((ligne) => ligne.productionQuantity !== undefined),
+  )
+
+  if (hasExplicitProductionData) {
+    return getExplicitProductionNeeds(activeCommandes, todayKey)
+  }
+
   const stockByArticle = new Map<number, number>()
   const articleNameById = new Map<number, string>()
   const demandByArticle = new Map<
@@ -106,6 +115,12 @@ export function getProductionNeeds(commandes: Commande[]): ProductionNeed[] {
         stock,
         orderedQuantity: dueDateDemand.quantity,
         quantityToProduce,
+        quantityByCommandeId: Object.fromEntries(
+          Array.from(dueDateDemand.commandeIds).map((commandeId) => [
+            commandeId,
+            quantityToProduce,
+          ]),
+        ),
         dueDate: dueDateDemand.dueDate,
         dueDateKey,
         commandeIds: Array.from(dueDateDemand.commandeIds).sort(
@@ -134,11 +149,82 @@ export function getProductionNeedsByCommandeId(needs: ProductionNeed[]) {
 
   for (const need of needs) {
     for (const commandeId of need.commandeIds) {
-      result.set(commandeId, [...(result.get(commandeId) ?? []), need])
+      const quantityToProduce = need.quantityByCommandeId[commandeId] ?? 0
+
+      if (quantityToProduce <= 0) {
+        continue
+      }
+
+      result.set(commandeId, [
+        ...(result.get(commandeId) ?? []),
+        {
+          ...need,
+          commandeIds: [commandeId],
+          quantityToProduce,
+        },
+      ])
     }
   }
 
   return result
+}
+
+function getExplicitProductionNeeds(
+  commandes: Commande[],
+  todayKey: string,
+): ProductionNeed[] {
+  const needsByArticleAndDate = new Map<string, ProductionNeed>()
+
+  for (const commande of commandes) {
+    const dueDateKey = getDueDateKey(commande.dateRetrait)
+
+    for (const ligne of commande.lignes) {
+      const quantityToProduce = ligne.productionQuantity ?? 0
+
+      if (quantityToProduce <= 0) {
+        continue
+      }
+
+      const key = `${ligne.articleId}:${dueDateKey}`
+      const need =
+        needsByArticleAndDate.get(key) ??
+        ({
+          articleId: ligne.articleId,
+          articleNom: ligne.article.nom,
+          stock: ligne.article.stock,
+          orderedQuantity: 0,
+          quantityToProduce: 0,
+          quantityByCommandeId: {},
+          dueDate: commande.dateRetrait,
+          dueDateKey,
+          commandeIds: [],
+          urgency: getUrgency(dueDateKey, todayKey),
+        } satisfies ProductionNeed)
+
+      need.stock = Math.min(need.stock, ligne.article.stock)
+      need.orderedQuantity += ligne.quantite
+      need.quantityToProduce += quantityToProduce
+      need.quantityByCommandeId[commande.id] =
+        (need.quantityByCommandeId[commande.id] ?? 0) + quantityToProduce
+
+      if (!need.commandeIds.includes(commande.id)) {
+        need.commandeIds.push(commande.id)
+        need.commandeIds.sort((a, b) => a - b)
+      }
+
+      needsByArticleAndDate.set(key, need)
+    }
+  }
+
+  return Array.from(needsByArticleAndDate.values()).sort((a, b) => {
+    const dateOrder = compareDueDateKeys(a.dueDateKey, b.dueDateKey)
+
+    if (dateOrder !== 0) {
+      return dateOrder
+    }
+
+    return a.articleNom.localeCompare(b.articleNom, 'fr')
+  })
 }
 
 function getDueDateKey(date?: string | null) {

@@ -55,6 +55,7 @@ type TransactionClient = {
   }
   mouvementStock: {
     findFirst: jest.Mock
+    findMany: jest.Mock
     create: jest.Mock
   }
 }
@@ -86,6 +87,7 @@ describe('Commandes integration', () => {
     },
     mouvementStock: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
     },
     stripeWebhookEvent: {
@@ -184,6 +186,7 @@ describe('Commandes integration', () => {
     prismaMock.commande.findMany.mockResolvedValue([])
     prismaMock.commandeStatutHistorique.create.mockResolvedValue({ id: 1 })
     prismaMock.mouvementStock.findFirst.mockResolvedValue(null)
+    prismaMock.mouvementStock.findMany.mockResolvedValue([])
     prismaMock.mouvementStock.create.mockResolvedValue({ id: 1 })
     prismaMock.stripeWebhookEvent.create.mockResolvedValue({ id: 1 })
 

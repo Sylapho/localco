@@ -41,6 +41,21 @@ type ReservationArticle = {
   imageUrl?: string | null
 }
 
+type CommandeWithProductionLines = {
+  id: number
+  lignes: {
+    articleId: number
+    quantite: number
+  }[]
+}
+
+type CommandeStockMovement = {
+  articleId: number | null
+  quantite: number
+  stockApres: number
+  reference: string | null
+}
+
 type StripeCheckoutWebhookEvent = {
   id: string
   type: string
@@ -66,7 +81,7 @@ export class CommandesService {
   async findAll() {
     await this.cleanupAbandonedCommandes()
 
-    return this.prisma.commande.findMany({
+    const commandes = await this.prisma.commande.findMany({
       where: {
         statut: {
           not: 'paiement_en_attente',
@@ -83,12 +98,14 @@ export class CommandesService {
         createdAt: 'desc',
       },
     })
+
+    return this.withProductionNeeds(commandes)
   }
 
   async findOne(id: number) {
     await this.cleanupAbandonedCommandes()
 
-    return this.prisma.commande.findUniqueOrThrow({
+    const commande = await this.prisma.commande.findUniqueOrThrow({
       where: { id },
       include: {
         lignes: {
@@ -103,6 +120,12 @@ export class CommandesService {
         },
       },
     })
+
+    const [commandeWithProductionNeeds] = await this.withProductionNeeds([
+      commande,
+    ])
+
+    return commandeWithProductionNeeds
   }
 
   async findPublicCheckoutSummary(sessionId: string) {
@@ -804,6 +827,96 @@ export class CommandesService {
 
   private getReservationReleaseReference(commandeId: number) {
     return `commande:${commandeId}:reservation:release`
+  }
+
+  private getDirectOrderReference(commandeId: number) {
+    return `commande:${commandeId}`
+  }
+
+  private async withProductionNeeds<T extends CommandeWithProductionLines>(
+    commandes: T[],
+  ) {
+    if (commandes.length === 0) {
+      return commandes
+    }
+
+    const referenceToCommandeId = new Map<string, number>()
+
+    for (const commande of commandes) {
+      referenceToCommandeId.set(
+        this.getDirectOrderReference(commande.id),
+        commande.id,
+      )
+      referenceToCommandeId.set(
+        this.getReservationReference(commande.id),
+        commande.id,
+      )
+    }
+
+    const movements = (await this.prisma.mouvementStock.findMany({
+      where: {
+        reference: {
+          in: Array.from(referenceToCommandeId.keys()),
+        },
+        articleId: {
+          not: null,
+        },
+        quantite: {
+          lt: 0,
+        },
+      },
+      select: {
+        articleId: true,
+        quantite: true,
+        stockApres: true,
+        reference: true,
+      },
+    })) as CommandeStockMovement[]
+
+    const productionQuantityByLine = new Map<string, number>()
+
+    for (const movement of movements) {
+      if (!movement.reference || !movement.articleId) {
+        continue
+      }
+
+      const commandeId = referenceToCommandeId.get(movement.reference)
+
+      if (!commandeId) {
+        continue
+      }
+
+      const quantityToProduce = Math.min(
+        Math.abs(movement.quantite),
+        Math.max(0, -movement.stockApres),
+      )
+
+      if (quantityToProduce <= 0) {
+        continue
+      }
+
+      const key = this.getProductionLineKey(commandeId, movement.articleId)
+
+      productionQuantityByLine.set(
+        key,
+        (productionQuantityByLine.get(key) ?? 0) + quantityToProduce,
+      )
+    }
+
+    return commandes.map((commande) => ({
+      ...commande,
+      lignes: commande.lignes.map((ligne) => ({
+        ...ligne,
+        productionQuantity:
+          productionQuantityByLine.get(
+            this.getProductionLineKey(commande.id, ligne.articleId),
+          ) ?? 0,
+      })),
+    }))
+  }
+
+  private getProductionLineKey(commandeId: number, articleId: number) {
+    return `${commandeId}:${articleId}`
   }
 
   private formatCommandeReference(id: number) {

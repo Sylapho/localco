@@ -402,6 +402,7 @@ export type LigneCommande = {
   commandeId: number
   articleId: number
   quantite: number
+  productionQuantity?: number
   prixUnitCents: number
   article: Article
 }
