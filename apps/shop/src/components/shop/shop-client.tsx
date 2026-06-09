@@ -185,7 +185,7 @@ export default function ShopClient({ articles, pickupPoints }: ShopClientProps) 
       <section className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-14">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#b5006e]">
-            Commande locale premium
+            Commande locale
           </p>
 
           <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight text-[#181014] sm:text-5xl">
