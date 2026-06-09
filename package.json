@@ -20,6 +20,7 @@
     "test": "pnpm test:api",
     "test:api": "pnpm --filter @localco/api test",
     "test:api:e2e": "pnpm --filter @localco/api test:e2e",
+    "test:shop:e2e": "pnpm --filter @localco/shop test:e2e",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",
