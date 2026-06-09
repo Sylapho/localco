@@ -12,6 +12,7 @@ describe('CommandesController', () => {
     createCheckout: jest.fn(),
     handleStripeWebhook: jest.fn(),
     findPublicCheckoutSummary: jest.fn(),
+    findPickupPoints: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
     updateStatut: jest.fn(),
@@ -79,6 +80,21 @@ describe('CommandesController', () => {
 
     await expect(controller.findAll()).resolves.toEqual(result)
     expect(commandesServiceMock.findAll).toHaveBeenCalled()
+  })
+
+  it('findPickupPoints should return public pickup points', () => {
+    const result = [
+      {
+        label: 'Marché de Gaillon',
+        schedule: 'Mardi matin, 8h-12h',
+        allowedWeekdays: [2],
+        value: 'Marché de Gaillon - Mardi matin, 8h-12h',
+      },
+    ]
+    commandesServiceMock.findPickupPoints.mockReturnValue(result)
+
+    expect(controller.findPickupPoints()).toEqual(result)
+    expect(commandesServiceMock.findPickupPoints).toHaveBeenCalled()
   })
 
   it('findOne should return one commande', async () => {

@@ -1,5 +1,6 @@
 import LegalPage, { LegalNotice, LegalSection } from '@/components/shop/legal-page'
-import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
+import { getPickupPoints } from '@/lib/api'
+import { formatPickupPoint } from '@/lib/pickup-points'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
@@ -7,7 +8,9 @@ export const metadata: Metadata = {
   title: 'Click & Collect - Les Cocottes de Diane',
 }
 
-export default function ClickAndCollectPage() {
+export default async function ClickAndCollectPage() {
+  const pickupPoints = await getPickupPoints()
+
   return (
     <LegalPage
       title="Comment fonctionne le Click & Collect ?"

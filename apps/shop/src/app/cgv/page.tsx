@@ -1,12 +1,15 @@
 import LegalPage, { LegalNotice, LegalSection, ToComplete } from '@/components/shop/legal-page'
-import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
+import { getPickupPoints } from '@/lib/api'
+import { formatPickupPoint } from '@/lib/pickup-points'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'CGV - Les Cocottes de Diane',
 }
 
-export default function CgvPage() {
+export default async function CgvPage() {
+  const pickupPoints = await getPickupPoints()
+
   return (
     <LegalPage
       title="Conditions Générales de Vente"

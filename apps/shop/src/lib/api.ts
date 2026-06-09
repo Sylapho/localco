@@ -42,6 +42,13 @@ export type CheckoutSummary = {
   }[]
 }
 
+export type PickupPoint = {
+  label: string
+  schedule: string
+  allowedWeekdays: number[]
+  value: string
+}
+
 export async function getShopArticles(): Promise<ShopArticle[]> {
   const response = await fetch(`${API_URL}/boutique/articles`, {
     cache: 'no-store',
@@ -49,6 +56,18 @@ export async function getShopArticles(): Promise<ShopArticle[]> {
 
   if (!response.ok) {
     throw new Error('Impossible de charger les articles')
+  }
+
+  return response.json()
+}
+
+export async function getPickupPoints(): Promise<PickupPoint[]> {
+  const response = await fetch(`${API_URL}/commandes/pickup-points`, {
+    cache: 'no-store',
+  })
+
+  if (!response.ok) {
+    throw new Error('Impossible de charger les points de retrait')
   }
 
   return response.json()

@@ -1,6 +1,6 @@
 'use client'
 
-import type { ShopArticle } from '@/lib/api'
+import type { PickupPoint, ShopArticle } from '@/lib/api'
 import {
   buildCartLines,
   formatCurrency,
@@ -9,7 +9,7 @@ import {
   writeStoredCart,
   type Cart,
 } from '@/lib/cart'
-import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
+import { formatPickupPoint } from '@/lib/pickup-points'
 import ProductInfoPopover from './product-info-popover'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 type ShopClientProps = {
   articles: ShopArticle[]
+  pickupPoints: PickupPoint[]
 }
 
 type ProductCategory =
@@ -81,7 +82,7 @@ function getArticleCategory(article: ShopArticle): ProductCategory {
   return 'Découpes'
 }
 
-export default function ShopClient({ articles }: ShopClientProps) {
+export default function ShopClient({ articles, pickupPoints }: ShopClientProps) {
   const [cart, setCart] = useState<Cart>({})
   const [cartReady, setCartReady] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)

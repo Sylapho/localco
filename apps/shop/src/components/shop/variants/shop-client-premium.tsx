@@ -1,8 +1,13 @@
 'use client'
 
-import type { CreateCommandePayload, ShopArticle } from '@/lib/api'
+import type { CreateCommandePayload, PickupPoint, ShopArticle } from '@/lib/api'
 import { formatCurrencyFromCents } from '@/lib/money'
-import { formatPickupPoint, pickupPoints } from '@/lib/pickup-points'
+import {
+  findPickupPoint,
+  formatPickupDateLabel,
+  formatPickupPoint,
+  getNextPickupDates,
+} from '@/lib/pickup-points'
 import ArticleImage from '../article-image'
 import Image from 'next/image'
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
@@ -10,6 +15,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 type ShopClientProps = {
   articles: ShopArticle[]
   apiUrl: string
+  pickupPoints: PickupPoint[]
 }
 
 type Cart = Record<number, number>
@@ -19,12 +25,6 @@ const maxCartQuantity = 99
 
 function formatCurrency(value: number) {
   return formatCurrencyFromCents(value)
-}
-
-function todayInputValue() {
-  const now = new Date()
-  const timezoneOffset = now.getTimezoneOffset() * 60_000
-  return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10)
 }
 
 function normalizeSearch(value: string) {
@@ -38,14 +38,20 @@ function normalizeSearch(value: string) {
 export default function ShopClientPremium({
   articles,
   apiUrl,
+  pickupPoints,
 }: ShopClientProps) {
+  const firstPickupPoint = pickupPoints[0]
   const [cart, setCart] = useState<Cart>({})
   const [panelOpen, setPanelOpen] = useState(false)
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [tel, setTel] = useState('')
-  const [lieu, setLieu] = useState(formatPickupPoint(pickupPoints[0]))
-  const [dateRetrait, setDateRetrait] = useState(todayInputValue())
+  const [lieu, setLieu] = useState(
+    firstPickupPoint ? formatPickupPoint(firstPickupPoint) : '',
+  )
+  const [dateRetrait, setDateRetrait] = useState(
+    firstPickupPoint ? (getNextPickupDates(firstPickupPoint, 1)[0] ?? '') : '',
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -73,6 +79,14 @@ export default function ShopClientPremium({
 
   const total = lines.reduce((sum, line) => sum + line.totalCents, 0)
   const count = lines.reduce((sum, line) => sum + line.quantite, 0)
+  const selectedPickupPoint =
+    findPickupPoint(pickupPoints, lieu) ?? firstPickupPoint
+  const pickupDateOptions = selectedPickupPoint
+    ? getNextPickupDates(selectedPickupPoint)
+    : []
+  const selectedDateRetrait = pickupDateOptions.includes(dateRetrait)
+    ? dateRetrait
+    : (pickupDateOptions[0] ?? '')
 
   const filteredArticles = useMemo(() => {
     const query = normalizeSearch(search)
@@ -122,6 +136,15 @@ export default function ShopClientPremium({
     })
   }
 
+  function handlePickupPointChange(value: string) {
+    const nextPickupPoint = findPickupPoint(pickupPoints, value)
+
+    setLieu(value)
+    setDateRetrait(
+      nextPickupPoint ? (getNextPickupDates(nextPickupPoint, 1)[0] ?? '') : '',
+    )
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -133,13 +156,19 @@ export default function ShopClientPremium({
       return
     }
 
+    if (!selectedPickupPoint || !selectedDateRetrait) {
+      setError('Aucun point de retrait disponible.')
+      setLoading(false)
+      return
+    }
+
     try {
       const payload: CreateCommandePayload = {
         nom,
         email,
         tel: tel || undefined,
-        lieu,
-        dateRetrait,
+        lieu: formatPickupPoint(selectedPickupPoint),
+        dateRetrait: selectedDateRetrait,
         lignes: lines.map((line) => ({
           articleId: line.article.id,
           quantite: line.quantite,
@@ -474,13 +503,15 @@ export default function ShopClientPremium({
           email={email}
           tel={tel}
           lieu={lieu}
-          dateRetrait={dateRetrait}
+          dateRetrait={selectedDateRetrait}
+          pickupPoints={pickupPoints}
+          pickupDateOptions={pickupDateOptions}
           onClose={() => setPanelOpen(false)}
           onSubmit={handleSubmit}
           onNomChange={setNom}
           onEmailChange={setEmail}
           onTelChange={setTel}
-          onLieuChange={setLieu}
+          onLieuChange={handlePickupPointChange}
           onDateRetraitChange={setDateRetrait}
           onUpdateCart={updateCart}
           onRemoveFromCart={removeFromCart}
@@ -573,6 +604,8 @@ function CartPanel({
   tel,
   lieu,
   dateRetrait,
+  pickupPoints,
+  pickupDateOptions,
   onClose,
   onSubmit,
   onNomChange,
@@ -596,6 +629,8 @@ function CartPanel({
   tel: string
   lieu: string
   dateRetrait: string
+  pickupPoints: PickupPoint[]
+  pickupDateOptions: string[]
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onNomChange: (value: string) => void
@@ -784,17 +819,19 @@ function CartPanel({
                 </Field>
 
                 <Field label="Date souhaitée *" htmlFor="premium-dateRetrait">
-                  <input
+                  <select
                     id="premium-dateRetrait"
-                    type="date"
-                    min={todayInputValue()}
                     value={dateRetrait}
-                    onChange={(event) =>
-                      onDateRetraitChange(event.target.value)
-                    }
+                    onChange={(event) => onDateRetraitChange(event.target.value)}
                     className="h-12 rounded-2xl border border-stone-200 bg-white px-4 outline-none transition focus:border-rose-800"
                     required
-                  />
+                  >
+                    {pickupDateOptions.map((date) => (
+                      <option key={date} value={date}>
+                        {formatPickupDateLabel(date)}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               </div>
 

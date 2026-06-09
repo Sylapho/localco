@@ -1,10 +1,13 @@
 import ShopClient from '@/components/shop/shop-client'
-import { getShopArticles } from '@/lib/api'
+import { getPickupPoints, getShopArticles } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
 export default async function Home() {
-  const articles = await getShopArticles()
+  const [articles, pickupPoints] = await Promise.all([
+    getShopArticles(),
+    getPickupPoints(),
+  ])
 
-  return <ShopClient articles={articles} />
+  return <ShopClient articles={articles} pickupPoints={pickupPoints} />
 }

@@ -10,7 +10,7 @@ import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.ser
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateCommandeDto } from './dto/create-commande.dto'
 import { CommandeStatut } from './dto/update-commande-statut.dto'
-import { validatePickupSlot } from './pickup-slots'
+import { getPublicPickupPoints, validatePickupSlot } from './pickup-slots'
 
 type StockMovementTransaction = Parameters<
   MouvementsStockService['recordArticleMovement']
@@ -77,6 +77,10 @@ export class CommandesService {
     private readonly configService: ConfigService,
     private readonly emailsService: EmailsService,
   ) {}
+
+  findPickupPoints() {
+    return getPublicPickupPoints()
+  }
 
   async findAll() {
     await this.cleanupAbandonedCommandes()

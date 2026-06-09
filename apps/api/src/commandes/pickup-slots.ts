@@ -44,6 +44,13 @@ export function formatPickupPoint(point: PickupPoint) {
   return `${point.label} - ${point.schedule}`
 }
 
+export function getPublicPickupPoints() {
+  return pickupPoints.map((point) => ({
+    ...point,
+    value: formatPickupPoint(point),
+  }))
+}
+
 export function findPickupPoint(value: string) {
   return pickupPoints.find((point) => formatPickupPoint(point) === value)
 }

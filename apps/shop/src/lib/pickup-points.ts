@@ -1,42 +1,9 @@
-export const pickupPoints = [
-  {
-    label: 'Marché de Gaillon',
-    schedule: 'Mardi matin, 8h-12h',
-    allowedWeekdays: [2],
-  },
-  {
-    label: 'Marché du Neubourg',
-    schedule: 'Mercredi matin, 8h-12h',
-    allowedWeekdays: [3],
-  },
-  {
-    label: 'Marché de Conches',
-    schedule: 'Jeudi matin, 8h-12h',
-    allowedWeekdays: [4],
-  },
-  {
-    label: 'À la ferme',
-    schedule: 'Vendredi après-midi, 16h-18h',
-    allowedWeekdays: [5],
-  },
-  {
-    label: 'À la ferme',
-    schedule: 'Samedi matin, 8h-12h',
-    allowedWeekdays: [6],
-  },
-  {
-    label: "AMAP d'Houlbec-Cocherel",
-    schedule: 'Jeudi, tous les 15 jours',
-    allowedWeekdays: [4],
-  },
-  {
-    label: 'AMAP Autheuil-Authouillet',
-    schedule: 'Jeudi, tous les 15 jours',
-    allowedWeekdays: [4],
-  },
-]
-
-export type PickupPoint = (typeof pickupPoints)[number]
+export type PickupPoint = {
+  label: string
+  schedule: string
+  allowedWeekdays: number[]
+  value: string
+}
 
 const weekdayLabels = [
   'dimanche',
@@ -63,14 +30,21 @@ function parseInputDate(value: string) {
 }
 
 export function formatPickupPoint(point: PickupPoint) {
-  return `${point.label} - ${point.schedule}`
+  return point.value
 }
 
-export function findPickupPoint(value: string) {
-  return pickupPoints.find((point) => formatPickupPoint(point) === value)
+export function findPickupPoint(
+  pickupPoints: readonly PickupPoint[],
+  value: string,
+) {
+  return pickupPoints.find((point) => point.value === value)
 }
 
-export function getAllowedPickupWeekdays(point: PickupPoint) {
+export function getAllowedPickupWeekdays(point?: PickupPoint) {
+  if (!point) {
+    return ''
+  }
+
   return point.allowedWeekdays
     .map((weekday) => weekdayLabels[weekday])
     .join(', ')

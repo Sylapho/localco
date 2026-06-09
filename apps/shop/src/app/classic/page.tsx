@@ -1,10 +1,19 @@
 import ShopClientClassic from '@/components/shop/variants/shop-client-classic'
-import { getApiUrl, getShopArticles } from '@/lib/api'
+import { getApiUrl, getPickupPoints, getShopArticles } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ClassicShopPage() {
-  const articles = await getShopArticles()
+  const [articles, pickupPoints] = await Promise.all([
+    getShopArticles(),
+    getPickupPoints(),
+  ])
 
-  return <ShopClientClassic articles={articles} apiUrl={getApiUrl()} />
+  return (
+    <ShopClientClassic
+      articles={articles}
+      apiUrl={getApiUrl()}
+      pickupPoints={pickupPoints}
+    />
+  )
 }

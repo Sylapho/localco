@@ -234,6 +234,23 @@ describe('Commandes integration', () => {
     }
   })
 
+  it('GET /api/commandes/pickup-points should expose public pickup choices used by checkout validation', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/commandes/pickup-points')
+      .expect(200)
+
+    expect(response.body).toEqual(
+      expect.arrayContaining([
+        {
+          label: 'Marché de Gaillon',
+          schedule: 'Mardi matin, 8h-12h',
+          allowedWeekdays: [2],
+          value: validPickupPoint,
+        },
+      ]),
+    )
+  })
+
   it('POST /api/commandes should create a direct order and allow negative stock', async () => {
     const articles: ArticleMock[] = [
       {

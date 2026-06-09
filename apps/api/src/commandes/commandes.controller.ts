@@ -41,6 +41,11 @@ export class CommandesController {
     return this.commandesService.create(body)
   }
 
+  @Get('pickup-points')
+  findPickupPoints() {
+    return this.commandesService.findPickupPoints()
+  }
+
   @Get()
   @UseGuards(BetterAuthGuard, RolesGuard)
   @Roles(ROLES.GERANT, ROLES.VENDEUR, ROLES.PRODUCTION, ROLES.COMPTABLE)

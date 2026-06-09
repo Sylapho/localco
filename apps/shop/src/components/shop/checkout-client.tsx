@@ -1,6 +1,6 @@
 'use client'
 
-import type { CreateCommandePayload, ShopArticle } from '@/lib/api'
+import type { CreateCommandePayload, PickupPoint, ShopArticle } from '@/lib/api'
 import {
   buildCartLines,
   clearStoredCart,
@@ -14,8 +14,6 @@ import {
   formatPickupPoint,
   getAllowedPickupWeekdays,
   getNextPickupDates,
-  pickupPoints,
-  type PickupPoint,
 } from '@/lib/pickup-points'
 import Link from 'next/link'
 import type * as React from 'react'
@@ -24,6 +22,7 @@ import { useEffect, useMemo, useState } from 'react'
 type CheckoutClientProps = {
   articles: ShopArticle[]
   apiUrl: string
+  pickupPoints: PickupPoint[]
 }
 
 type CheckoutError = {
@@ -59,7 +58,9 @@ const inputClassName =
 export default function CheckoutClient({
   articles,
   apiUrl,
+  pickupPoints,
 }: CheckoutClientProps) {
+  const firstPickupPoint = pickupPoints[0]
   const [cart, setCart] = useState<Cart>({})
   const [cartReady, setCartReady] = useState(false)
 
@@ -67,9 +68,11 @@ export default function CheckoutClient({
   const [email, setEmail] = useState('')
   const [tel, setTel] = useState('')
 
-  const [lieu, setLieu] = useState(formatPickupPoint(pickupPoints[0]))
+  const [lieu, setLieu] = useState(
+    firstPickupPoint ? formatPickupPoint(firstPickupPoint) : '',
+  )
   const [dateRetrait, setDateRetrait] = useState(
-    getNextPickupDates(pickupPoints[0], 1)[0],
+    firstPickupPoint ? (getNextPickupDates(firstPickupPoint, 1)[0] ?? '') : '',
   )
 
   const [loading, setLoading] = useState(false)
@@ -79,16 +82,17 @@ export default function CheckoutClient({
   const total = lines.reduce((sum, line) => sum + line.totalCents, 0)
   const itemCount = lines.reduce((sum, line) => sum + line.quantite, 0)
 
-  const selectedPickupPoint = findPickupPoint(lieu) ?? pickupPoints[0]
+  const selectedPickupPoint =
+    findPickupPoint(pickupPoints, lieu) ?? firstPickupPoint
 
   const pickupDateOptions = useMemo(
-    () => getNextPickupDates(selectedPickupPoint),
+    () => (selectedPickupPoint ? getNextPickupDates(selectedPickupPoint) : []),
     [selectedPickupPoint],
   )
 
   const selectedDateRetrait = pickupDateOptions.includes(dateRetrait)
     ? dateRetrait
-    : pickupDateOptions[0]
+    : (pickupDateOptions[0] ?? '')
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -100,10 +104,12 @@ export default function CheckoutClient({
   }, [])
 
   function handlePickupPointChange(value: string) {
-    const nextPickupPoint = findPickupPoint(value) ?? pickupPoints[0]
+    const nextPickupPoint = findPickupPoint(pickupPoints, value)
 
     setLieu(value)
-    setDateRetrait(getNextPickupDates(nextPickupPoint, 1)[0])
+    setDateRetrait(
+      nextPickupPoint ? (getNextPickupDates(nextPickupPoint, 1)[0] ?? '') : '',
+    )
   }
 
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
@@ -116,6 +122,15 @@ export default function CheckoutClient({
         message: 'Ajoutez au moins un produit avant de passer au paiement.',
         actionHref: '/#produits',
         actionLabel: 'Voir les produits',
+      })
+      return
+    }
+
+    if (!selectedPickupPoint) {
+      setError({
+        title: 'Point de retrait indisponible',
+        message:
+          'Aucun point de retrait ne peut Ãªtre proposÃ© pour le moment. RÃ©essayez plus tard.',
       })
       return
     }
@@ -136,7 +151,7 @@ export default function CheckoutClient({
         nom,
         email,
         tel: tel || undefined,
-        lieu,
+        lieu: formatPickupPoint(selectedPickupPoint),
         dateRetrait: selectedDateRetrait,
         lignes: lines.map((line) => ({
           articleId: line.article.id,
@@ -250,21 +265,27 @@ export default function CheckoutClient({
                   description="Sélectionnez un point de retrait, puis une date compatible avec ce lieu."
                 />
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {pickupPoints.map((point) => {
-                    const value = formatPickupPoint(point)
-                    const selected = value === lieu
+                {pickupPoints.length > 0 ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {pickupPoints.map((point) => {
+                      const value = formatPickupPoint(point)
+                      const selected = value === lieu
 
-                    return (
-                      <PickupPointCard
-                        key={value}
-                        point={point}
-                        selected={selected}
-                        onSelect={() => handlePickupPointChange(value)}
-                      />
-                    )
-                  })}
-                </div>
+                      return (
+                        <PickupPointCard
+                          key={value}
+                          point={point}
+                          selected={selected}
+                          onSelect={() => handlePickupPointChange(value)}
+                        />
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                    Aucun point de retrait nâ€™est disponible pour le moment.
+                  </div>
+                )}
 
                 <div className="mt-5 grid gap-1.5">
                   <label
@@ -463,17 +484,21 @@ export default function CheckoutClient({
                 <div className="grid gap-1">
                   <span className="text-[#7a6d73]">Retrait</span>
                   <span className="font-bold text-[#181014]">
-                    {selectedPickupPoint.label}
+                    {selectedPickupPoint?.label ?? 'Non disponible'}
                   </span>
-                  <span className="text-xs text-[#7a6d73]">
-                    {selectedPickupPoint.schedule}
-                  </span>
+                  {selectedPickupPoint ? (
+                    <span className="text-xs text-[#7a6d73]">
+                      {selectedPickupPoint.schedule}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="flex justify-between gap-4 border-t border-[#eee2e7] pt-3">
                   <span className="text-[#7a6d73]">Date</span>
                   <span className="text-right font-bold text-[#181014]">
-                    {formatPickupDateLabel(selectedDateRetrait)}
+                    {selectedDateRetrait
+                      ? formatPickupDateLabel(selectedDateRetrait)
+                      : '-'}
                   </span>
                 </div>
               </div>
