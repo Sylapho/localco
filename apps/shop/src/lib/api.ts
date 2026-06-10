@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
+const PUBLIC_API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
+const SERVER_API_URL = process.env.API_INTERNAL_URL ?? PUBLIC_API_URL
 
 export type ShopArticle = {
   id: number
@@ -50,7 +52,7 @@ export type PickupPoint = {
 }
 
 export async function getShopArticles(): Promise<ShopArticle[]> {
-  const response = await fetch(`${API_URL}/boutique/articles`, {
+  const response = await fetch(`${SERVER_API_URL}/boutique/articles`, {
     cache: 'no-store',
   })
 
@@ -62,7 +64,7 @@ export async function getShopArticles(): Promise<ShopArticle[]> {
 }
 
 export async function getPickupPoints(): Promise<PickupPoint[]> {
-  const response = await fetch(`${API_URL}/commandes/pickup-points`, {
+  const response = await fetch(`${SERVER_API_URL}/commandes/pickup-points`, {
     cache: 'no-store',
   })
 
@@ -77,7 +79,9 @@ export async function getCheckoutSummary(
   sessionId: string,
 ): Promise<CheckoutSummary | null> {
   const response = await fetch(
-    `${API_URL}/commandes/checkout-session/${encodeURIComponent(sessionId)}`,
+    `${SERVER_API_URL}/commandes/checkout-session/${encodeURIComponent(
+      sessionId,
+    )}`,
     {
       cache: 'no-store',
     },
@@ -95,5 +99,5 @@ export async function getCheckoutSummary(
 }
 
 export function getApiUrl() {
-  return API_URL
+  return PUBLIC_API_URL
 }

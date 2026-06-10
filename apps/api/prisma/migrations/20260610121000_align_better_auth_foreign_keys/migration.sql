@@ -1,0 +1,11 @@
+ALTER TABLE "session" DROP CONSTRAINT IF EXISTS "session_userId_fkey";
+ALTER TABLE "session"
+ADD CONSTRAINT "session_userId_fkey"
+FOREIGN KEY ("userId") REFERENCES "user"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "account" DROP CONSTRAINT IF EXISTS "account_userId_fkey";
+ALTER TABLE "account"
+ADD CONSTRAINT "account_userId_fkey"
+FOREIGN KEY ("userId") REFERENCES "user"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;

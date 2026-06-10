@@ -2,13 +2,140 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: localco
-      POSTGRES_PASSWORD: localco_dev
-      POSTGRES_DB: localco_db
+      POSTGRES_USER: ${POSTGRES_USER:-localco}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localco_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-localco_db}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-localco} -d ${POSTGRES_DB:-localco_db}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  init:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace
+    command: sh -c "pnpm install --frozen-lockfile && pnpm db:generate"
+    environment:
+      CI: "true"
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/node_modules
+      - pnpm_store:/pnpm/store
+      - api_node_modules:/workspace/apps/api/node_modules
+      - web_node_modules:/workspace/apps/web/node_modules
+      - shop_node_modules:/workspace/apps/shop/node_modules
+      - web_next:/workspace/apps/web/.next
+      - shop_next:/workspace/apps/shop/.next
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace
+    command: sh -c "pnpm db:deploy && pnpm dev:api"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL:-postgresql://localco:localco_dev@postgres:5432/localco_db}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-replace-with-a-long-random-string-for-local-docker}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:4000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      SHOP_PUBLIC_URL: ${SHOP_PUBLIC_URL:-http://localhost:3001}
+      API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      CHECKOUT_RATE_LIMIT_WINDOW_MS: ${CHECKOUT_RATE_LIMIT_WINDOW_MS:-60000}
+      CHECKOUT_RATE_LIMIT_MAX: ${CHECKOUT_RATE_LIMIT_MAX:-10}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-re_replace_me}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-Les Cocottes de Diane <commande@example.com>}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/node_modules
+      - pnpm_store:/pnpm/store
+      - api_node_modules:/workspace/apps/api/node_modules
+      - web_node_modules:/workspace/apps/web/node_modules
+      - shop_node_modules:/workspace/apps/shop/node_modules
+      - web_next:/workspace/apps/web/.next
+      - shop_next:/workspace/apps/shop/.next
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace
+    command: pnpm --filter @localco/web dev --hostname 0.0.0.0
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: ${DATABASE_URL:-postgresql://localco:localco_dev@postgres:5432/localco_db}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:4000/api}
+      NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:-http://localhost:4000}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/node_modules
+      - pnpm_store:/pnpm/store
+      - api_node_modules:/workspace/apps/api/node_modules
+      - web_node_modules:/workspace/apps/web/node_modules
+      - shop_node_modules:/workspace/apps/shop/node_modules
+      - web_next:/workspace/apps/web/.next
+    depends_on:
+      api:
+        condition: service_started
+
+  shop:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace
+    command: pnpm --filter @localco/shop dev --hostname 0.0.0.0
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:4000/api}
+    ports:
+      - "${SHOP_PORT:-3001}:3001"
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/node_modules
+      - pnpm_store:/pnpm/store
+      - api_node_modules:/workspace/apps/api/node_modules
+      - web_node_modules:/workspace/apps/web/node_modules
+      - shop_node_modules:/workspace/apps/shop/node_modules
+      - shop_next:/workspace/apps/shop/.next
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   postgres_data:
+  node_modules:
+  pnpm_store:
+  api_node_modules:
+  web_node_modules:
+  shop_node_modules:
+  web_next:
+  shop_next:

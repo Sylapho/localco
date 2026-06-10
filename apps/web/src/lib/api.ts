@@ -3,10 +3,10 @@ import 'server-only'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { headers as nextHeaders } from 'next/headers'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL
 
 if (!API_URL) {
-  throw new Error('NEXT_PUBLIC_API_URL est manquante')
+  throw new Error('API_INTERNAL_URL ou NEXT_PUBLIC_API_URL est manquante')
 }
 
 async function apiFetch(path: string, init: RequestInit = {}) {

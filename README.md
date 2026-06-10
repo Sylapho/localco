@@ -165,6 +165,35 @@ pnpm dev:web
 pnpm dev:shop
 ```
 
+### Docker
+
+Pour lancer l'environnement complet en conteneurs :
+
+```bash
+pnpm docker:dev
+```
+
+Services lancés :
+
+| Service | URL |
+| --- | --- |
+| API | `http://localhost:4000/api` |
+| Web | `http://localhost:3000` |
+| Shop | `http://localhost:3001` |
+| PostgreSQL | `localhost:5432` |
+
+Commandes utiles :
+
+```bash
+pnpm docker:dev:detached
+pnpm docker:ps
+pnpm docker:logs
+pnpm docker:down
+pnpm docker:down:volumes
+```
+
+Le guide détaillé est dans `docs/DOCKER.md`.
+
 Ports locaux par défaut :
 
 | Application | URL |

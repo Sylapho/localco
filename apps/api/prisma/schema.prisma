@@ -36,16 +36,16 @@ model Article {
 }
 
 model MatierePremiere {
-  id              Int              @id @default(autoincrement())
-  nom             String
-  stock           Float
-  unite           String
+  id                Int              @id @default(autoincrement())
+  nom               String
+  stock             Float
+  unite             String
   coutUnitaireCents Int
-  seuil           Float
-  conditionnement String
-  nomen           Nomenclature[]
-  mouvementsStock MouvementStock[]
-  stockLots       StockLot[]
+  seuil             Float
+  conditionnement   String
+  nomen             Nomenclature[]
+  mouvementsStock   MouvementStock[]
+  stockLots         StockLot[]
 }
 
 model Nomenclature {
@@ -67,43 +67,102 @@ model User {
   ventes    Vente[]
 }
 
+model AuthUser {
+  id            String        @id
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  role          String?       @default("vendeur")
+  createdAt     DateTime      @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime      @default(now()) @db.Timestamp(6)
+  sessions      AuthSession[]
+  accounts      AuthAccount[]
+
+  @@map("user")
+}
+
+model AuthSession {
+  id        String   @id
+  expiresAt DateTime @db.Timestamp(6)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @db.Timestamp(6)
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model AuthAccount {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamp(6)
+  refreshTokenExpiresAt DateTime? @db.Timestamp(6)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime  @default(now()) @db.Timestamp(6)
+  user                  AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model AuthVerification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamp(6)
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime @default(now()) @db.Timestamp(6)
+
+  @@map("verification")
+}
+
 model Vente {
-  id             Int          @id @default(autoincrement())
-  date           DateTime     @default(now())
-  totalTtcCents  Int
-  totalHtCents   Int
-  tvaCents       Int
-  mode           String
-  remiseCents    Int          @default(0)
-  userId         Int?
-  user           User?        @relation(fields: [userId], references: [id])
-  lignes         LigneVente[]
+  id            Int          @id @default(autoincrement())
+  date          DateTime     @default(now())
+  totalTtcCents Int
+  totalHtCents  Int
+  tvaCents      Int
+  mode          String
+  remiseCents   Int          @default(0)
+  userId        Int?
+  user          User?        @relation(fields: [userId], references: [id])
+  lignes        LigneVente[]
 }
 
 model LigneVente {
-  id             Int     @id @default(autoincrement())
-  venteId        Int
-  articleId      Int
-  quantite       Int
-  prixUnitCents  Int
-  tvaBps         Int
-  vente          Vente   @relation(fields: [venteId], references: [id])
-  article        Article @relation(fields: [articleId], references: [id])
+  id            Int     @id @default(autoincrement())
+  venteId       Int
+  articleId     Int
+  quantite      Int
+  prixUnitCents Int
+  tvaBps        Int
+  vente         Vente   @relation(fields: [venteId], references: [id])
+  article       Article @relation(fields: [articleId], references: [id])
 }
 
 model Commande {
-  id          Int                       @id @default(autoincrement())
-  nom         String
-  email       String
-  tel         String?
+  id            Int                        @id @default(autoincrement())
+  nom           String
+  email         String
+  tel           String?
   totalTtcCents Int
-  lieu        String
-  dateRetrait DateTime?
-  statut      String                    @default("nouvelle")
-  stripeId    String?
-  createdAt   DateTime                  @default(now())
-  lignes      LigneCommande[]
-  historique  CommandeStatutHistorique[]
+  lieu          String
+  dateRetrait   DateTime?
+  statut        String                     @default("nouvelle")
+  stripeId      String?
+  createdAt     DateTime                   @default(now())
+  lignes        LigneCommande[]
+  historique    CommandeStatutHistorique[]
 
   @@index([statut])
   @@index([stripeId])
@@ -111,13 +170,13 @@ model Commande {
 }
 
 model LigneCommande {
-  id             Int      @id @default(autoincrement())
-  commandeId     Int
-  articleId      Int
-  quantite       Int
-  prixUnitCents  Int
-  commande       Commande @relation(fields: [commandeId], references: [id])
-  article        Article  @relation(fields: [articleId], references: [id])
+  id            Int      @id @default(autoincrement())
+  commandeId    Int
+  articleId     Int
+  quantite      Int
+  prixUnitCents Int
+  commande      Commande @relation(fields: [commandeId], references: [id])
+  article       Article  @relation(fields: [articleId], references: [id])
 }
 
 model CommandeStatutHistorique {
@@ -139,17 +198,17 @@ model StripeWebhookEvent {
 }
 
 model JourneeCaisse {
-  id             Int      @id @default(autoincrement())
-  date           DateTime @unique
-  totalTtcCents  Int
-  totalHtCents   Int
-  tvaCents       Int
-  especesCents   Int
-  cbCents        Int
-  chequesCents   Int
-  margeCents     Int
-  nbVentes       Int
-  clotureeA      DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  date          DateTime @unique
+  totalTtcCents Int
+  totalHtCents  Int
+  tvaCents      Int
+  especesCents  Int
+  cbCents       Int
+  chequesCents  Int
+  margeCents    Int
+  nbVentes      Int
+  clotureeA     DateTime @default(now())
 }
 
 model MouvementStock {
@@ -171,7 +230,7 @@ model MouvementStock {
 }
 
 model StockLot {
-  id                Int      @id @default(autoincrement())
+  id                Int       @id @default(autoincrement())
   target            String
   articleId         Int?
   mpId              Int?
@@ -179,8 +238,8 @@ model StockLot {
   remainingQuantity Float
   expiresAt         DateTime?
   reference         String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   article Article?         @relation(fields: [articleId], references: [id])
   mp      MatierePremiere? @relation(fields: [mpId], references: [id])
