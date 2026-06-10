@@ -16,14 +16,7 @@ type StockMovementTransaction = Parameters<
   MouvementsStockService['recordArticleMovement']
 >[0]
 
-type ReservationTransaction = StockMovementTransaction & {
-  mouvementStock: StockMovementTransaction['mouvementStock'] & {
-    findFirst: (args: {
-      where: { reference: string }
-      select: { id: true }
-    }) => Promise<{ id: number } | null>
-  }
-}
+type ReservationTransaction = StockMovementTransaction
 
 type ReservationLine = {
   articleId: number

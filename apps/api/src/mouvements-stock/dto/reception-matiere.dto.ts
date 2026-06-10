@@ -9,7 +9,7 @@ import {
 export class ReceptionMatiereDto {
   @IsNumber()
   @Min(0.001)
-  quantite: number
+  quantite!: number
 
   @IsOptional()
   @IsString()

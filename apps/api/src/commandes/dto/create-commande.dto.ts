@@ -16,22 +16,22 @@ import { Type } from 'class-transformer'
 
 class CreateCommandeLineDto {
   @IsInt()
-  articleId: number
+  articleId!: number
 
   @IsInt()
   @Min(1)
   @Max(99)
-  quantite: number
+  quantite!: number
 }
 
 export class CreateCommandeDto {
   @IsString()
   @MaxLength(120)
-  nom: string
+  nom!: string
 
   @IsEmail()
   @MaxLength(254)
-  email: string
+  email!: string
 
   @IsOptional()
   @IsString()
@@ -41,7 +41,7 @@ export class CreateCommandeDto {
 
   @IsString()
   @MaxLength(120)
-  lieu: string
+  lieu!: string
 
   @IsOptional()
   @IsDateString()
@@ -51,5 +51,5 @@ export class CreateCommandeDto {
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateCommandeLineDto)
-  lignes: CreateCommandeLineDto[]
+  lignes!: CreateCommandeLineDto[]
 }

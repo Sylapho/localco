@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import type { Prisma } from '../../prisma/generated/prisma/client'
 import { CreateAjustementStockDto } from './dto/create-ajustement-stock.dto'
 import { ReceptionMatiereDto } from './dto/reception-matiere.dto'
 
@@ -15,19 +16,6 @@ export type MouvementStockCible = 'article' | 'matiere_premiere'
 
 type StockLotTarget = MouvementStockCible
 
-type MouvementStockCreateData = {
-  type: MouvementStockType
-  cible: MouvementStockCible
-  articleId?: number
-  mpId?: number
-  quantite: number
-  stockAvant: number
-  stockApres: number
-  motif?: string
-  reference?: string
-  createdByUserId?: string
-}
-
 type StockLotRecord = {
   id: number
   remainingQuantity: number
@@ -40,40 +28,7 @@ type StockItem = {
   stock: number
 }
 
-type MouvementStockTransaction = {
-  article: {
-    findUniqueOrThrow: (args: {
-      where: { id: number }
-    }) => Promise<{ id: number; stock: number }>
-    update: (args: {
-      where: { id: number }
-      data: { stock: { decrement: number } | { increment: number } | number }
-    }) => Promise<{ id: number; stock: number }>
-  }
-  matierePremiere: {
-    findUniqueOrThrow: (args: {
-      where: { id: number }
-    }) => Promise<{ id: number; stock: number }>
-    update: (args: {
-      where: { id: number }
-      data: { stock: { decrement: number } | { increment: number } | number }
-    }) => Promise<{ id: number; stock: number }>
-  }
-  mouvementStock: {
-    create: (args: {
-      data: MouvementStockCreateData
-      include?: {
-        article: boolean
-        mp: boolean
-      }
-    }) => Promise<unknown>
-  }
-  stockLot: {
-    findMany: (args: unknown) => Promise<unknown>
-    create: (args: unknown) => Promise<unknown>
-    update: (args: unknown) => Promise<unknown>
-  }
-}
+export type MouvementStockTransaction = Prisma.TransactionClient
 
 @Injectable()
 export class MouvementsStockService {

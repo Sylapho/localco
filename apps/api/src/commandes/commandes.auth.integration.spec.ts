@@ -10,15 +10,6 @@ import { CommandesController } from './commandes.controller'
 import { CommandesService } from './commandes.service'
 
 const mockBetterAuthGetSession = jest.fn()
-const mockBetterAuth = jest.fn(() => ({
-  api: {
-    getSession: mockBetterAuthGetSession,
-  },
-}))
-
-jest.mock('better-auth', () => ({
-  betterAuth: mockBetterAuth,
-}))
 
 describe('Commandes admin auth integration', () => {
   let app: INestApplication
@@ -65,6 +56,14 @@ describe('Commandes admin auth integration', () => {
         },
       ],
     }).compile()
+
+    Object.assign(moduleFixture.get(BetterAuthGuard), {
+      auth: {
+        api: {
+          getSession: mockBetterAuthGetSession,
+        },
+      },
+    })
 
     app = moduleFixture.createNestApplication()
 

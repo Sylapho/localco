@@ -2,23 +2,23 @@ import { IsNumber, IsString, Min } from 'class-validator'
 
 export class CreateMatierePremiereDto {
   @IsString()
-  nom: string
+  nom!: string
 
   @IsNumber()
   @Min(0)
-  stock: number
+  stock!: number
 
   @IsString()
-  unite: string
+  unite!: string
 
   @IsNumber()
   @Min(0)
-  coutUnitaireCents: number
+  coutUnitaireCents!: number
 
   @IsNumber()
   @Min(0)
-  seuil: number
+  seuil!: number
 
   @IsString()
-  conditionnement: string
+  conditionnement!: string
 }

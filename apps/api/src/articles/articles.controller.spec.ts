@@ -61,7 +61,7 @@ describe('ArticlesController', () => {
 
     articlesServiceMock.create.mockResolvedValue(result)
 
-    await expect(controller.create(body as any)).resolves.toEqual(result)
+    await expect(controller.create(body)).resolves.toEqual(result)
   })
 
   it('update should return updated article', async () => {
@@ -70,7 +70,7 @@ describe('ArticlesController', () => {
 
     articlesServiceMock.update.mockResolvedValue(result)
 
-    await expect(controller.update(1, body as any)).resolves.toEqual(result)
+    await expect(controller.update(1, body)).resolves.toEqual(result)
   })
 
   it('remove should return deleted article', async () => {

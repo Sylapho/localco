@@ -9,13 +9,13 @@ import {
 
 export class CreateAjustementStockDto {
   @IsIn(['article', 'matiere_premiere'])
-  cible: 'article' | 'matiere_premiere'
+  cible!: 'article' | 'matiere_premiere'
 
   @IsInt()
-  cibleId: number
+  cibleId!: number
 
   @IsNumber()
-  quantite: number
+  quantite!: number
 
   @IsOptional()
   @IsString()

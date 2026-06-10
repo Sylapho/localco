@@ -11,5 +11,5 @@ export type CommandeStatut = (typeof COMMANDE_STATUTS)[number]
 
 export class UpdateCommandeStatutDto {
   @IsIn(COMMANDE_STATUTS)
-  statut: CommandeStatut
+  statut!: CommandeStatut
 }

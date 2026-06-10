@@ -11,16 +11,16 @@ import {
 
 class CreateLigneVenteDto {
   @IsInt()
-  articleId: number
+  articleId!: number
 
   @IsInt()
   @Min(1)
-  quantite: number
+  quantite!: number
 }
 
 export class CreateVenteDto {
   @IsIn(['cb', 'especes', 'cheque'])
-  mode: string
+  mode!: string
 
   @IsOptional()
   @IsNumber()
@@ -34,5 +34,5 @@ export class CreateVenteDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateLigneVenteDto)
-  lignes: CreateLigneVenteDto[]
+  lignes!: CreateLigneVenteDto[]
 }

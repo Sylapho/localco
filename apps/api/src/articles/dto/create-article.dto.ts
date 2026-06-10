@@ -2,11 +2,11 @@ import { IsBoolean, IsNumber, IsOptional, IsString, Min } from 'class-validator'
 
 export class CreateArticleDto {
   @IsString()
-  nom: string
+  nom!: string
 
   @IsNumber()
   @Min(0)
-  prixCents: number
+  prixCents!: number
 
   @IsOptional()
   @IsNumber()
