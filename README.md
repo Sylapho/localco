@@ -326,7 +326,18 @@ Better Auth gère l'authentification et les sessions.
 - Les routes internes sensibles utilisent aussi des rôles : `gerant`, `vendeur`, `production`, `stock`, `comptable`.
 - Les inscriptions par e-mail et mot de passe sont désactivées côté web ; les utilisateurs sont administrés via Better Auth.
 
+La matrice des roles, les routes publiques/protegees et la separation `User` / `AuthUser` sont documentees dans `docs/AUTH_ROLES.md`.
+
 Les secrets Better Auth et les secrets OAuth ne doivent pas être exposés côté client.
+
+## Rate limit checkout
+
+`POST /api/commandes/checkout` est limite par IP avec :
+
+- `CHECKOUT_RATE_LIMIT_WINDOW_MS`
+- `CHECKOUT_RATE_LIMIT_MAX`
+
+Le stockage actuel est en memoire et reste adapte au local ou a une instance API unique. Pour une production distribuee, la limite doit etre appliquee par une infrastructure partagee ou par un store distribue decide avec l'hebergement. La strategie est documentee dans `docs/CHECKOUT_RATE_LIMITING.md`.
 
 ## Resend
 

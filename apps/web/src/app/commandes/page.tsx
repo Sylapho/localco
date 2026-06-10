@@ -1,7 +1,9 @@
 import ArticleImage from '@/components/articles/article-image'
 import CommandeStatusActions from '@/components/commandes/commande-status-actions'
-import CommandeStatusBadge from '@/components/commandes/commande-status-badge'
-import { getCommandes, type CommandeStatut } from '@/lib/api'
+import CommandeStatusBadge, {
+  commandeStatusLabels,
+} from '@/components/commandes/commande-status-badge'
+import { getCommandes, type Commande, type CommandeStatut } from '@/lib/api'
 import {
   getProductionNeeds,
   getProductionNeedsByCommandeId,
@@ -15,6 +17,15 @@ const processingStatuses = new Set<CommandeStatut>([
   'preparee',
   'paiement_a_verifier',
 ])
+
+const commandeStatuses: CommandeStatut[] = [
+  'paiement_en_attente',
+  'nouvelle',
+  'preparee',
+  'traitee',
+  'annulee',
+  'paiement_a_verifier',
+]
 
 const urgencyLabels: Record<ProductionUrgency, string> = {
   urgent: 'Urgent',
@@ -105,7 +116,252 @@ function ProductionUrgencyBadge({ urgency }: { urgency: ProductionUrgency }) {
   )
 }
 
-export default async function CommandesPage() {
+type CommandesPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+type CommandeFilters = {
+  statut: CommandeStatut | ''
+  dateRetrait: string
+  nom: string
+  email: string
+  commandeId: string
+  productionRequired: boolean
+  urgent: boolean
+}
+
+function getParam(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+) {
+  const value = params[key]
+
+  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
+}
+
+function getCommandeFilters(
+  params: Record<string, string | string[] | undefined>,
+): CommandeFilters {
+  const statut = getParam(params, 'statut')
+
+  return {
+    statut: isCommandeStatut(statut) ? statut : '',
+    dateRetrait: getParam(params, 'dateRetrait'),
+    nom: getParam(params, 'nom'),
+    email: getParam(params, 'email'),
+    commandeId: getParam(params, 'commandeId').replace(/^#/, ''),
+    productionRequired: getParam(params, 'productionRequired') === '1',
+    urgent: getParam(params, 'urgent') === '1',
+  }
+}
+
+function isCommandeStatut(value: string): value is CommandeStatut {
+  return commandeStatuses.includes(value as CommandeStatut)
+}
+
+function normalizeSearch(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function includesSearch(value: string, search: string) {
+  const normalizedSearch = normalizeSearch(search)
+
+  return (
+    normalizedSearch.length === 0 ||
+    normalizeSearch(value).includes(normalizedSearch)
+  )
+}
+
+function getDateKey(value?: string | null) {
+  if (!value) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Europe/Paris',
+  }).format(new Date(value))
+}
+
+function matchesCommandeFilters(
+  commande: Commande,
+  filters: CommandeFilters,
+  productionNeeds: ProductionNeed[],
+) {
+  if (filters.statut && commande.statut !== filters.statut) {
+    return false
+  }
+
+  if (
+    filters.dateRetrait &&
+    getDateKey(commande.dateRetrait) !== filters.dateRetrait
+  ) {
+    return false
+  }
+
+  if (!includesSearch(commande.nom, filters.nom)) {
+    return false
+  }
+
+  if (!includesSearch(commande.email, filters.email)) {
+    return false
+  }
+
+  if (
+    filters.commandeId &&
+    !String(commande.id).includes(filters.commandeId)
+  ) {
+    return false
+  }
+
+  if (filters.productionRequired && productionNeeds.length === 0) {
+    return false
+  }
+
+  if (
+    filters.urgent &&
+    !productionNeeds.some((need) => need.urgency === 'urgent')
+  ) {
+    return false
+  }
+
+  return true
+}
+
+function getActiveFilterCount(filters: CommandeFilters) {
+  return [
+    filters.statut,
+    filters.dateRetrait,
+    filters.nom,
+    filters.email,
+    filters.commandeId,
+    filters.productionRequired,
+    filters.urgent,
+  ].filter(Boolean).length
+}
+
+function CommandeFiltersForm({
+  filters,
+  activeFilterCount,
+}: {
+  filters: CommandeFilters
+  activeFilterCount: number
+}) {
+  return (
+    <section className="rounded border bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Filtres commandes</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Recherchez une commande par statut, retrait, client ou besoin de
+            production.
+          </p>
+        </div>
+        {activeFilterCount > 0 ? (
+          <Link href="/commandes" className="rounded border px-3 py-2 text-sm">
+            Reinitialiser
+          </Link>
+        ) : null}
+      </div>
+
+      <form className="mt-4 grid gap-3 lg:grid-cols-4">
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-gray-800">Statut</span>
+          <select
+            name="statut"
+            defaultValue={filters.statut}
+            className="rounded border px-3 py-2"
+          >
+            <option value="">Tous les statuts</option>
+            {commandeStatuses.map((statut) => (
+              <option key={statut} value={statut}>
+                {commandeStatusLabels[statut]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-gray-800">Date de retrait</span>
+          <input
+            type="date"
+            name="dateRetrait"
+            defaultValue={filters.dateRetrait}
+            className="rounded border px-3 py-2"
+          />
+        </label>
+
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-gray-800">Nom client</span>
+          <input
+            name="nom"
+            defaultValue={filters.nom}
+            placeholder="Nom ou prenom"
+            className="rounded border px-3 py-2"
+          />
+        </label>
+
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-gray-800">Email</span>
+          <input
+            name="email"
+            defaultValue={filters.email}
+            placeholder="client@example.com"
+            className="rounded border px-3 py-2"
+          />
+        </label>
+
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium text-gray-800">Numero commande</span>
+          <input
+            name="commandeId"
+            defaultValue={filters.commandeId}
+            placeholder="Ex. 42"
+            inputMode="numeric"
+            className="rounded border px-3 py-2"
+          />
+        </label>
+
+        <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            name="productionRequired"
+            value="1"
+            defaultChecked={filters.productionRequired}
+          />
+          <span>Production requise</span>
+        </label>
+
+        <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            name="urgent"
+            value="1"
+            defaultChecked={filters.urgent}
+          />
+          <span>Urgent</span>
+        </label>
+
+        <div className="flex items-end">
+          <button
+            type="submit"
+            className="w-full rounded bg-black px-4 py-2 text-sm font-medium text-white"
+          >
+            Filtrer
+          </button>
+        </div>
+      </form>
+    </section>
+  )
+}
+
+export default async function CommandesPage({
+  searchParams,
+}: CommandesPageProps) {
+  const params = searchParams ? await searchParams : {}
+  const filters = getCommandeFilters(params)
   const commandes = await getCommandes()
   const commandesATraiter = commandes.filter((commande) =>
     processingStatuses.has(commande.statut),
@@ -124,6 +380,14 @@ export default async function CommandesPage() {
   const urgentProductionNeeds = productionNeeds.filter(
     (need) => need.urgency === 'urgent',
   )
+  const filteredCommandes = commandes.filter((commande) =>
+    matchesCommandeFilters(
+      commande,
+      filters,
+      productionNeedsByCommandeId.get(commande.id) ?? [],
+    ),
+  )
+  const activeFilterCount = getActiveFilterCount(filters)
 
   return (
     <main className="p-8">
@@ -182,6 +446,11 @@ export default async function CommandesPage() {
         </section>
       ) : (
         <div className="grid gap-4">
+          <CommandeFiltersForm
+            filters={filters}
+            activeFilterCount={activeFilterCount}
+          />
+
           {productionNeedGroups.length > 0 ? (
             <section className="rounded border border-amber-200 bg-amber-50 p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -286,7 +555,19 @@ export default async function CommandesPage() {
           ) : null}
 
           <section className="grid gap-4">
-            {commandes.map((commande) => {
+            {filteredCommandes.length === 0 ? (
+              <div className="rounded border bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-semibold">
+                  Aucune commande ne correspond aux filtres
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Modifiez la recherche ou reinitialisez les filtres pour revoir
+                  toutes les commandes.
+                </p>
+              </div>
+            ) : null}
+
+            {filteredCommandes.map((commande) => {
               const commandeProductionNeeds =
                 productionNeedsByCommandeId.get(commande.id) ?? []
 

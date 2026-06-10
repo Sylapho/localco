@@ -42,7 +42,7 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 
 ### Partiellement en place
 
-- Gestion des commandes : création, checkout, suivi de statut et détails existent, mais le dashboard interne doit être renforcé pour un usage quotidien.
+- Gestion des commandes : création, checkout, suivi de statut, détails et filtres simples existent ; le dashboard interne doit maintenant être éprouvé en usage quotidien.
 - Stock : les mouvements, lots et ajustements existent. Le stock peut être négatif volontairement.
 - Précommande : un stock négatif représente une demande client supérieure au stock disponible et doit être traité comme une production à prévoir.
 - Back-office : les besoins de production liés aux stocks négatifs doivent être affichés clairement au lieu d'être bloqués.
@@ -54,7 +54,7 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 
 ### Risqué / à sécuriser
 
-- Le rate limiting checkout est en mémoire ; il n'est pas adapté à plusieurs instances ou à une production distribuée.
+- Le rate limiting checkout est en mémoire ; il est isolé dans un module remplaçable, mais il n'est pas adapté comme unique protection à plusieurs instances ou à une production distribuée.
 - Les logs, métriques et alertes ne sont pas encore structurés pour la production.
 - La procédure de déploiement, rollback, sauvegarde et restauration PostgreSQL doit être écrite.
 - Les webhooks Stripe doivent être validés contre un environnement réel ou Stripe CLI avant mise en ligne.
@@ -68,16 +68,16 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 - Assumer les commandes dépassant le stock disponible comme précommandes et les afficher comme besoins de production.
 - Clarifier dans le back-office les articles en déficit afin de piloter la production à prévoir.
 - Couvrir les webhooks Stripe `completed`, `expired`, doublons et signatures invalides.
-- Remplacer ou externaliser le rate limit checkout en mémoire pour la production.
+- Choisir la stratégie production du rate limit checkout : ingress/API gateway/WAF ou store partagé si l'infrastructure retenue le fournit.
 - Finaliser la configuration d'environnement production : API, web, shop, Stripe, Resend, CORS, Better Auth.
 - Écrire un runbook de déploiement, rollback, sauvegarde et restauration.
 - Vérifier les pages légales avant ouverture publique.
 
 ### P1 — nécessaire MVP propre
 
-- Améliorer le dashboard interne des commandes.
+- Eprouver et ajuster le dashboard interne des commandes avec les filtres de statut, retrait, client, production requise et urgence.
 - Stabiliser le CRUD articles utilisé par le catalogue public.
-- Auditer les rôles Better Auth côté API et web.
+- Maintenir l'audit des rôles Better Auth côté API et web dans `docs/AUTH_ROLES.md`.
 - Ajouter un test E2E du parcours boutique : catalogue, panier, checkout, redirection Stripe simulée.
 - Fiabiliser les messages d'erreur checkout côté shop sans présenter le stock négatif comme une erreur.
 - Documenter les opérations courantes : précommande, annulation, commande abandonnée, paiement à vérifier.
