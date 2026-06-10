@@ -123,7 +123,7 @@ Critère de validation :
 
 - Un développeur peut installer, configurer, lancer et vérifier le projet avec la documentation.
 - `pnpm check` est vert.
-- Un checkout avec stock insuffisant est accepté comme une précommande avant création de session Stripe.
+- Un checkout avec une demande supérieure au stock disponible est accepté comme une précommande avant création de session Stripe.
 - Le dashboard production/back-office affiche les quantités à produire liées aux stocks négatifs.
 - Les anciens choix d'auth ne créent plus d'ambiguïté produit ou technique.
 
@@ -281,7 +281,7 @@ Notes :
 ## 7. Prochaines actions concrètes
 
 1. Rejouer et compléter les tests webhook Stripe : completed, expired, duplicate, signature invalide.
-2. Ajouter ou vérifier un test de checkout avec stock insuffisant accepté comme précommande.
+2. Ajouter ou vérifier un test de checkout acceptant une demande supérieure au stock disponible comme précommande.
 3. Vérifier que le back-office affiche les précommandes et besoins de production générés par les stocks négatifs.
 4. Auditer les champs et migrations liés à l'ancienne dette d'authentification.
 5. Vérifier les `.env.example` pour API, web et shop avant pré-production.
