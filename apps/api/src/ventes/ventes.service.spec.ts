@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common'
+import { BadRequestException, ConflictException } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
 import { PrismaService } from '../prisma/prisma.service'
@@ -13,11 +13,15 @@ describe('VentesService', () => {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    stockLot: {
+      findMany: jest.fn(),
+    },
     vente: {
       findMany: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   }
 
@@ -27,14 +31,18 @@ describe('VentesService', () => {
   }
 
   type TransactionClient = {
+    $queryRaw: typeof prismaMock.$queryRaw
     article: typeof prismaMock.article
+    stockLot: typeof prismaMock.stockLot
     vente: typeof prismaMock.vente
   }
 
   type TransactionCallback<T> = (tx: TransactionClient) => Promise<T>
 
   const transactionClient: TransactionClient = {
+    $queryRaw: prismaMock.$queryRaw,
     article: prismaMock.article,
+    stockLot: prismaMock.stockLot,
     vente: prismaMock.vente,
   }
 
@@ -59,6 +67,8 @@ describe('VentesService', () => {
     prismaMock.$transaction.mockImplementation(
       <T>(callback: TransactionCallback<T>) => callback(transactionClient),
     )
+    prismaMock.$queryRaw.mockResolvedValue([])
+    prismaMock.stockLot.findMany.mockResolvedValue([])
     mouvementsStockServiceMock.recordArticleMovement.mockResolvedValue({
       id: 1,
     })
@@ -162,18 +172,12 @@ describe('VentesService', () => {
       lignes: [],
     }
 
-    prismaMock.article.findMany.mockResolvedValue(articles)
+    prismaMock.$queryRaw.mockResolvedValue(articles)
     prismaMock.vente.create.mockResolvedValue(created)
 
     await expect(service.create(body)).resolves.toEqual(created)
 
-    expect(prismaMock.article.findMany).toHaveBeenCalledWith({
-      where: {
-        id: {
-          in: [1, 2],
-        },
-      },
-    })
+    expect(prismaMock.$queryRaw).toHaveBeenCalled()
     expect(prismaMock.article.update).toHaveBeenNthCalledWith(1, {
       where: { id: 1 },
       data: {
@@ -259,7 +263,7 @@ describe('VentesService', () => {
       ],
     }
 
-    prismaMock.article.findMany.mockResolvedValue([
+    prismaMock.$queryRaw.mockResolvedValue([
       {
         id: 1,
         nom: 'Petit prix',
@@ -334,12 +338,12 @@ describe('VentesService', () => {
       lignes: [{ articleId: 1, quantite: 1 }],
     }
 
-    prismaMock.article.findMany.mockResolvedValue([])
+    prismaMock.$queryRaw.mockResolvedValue([])
 
     await expect(service.create(body)).rejects.toBeInstanceOf(
       BadRequestException,
     )
-    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(prismaMock.$transaction).toHaveBeenCalled()
   })
 
   it('create should reject insufficient stock', async () => {
@@ -348,7 +352,7 @@ describe('VentesService', () => {
       lignes: [{ articleId: 1, quantite: 6 }],
     }
 
-    prismaMock.article.findMany.mockResolvedValue([
+    prismaMock.$queryRaw.mockResolvedValue([
       {
         id: 1,
         nom: 'Baguette',
@@ -358,9 +362,8 @@ describe('VentesService', () => {
       },
     ])
 
-    await expect(service.create(body)).rejects.toBeInstanceOf(
-      BadRequestException,
-    )
-    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    await expect(service.create(body)).rejects.toBeInstanceOf(ConflictException)
+    expect(prismaMock.$transaction).toHaveBeenCalled()
+    expect(prismaMock.vente.create).not.toHaveBeenCalled()
   })
 })
