@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,6 +10,11 @@ import { ConfigService } from '@nestjs/config'
 import { EmailsService } from '../emails/emails.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
 import { PrismaService } from '../prisma/prisma.service'
+import {
+  canTransitionOrderStatus,
+  isTerminalOrderStatus,
+  OrderStatus,
+} from './commande-status-transitions'
 import { CreateCommandeDto } from './dto/create-commande.dto'
 import { CommandeStatut } from './dto/update-commande-statut.dto'
 import { getPublicPickupPoints, validatePickupSlot } from './pickup-slots'
@@ -539,54 +545,11 @@ export class CommandesService {
   }
 
   async updateStatut(id: number, statut: CommandeStatut) {
-    const commande = await this.findOne(id)
-
-    if (statut === 'annulee' && commande.statut !== 'traitee') {
+    if (statut === 'annulee') {
       return this.cancelCommande(id)
     }
 
-    if (commande.statut === 'annulee') {
-      throw new BadRequestException('Une commande annulée ne peut plus changer')
-    }
-
-    if (commande.statut === 'traitee') {
-      throw new BadRequestException('Une commande traitée ne peut plus changer')
-    }
-
-    if (commande.statut === 'paiement_en_attente' && statut !== 'annulee') {
-      throw new BadRequestException(
-        'Le paiement de cette commande est en attente',
-      )
-    }
-
-    if (commande.statut === 'paiement_a_verifier' && statut !== 'annulee') {
-      throw new BadRequestException(
-        'Le stock de cette commande doit être vérifié',
-      )
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.commande.update({
-        where: { id },
-        data: { statut },
-        include: {
-          lignes: {
-            include: {
-              article: true,
-            },
-          },
-        },
-      })
-
-      await this.recordStatusHistory(tx, {
-        commandeId: id,
-        ancienStatut: commande.statut,
-        nouveauStatut: statut,
-        motif: 'statut_modifie',
-      })
-
-      return updated
-    })
+    return this.transitionCommandeStatus(id, statut, 'statut_modifie')
   }
 
   async cleanupAbandonedCommandes() {
@@ -669,46 +632,111 @@ export class CommandesService {
       return result.order
     }
 
+    if (isTerminalOrderStatus(result.order.statut)) {
+      throw new ConflictException({
+        code: 'ORDER_STATUS_CONFLICT',
+        message: 'Le statut de cette commande a deja change',
+        currentStatus: result.order.statut,
+        targetStatus: 'annulee',
+      })
+    }
+
     throw new BadRequestException('Cette commande ne peut pas être annulée')
+  }
+
+  private async transitionCommandeStatus(
+    commandeId: number,
+    nextStatus: OrderStatus,
+    motif: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT "id"
+        FROM "Commande"
+        WHERE "id" = ${commandeId}
+        FOR UPDATE
+      `
+
+      const commande = await tx.commande.findUniqueOrThrow({
+        where: { id: commandeId },
+        include: {
+          lignes: {
+            include: {
+              article: true,
+            },
+          },
+        },
+      })
+
+      this.assertCommandeTransitionAllowedOrThrow(commande.statut, nextStatus)
+
+      const updated = await tx.commande.update({
+        where: { id: commande.id },
+        data: { statut: nextStatus },
+        include: {
+          lignes: {
+            include: {
+              article: true,
+            },
+          },
+        },
+      })
+
+      await this.recordStatusHistory(tx, {
+        commandeId: commande.id,
+        ancienStatut: commande.statut,
+        nouveauStatut: nextStatus,
+        motif,
+      })
+
+      return updated
+    })
+  }
+
+  private assertCommandeTransitionAllowedOrThrow(
+    currentStatus: string,
+    nextStatus: OrderStatus,
+  ) {
+    if (canTransitionOrderStatus(currentStatus, nextStatus)) {
+      return
+    }
+
+    if (isTerminalOrderStatus(currentStatus)) {
+      throw new ConflictException({
+        code: 'ORDER_STATUS_CONFLICT',
+        message: 'Le statut de cette commande a deja change',
+        currentStatus,
+        targetStatus: nextStatus,
+      })
+    }
+
+    throw new BadRequestException({
+      code: 'ORDER_STATUS_TRANSITION_FORBIDDEN',
+      message: 'Transition de statut interdite',
+      currentStatus,
+      targetStatus: nextStatus,
+    })
   }
 
   private async confirmPaidCommande(stripeId: string) {
     const commande = await this.prisma.commande.findFirst({
       where: { stripeId },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
-      },
+      select: { id: true },
     })
 
-    if (!commande || commande.statut !== 'paiement_en_attente') {
+    if (!commande) {
       return
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const updateResult = await tx.commande.updateMany({
-        where: {
-          id: commande.id,
-          statut: 'paiement_en_attente',
-        },
-        data: { statut: 'nouvelle' },
-      })
+      await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT "id"
+        FROM "Commande"
+        WHERE "id" = ${commande.id}
+        FOR UPDATE
+      `
 
-      if (updateResult.count === 0) {
-        return
-      }
-
-      await this.recordStatusHistory(tx, {
-        commandeId: commande.id,
-        ancienStatut: commande.statut,
-        nouveauStatut: 'nouvelle',
-        motif: 'paiement_confirme',
-      })
-
-      return tx.commande.findUniqueOrThrow({
+      const lockedCommande = await tx.commande.findUniqueOrThrow({
         where: { id: commande.id },
         include: {
           lignes: {
@@ -718,6 +746,36 @@ export class CommandesService {
           },
         },
       })
+
+      if (lockedCommande.statut !== 'paiement_en_attente') {
+        return
+      }
+
+      this.assertCommandeTransitionAllowedOrThrow(
+        lockedCommande.statut,
+        'nouvelle',
+      )
+
+      const updated = await tx.commande.update({
+        where: { id: lockedCommande.id },
+        data: { statut: 'nouvelle' },
+        include: {
+          lignes: {
+            include: {
+              article: true,
+            },
+          },
+        },
+      })
+
+      await this.recordStatusHistory(tx, {
+        commandeId: lockedCommande.id,
+        ancienStatut: lockedCommande.statut,
+        nouveauStatut: 'nouvelle',
+        motif: 'paiement_confirme',
+      })
+
+      return updated
     })
   }
 
@@ -1050,6 +1108,11 @@ export class CommandesService {
       let order = commande
 
       if (statusChanged) {
+        this.assertCommandeTransitionAllowedOrThrow(
+          commande.statut,
+          options.finalStatus,
+        )
+
         order = await tx.commande.update({
           where: { id: commande.id },
           data: { statut: options.finalStatus },

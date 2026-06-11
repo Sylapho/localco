@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common'
@@ -1613,9 +1614,9 @@ describe('CommandesService', () => {
       },
     })
 
-    prismaMock.commande.findFirst.mockResolvedValue(commande)
-    prismaMock.commande.updateMany.mockResolvedValue({ count: 1 })
-    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(updatedCommande)
+    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
+    prismaMock.commande.update.mockResolvedValue(updatedCommande)
 
     await expect(
       service.handleStripeWebhook(rawBody, 'stripe-signature'),
@@ -1641,13 +1642,7 @@ describe('CommandesService', () => {
 
     expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
       where: { stripeId: 'cs_paid' },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
-      },
+      select: { id: true },
     })
 
     expect(prismaMock.article.update).not.toHaveBeenCalled()
@@ -1658,15 +1653,10 @@ describe('CommandesService', () => {
       mouvementsStockServiceMock.recordArticleMovement,
     ).not.toHaveBeenCalled()
 
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 55,
-        statut: 'paiement_en_attente',
-      },
-      data: { statut: 'nouvelle' },
-    })
-    expect(prismaMock.commande.findUniqueOrThrow).toHaveBeenCalledWith({
+    expect(transactionClient.$queryRaw).toHaveBeenCalled()
+    expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 55 },
+      data: { statut: 'nouvelle' },
       include: {
         lignes: {
           include: {
@@ -1714,6 +1704,9 @@ describe('CommandesService', () => {
     })
 
     prismaMock.commande.findFirst.mockResolvedValue({
+      id: 56,
+    })
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue({
       id: 56,
       statut: 'annulee',
       stripeId: 'cs_cancelled',
@@ -1763,8 +1756,9 @@ describe('CommandesService', () => {
       },
     })
 
-    prismaMock.commande.findFirst.mockResolvedValue(commande)
-    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(updatedCommande)
+    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
+    prismaMock.commande.update.mockResolvedValue(updatedCommande)
     emailsServiceMock.sendOrderConfirmation.mockRejectedValueOnce(
       new Error('Resend unavailable'),
     )
@@ -1773,12 +1767,16 @@ describe('CommandesService', () => {
       service.handleStripeWebhook(Buffer.from('{}'), 'stripe-signature'),
     ).resolves.toEqual({ received: true })
 
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 56,
-        statut: 'paiement_en_attente',
-      },
+    expect(prismaMock.commande.update).toHaveBeenCalledWith({
+      where: { id: 56 },
       data: { statut: 'nouvelle' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
     expect(prismaMock.stripeWebhookEvent.updateMany).toHaveBeenCalledWith({
       where: {
@@ -1809,11 +1807,14 @@ describe('CommandesService', () => {
 
     prismaMock.commande.findFirst.mockResolvedValue({
       id: 57,
+    })
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue({
+      id: 57,
       statut: 'paiement_en_attente',
       stripeId: 'cs_business_failure',
       lignes: [],
     })
-    prismaMock.commande.updateMany.mockRejectedValueOnce(databaseError)
+    prismaMock.commande.update.mockRejectedValueOnce(databaseError)
 
     await expect(
       service.handleStripeWebhook(Buffer.from('{}'), 'stripe-signature'),
@@ -1869,8 +1870,9 @@ describe('CommandesService', () => {
       processingStartedAt: failedAt,
       processedAt: null,
     })
-    prismaMock.commande.findFirst.mockResolvedValue(commande)
-    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(updatedCommande)
+    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
+    prismaMock.commande.update.mockResolvedValue(updatedCommande)
 
     await expect(
       service.handleStripeWebhook(Buffer.from('{}'), 'stripe-signature'),
@@ -1903,7 +1905,7 @@ describe('CommandesService', () => {
         },
       },
     )
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledTimes(1)
+    expect(prismaMock.commande.update).toHaveBeenCalledTimes(1)
     expect(prismaMock.stripeWebhookEvent.updateMany).toHaveBeenLastCalledWith({
       where: {
         eventId: 'evt_retry',
@@ -1959,8 +1961,11 @@ describe('CommandesService', () => {
     prismaMock.stripeWebhookEvent.updateMany
       .mockResolvedValueOnce({ count: 0 })
       .mockResolvedValueOnce({ count: 1 })
-    prismaMock.commande.findFirst.mockReturnValueOnce(businessLookup)
-    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(updatedCommande)
+    prismaMock.commande.findFirst.mockReturnValueOnce(
+      businessLookup.then((commande) => ({ id: commande.id })),
+    )
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
+    prismaMock.commande.update.mockResolvedValue(updatedCommande)
 
     const firstCall = service.handleStripeWebhook(
       Buffer.from('{}'),
@@ -1976,7 +1981,7 @@ describe('CommandesService', () => {
     releaseBusinessLookup(commande)
 
     await expect(firstCall).resolves.toEqual({ received: true })
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledTimes(1)
+    expect(prismaMock.commande.update).toHaveBeenCalledTimes(1)
     expect(emailsServiceMock.sendOrderConfirmation).toHaveBeenCalledTimes(1)
   })
 
@@ -2049,8 +2054,9 @@ describe('CommandesService', () => {
       processingStartedAt: new Date('2026-06-10T10:00:00.000Z'),
       processedAt: null,
     })
-    prismaMock.commande.findFirst.mockResolvedValue(commande)
-    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(updatedCommande)
+    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
+    prismaMock.commande.update.mockResolvedValue(updatedCommande)
 
     await expect(
       service.handleStripeWebhook(Buffer.from('{}'), 'stripe-signature'),
@@ -2068,7 +2074,7 @@ describe('CommandesService', () => {
         }) as unknown,
       }),
     )
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledTimes(1)
+    expect(prismaMock.commande.update).toHaveBeenCalledTimes(1)
   })
 
   it('handleStripeWebhook should not send confirmation email when paid order does not exist', async () => {
@@ -2239,13 +2245,17 @@ describe('CommandesService', () => {
   })
 
   it.each([
-    ['annulee', 'preparee'],
-    ['traitee', 'preparee'],
-    ['paiement_en_attente', 'preparee'],
-    ['paiement_a_verifier', 'preparee'],
+    ['annulee', 'preparee', ConflictException],
+    ['traitee', 'preparee', ConflictException],
+    ['paiement_en_attente', 'preparee', BadRequestException],
+    ['paiement_a_verifier', 'preparee', BadRequestException],
   ])(
     'updateStatut should reject transition from %s to %s',
-    async (currentStatut: string, nextStatut: CommandeStatut) => {
+    async (
+      currentStatut: string,
+      nextStatut: CommandeStatut,
+      expectedException: typeof BadRequestException | typeof ConflictException,
+    ) => {
       prismaMock.commande.findUniqueOrThrow.mockResolvedValue({
         id: 1,
         statut: currentStatut,
@@ -2253,7 +2263,7 @@ describe('CommandesService', () => {
       })
 
       await expect(service.updateStatut(1, nextStatut)).rejects.toBeInstanceOf(
-        BadRequestException,
+        expectedException,
       )
 
       expect(prismaMock.commande.update).not.toHaveBeenCalled()

@@ -636,12 +636,18 @@ describe('Commandes integration', () => {
 
     prismaMock.article.findMany.mockResolvedValue(articles)
     prismaMock.commande.create.mockResolvedValue(pendingCommande)
-    prismaMock.commande.update.mockResolvedValueOnce({
-      ...pendingCommande,
-      stripeId: 'cs_test_critical',
+    prismaMock.commande.update
+      .mockResolvedValueOnce({
+        ...pendingCommande,
+        stripeId: 'cs_test_critical',
+      })
+      .mockResolvedValueOnce(confirmedCommande)
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(
+      pendingCommandeWithLines,
+    )
+    prismaMock.commande.findFirst.mockResolvedValue({
+      id: pendingCommandeWithLines.id,
     })
-    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(confirmedCommande)
-    prismaMock.commande.findFirst.mockResolvedValue(pendingCommandeWithLines)
     prismaMock.stripeWebhookEvent.create
       .mockResolvedValueOnce({ id: 1 })
       .mockRejectedValueOnce({ code: 'P2002' })
@@ -732,23 +738,11 @@ describe('Commandes integration', () => {
     })
     expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
       where: { stripeId: 'cs_test_critical' },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
-      },
+      select: { id: true },
     })
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 220,
-        statut: 'paiement_en_attente',
-      },
-      data: { statut: 'nouvelle' },
-    })
-    expect(prismaMock.commande.findUniqueOrThrow).toHaveBeenCalledWith({
+    expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 220 },
+      data: { statut: 'nouvelle' },
       include: {
         lignes: {
           include: {
@@ -782,8 +776,8 @@ describe('Commandes integration', () => {
     })
     expect(mockStripeConstructEvent).toHaveBeenCalledTimes(2)
     expect(prismaMock.stripeWebhookEvent.create).toHaveBeenCalledTimes(2)
-    expect(prismaMock.commande.update).toHaveBeenCalledTimes(1)
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledTimes(1)
+    expect(prismaMock.commande.update).toHaveBeenCalledTimes(2)
+    expect(prismaMock.commande.updateMany).not.toHaveBeenCalled()
     expect(prismaMock.article.update).toHaveBeenCalledTimes(1)
     expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledTimes(2)
     expect(emailsServiceMock.sendOrderConfirmation).toHaveBeenCalledTimes(1)
@@ -1209,8 +1203,9 @@ describe('Commandes integration', () => {
       },
     })
 
-    prismaMock.commande.findFirst.mockResolvedValue(commande)
-    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(updatedCommande)
+    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
+    prismaMock.commande.update.mockResolvedValue(updatedCommande)
 
     const response = await request(app.getHttpServer())
       .post('/api/commandes/stripe/webhook')
@@ -1236,13 +1231,7 @@ describe('Commandes integration', () => {
 
     expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
       where: { stripeId: 'cs_paid' },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
-      },
+      select: { id: true },
     })
 
     expect(prismaMock.article.update).not.toHaveBeenCalled()
@@ -1250,15 +1239,9 @@ describe('Commandes integration', () => {
       mouvementsStockServiceMock.recordArticleMovement,
     ).not.toHaveBeenCalled()
 
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 303,
-        statut: 'paiement_en_attente',
-      },
-      data: { statut: 'nouvelle' },
-    })
-    expect(prismaMock.commande.findUniqueOrThrow).toHaveBeenCalledWith({
+    expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 303 },
+      data: { statut: 'nouvelle' },
       include: {
         lignes: {
           include: {
@@ -1306,13 +1289,7 @@ describe('Commandes integration', () => {
     })
     expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
       where: { stripeId: 'cs_unknown' },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
-      },
+      select: { id: true },
     })
     expect(prismaMock.article.update).not.toHaveBeenCalled()
     expect(prismaMock.commande.update).not.toHaveBeenCalled()
