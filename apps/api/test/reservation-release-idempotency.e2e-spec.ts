@@ -34,7 +34,58 @@ describe('API E2E - order reservation release idempotency', () => {
 
     expect([first.status, second.status]).toEqual([200, 200])
 
-    await expectSingleReleaseApplied({ articleId, commandeId, finalStock: 2 })
+    await expectSingleReleaseApplied({
+      articleId,
+      commandeId,
+      finalStock: 2,
+      releasedQuantity: 5,
+    })
+  })
+
+  it('cancels a nouvelle order concurrently through the shared idempotent primitive', async () => {
+    const { articleId, commandeId } = await createDirectOrderWithLot(10, 4)
+
+    const results = await Promise.allSettled([
+      cancelManually(commandeId),
+      cancelManually(commandeId),
+    ])
+
+    expect(results).toHaveLength(2)
+    for (const result of results) {
+      expect(result.status).toBe('fulfilled')
+      if (result.status === 'fulfilled') {
+        expect(result.value.status).toBe(200)
+      }
+    }
+
+    await expectSingleReleaseApplied({
+      articleId,
+      commandeId,
+      finalStock: 10,
+      releasedQuantity: 4,
+      expectedRemainingLotQuantity: 10,
+    })
+  })
+
+  it('cancels a preparee order idempotently through the shared primitive', async () => {
+    const { articleId, commandeId } = await createDirectOrderWithLot(8, 3)
+
+    await request(testApp.app.getHttpServer())
+      .patch(`/api/commandes/${commandeId}/statut`)
+      .set(authAs(ROLES.GERANT))
+      .send({ statut: 'preparee' })
+      .expect(200)
+
+    await cancelManually(commandeId).expect(200)
+    await cancelManually(commandeId).expect(200)
+
+    await expectSingleReleaseApplied({
+      articleId,
+      commandeId,
+      finalStock: 8,
+      releasedQuantity: 3,
+      expectedRemainingLotQuantity: 8,
+    })
   })
 
   it('releases stock once when manual cancellation and Stripe expired webhook run concurrently', async () => {
@@ -54,7 +105,12 @@ describe('API E2E - order reservation release idempotency', () => {
     expect(webhookResponse.status).toBe(201)
     expect(webhookResponse.body).toEqual({ received: true })
 
-    await expectSingleReleaseApplied({ articleId, commandeId, finalStock: 2 })
+    await expectSingleReleaseApplied({
+      articleId,
+      commandeId,
+      finalStock: 2,
+      releasedQuantity: 5,
+    })
   })
 
   it('treats repeated sequential cancellation calls as idempotent', async () => {
@@ -64,7 +120,12 @@ describe('API E2E - order reservation release idempotency', () => {
     await cancelManually(commandeId).expect(200)
     await cancelManually(commandeId).expect(200)
 
-    await expectSingleReleaseApplied({ articleId, commandeId, finalStock: 2 })
+    await expectSingleReleaseApplied({
+      articleId,
+      commandeId,
+      finalStock: 2,
+      releasedQuantity: 5,
+    })
   })
 
   it('rolls back release operation, stock and status when restitution fails', async () => {
@@ -129,6 +190,45 @@ describe('API E2E - order reservation release idempotency', () => {
     }
   }
 
+  async function createDirectOrderWithLot(
+    initialStock: number,
+    quantity: number,
+  ) {
+    const article = await createArticle(testApp.prisma, {
+      prixCents: 250,
+      stock: initialStock,
+    })
+
+    await testApp.prisma.stockLot.create({
+      data: {
+        target: 'article',
+        articleId: article.id,
+        initialQuantity: initialStock,
+        remainingQuantity: initialStock,
+        expiresAt: futureDate(10),
+        reference: `article:${article.id}:initial`,
+      },
+    })
+
+    const response = await request(testApp.app.getHttpServer())
+      .post('/api/commandes')
+      .set(authAs(ROLES.GERANT))
+      .send({
+        nom: 'Client E2E',
+        email: 'client.e2e@example.com',
+        tel: '0600000000',
+        lieu: validPickupPoint,
+        dateRetrait: getNextDateForWeekday(2),
+        lignes: [{ articleId: article.id, quantite: quantity }],
+      })
+      .expect(201)
+
+    return {
+      articleId: article.id,
+      commandeId: response.body.id as number,
+    }
+  }
+
   function cancelManually(commandeId: number) {
     return request(testApp.app.getHttpServer())
       .patch(`/api/commandes/${commandeId}/statut`)
@@ -148,8 +248,10 @@ describe('API E2E - order reservation release idempotency', () => {
     articleId: number
     commandeId: number
     finalStock: number
+    releasedQuantity: number
+    expectedRemainingLotQuantity?: number
   }) {
-    const [commande, article, releaseOperations, releaseMovements] =
+    const [commande, article, releaseOperations, releaseMovements, lots] =
       await Promise.all([
         testApp.prisma.commande.findUniqueOrThrow({
           where: { id: data.commandeId },
@@ -165,6 +267,15 @@ describe('API E2E - order reservation release idempotency', () => {
             reference: `commande:${data.commandeId}:reservation:release`,
           },
         }),
+        testApp.prisma.stockLot.findMany({
+          where: {
+            target: 'article',
+            articleId: data.articleId,
+            remainingQuantity: {
+              gt: 0,
+            },
+          },
+        }),
       ])
 
     expect(commande.statut).toBe('annulee')
@@ -173,9 +284,15 @@ describe('API E2E - order reservation release idempotency', () => {
     expect(releaseMovements).toHaveLength(1)
     expect(releaseMovements[0]).toMatchObject({
       articleId: data.articleId,
-      quantite: 5,
+      quantite: data.releasedQuantity,
       stockApres: data.finalStock,
     })
+
+    if (data.expectedRemainingLotQuantity !== undefined) {
+      expect(
+        lots.reduce((total, lot) => total + lot.remainingQuantity, 0),
+      ).toBe(data.expectedRemainingLotQuantity)
+    }
   }
 
   async function installFailingArticleReleaseTrigger() {
@@ -209,3 +326,10 @@ describe('API E2E - order reservation release idempotency', () => {
     `)
   }
 })
+
+function futureDate(days: number) {
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() + days)
+  return date
+}

@@ -80,6 +80,10 @@ describe('CommandesService', () => {
       findMany: jest.fn(),
       create: jest.fn(),
     },
+    stockLot: {
+      aggregate: jest.fn(),
+      create: jest.fn(),
+    },
     stripeWebhookEvent: {
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -107,6 +111,7 @@ describe('CommandesService', () => {
     commande: typeof prismaMock.commande
     commandeStatutHistorique: typeof prismaMock.commandeStatutHistorique
     mouvementStock: typeof prismaMock.mouvementStock
+    stockLot: typeof prismaMock.stockLot
   }
 
   type TransactionCallback<T> = (tx: TransactionClient) => Promise<T>
@@ -117,6 +122,7 @@ describe('CommandesService', () => {
     commande: prismaMock.commande,
     commandeStatutHistorique: prismaMock.commandeStatutHistorique,
     mouvementStock: prismaMock.mouvementStock,
+    stockLot: prismaMock.stockLot,
   }
 
   const validPickupPoint = 'Marché de Gaillon - Mardi matin, 8h-12h'
@@ -229,6 +235,8 @@ describe('CommandesService', () => {
       prismaMock.mouvementStock.findFirst,
       prismaMock.mouvementStock.findMany,
       prismaMock.mouvementStock.create,
+      prismaMock.stockLot.aggregate,
+      prismaMock.stockLot.create,
       prismaMock.stripeWebhookEvent.create,
       prismaMock.stripeWebhookEvent.findUnique,
       prismaMock.stripeWebhookEvent.updateMany,
@@ -256,6 +264,12 @@ describe('CommandesService', () => {
     prismaMock.mouvementStock.findFirst.mockResolvedValue(null)
     prismaMock.mouvementStock.findMany.mockResolvedValue([])
     prismaMock.mouvementStock.create.mockResolvedValue({ id: 1 })
+    prismaMock.stockLot.aggregate.mockResolvedValue({
+      _sum: {
+        remainingQuantity: 0,
+      },
+    })
+    prismaMock.stockLot.create.mockResolvedValue({ id: 1 })
     prismaMock.stripeWebhookEvent.create.mockResolvedValue({ id: 1 })
     prismaMock.stripeWebhookEvent.findUnique.mockResolvedValue(null)
     prismaMock.stripeWebhookEvent.updateMany.mockResolvedValue({ count: 1 })
@@ -2416,6 +2430,9 @@ describe('CommandesService', () => {
         {
           articleId: 2,
           quantite: 4,
+          article: {
+            stock: 6,
+          },
         },
       ],
     }
@@ -2454,8 +2471,18 @@ describe('CommandesService', () => {
       stockAvant: 6,
       stockApres: 10,
       type: 'commande',
-      motif: 'Annulation commande #3',
-      reference: 'commande:3:annulation',
+      motif: 'Libération réservation commande #3',
+      reference: 'commande:3:reservation:release',
+    })
+
+    expect(prismaMock.stockLot.create).toHaveBeenCalledWith({
+      data: {
+        target: 'article',
+        articleId: 2,
+        initialQuantity: 4,
+        remainingQuantity: 4,
+        reference: 'commande:3:reservation:release',
+      },
     })
 
     expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({
