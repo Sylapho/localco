@@ -164,10 +164,18 @@ model Commande {
   createdAt     DateTime                   @default(now())
   lignes        LigneCommande[]
   historique    CommandeStatutHistorique[]
+  reservationRelease CommandeReservationRelease?
 
   @@index([statut])
   @@index([stripeId])
   @@index([dateRetrait])
+}
+
+model CommandeReservationRelease {
+  id         Int      @id @default(autoincrement())
+  commandeId Int      @unique
+  commande   Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 }
 
 model LigneCommande {

@@ -215,6 +215,32 @@ describe('CommandesService', () => {
     service = module.get<CommandesService>(CommandesService)
 
     jest.clearAllMocks()
+    ;[
+      prismaMock.article.findMany,
+      prismaMock.article.update,
+      prismaMock.commande.findMany,
+      prismaMock.commande.findFirst,
+      prismaMock.commande.findUnique,
+      prismaMock.commande.findUniqueOrThrow,
+      prismaMock.commande.create,
+      prismaMock.commande.update,
+      prismaMock.commande.updateMany,
+      prismaMock.commandeStatutHistorique.create,
+      prismaMock.mouvementStock.findFirst,
+      prismaMock.mouvementStock.findMany,
+      prismaMock.mouvementStock.create,
+      prismaMock.stripeWebhookEvent.create,
+      prismaMock.stripeWebhookEvent.findUnique,
+      prismaMock.stripeWebhookEvent.updateMany,
+      prismaMock.$transaction,
+      transactionClient.$queryRaw,
+      mouvementsStockServiceMock.recordArticleMovement,
+      mouvementsStockServiceMock.getSellableArticleStock,
+      configServiceMock.get,
+      emailsServiceMock.sendOrderConfirmation,
+      mockStripeCheckoutSessionsCreate,
+      mockStripeConstructEvent,
+    ].forEach((mock) => mock.mockReset())
 
     prismaMock.$transaction.mockImplementation(
       async <T>(callback: TransactionCallback<T>) =>
@@ -1259,6 +1285,13 @@ describe('CommandesService', () => {
     expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 45 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
     expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({
       data: {
@@ -1330,6 +1363,13 @@ describe('CommandesService', () => {
     expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 46 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
     expect(
       mouvementsStockServiceMock.recordArticleMovement,
@@ -1414,6 +1454,13 @@ describe('CommandesService', () => {
     expect(prismaMock.commande.update).toHaveBeenNthCalledWith(2, {
       where: { id: 47 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
     expect(
       mouvementsStockServiceMock.recordArticleMovement,
@@ -2069,10 +2116,9 @@ describe('CommandesService', () => {
       },
     })
 
-    prismaMock.commande.findMany.mockResolvedValue([pendingCommande])
-    prismaMock.mouvementStock.findFirst
-      .mockResolvedValueOnce({ id: 1 })
-      .mockResolvedValueOnce(null)
+    prismaMock.commande.findMany.mockResolvedValue([{ id: 77 }])
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(pendingCommande)
+    prismaMock.mouvementStock.findFirst.mockResolvedValueOnce({ id: 1 })
     prismaMock.article.update.mockResolvedValue({
       id: 1,
       stock: 10,
@@ -2087,12 +2133,8 @@ describe('CommandesService', () => {
         stripeId: 'cs_expired',
         statut: 'paiement_en_attente',
       },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
+      select: {
+        id: true,
       },
     })
 
@@ -2117,12 +2159,16 @@ describe('CommandesService', () => {
       reference: 'commande:77:reservation:release',
     })
 
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 77,
-        statut: 'paiement_en_attente',
-      },
+    expect(prismaMock.commande.update).toHaveBeenCalledWith({
+      where: { id: 77 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
 
     expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({
@@ -2331,9 +2377,10 @@ describe('CommandesService', () => {
     }
 
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
-    prismaMock.mouvementStock.findFirst
-      .mockResolvedValueOnce({ id: 1 })
-      .mockResolvedValueOnce({ id: 2 })
+    prismaMock.mouvementStock.findFirst.mockResolvedValueOnce({ id: 1 })
+    transactionClient.$queryRaw
+      .mockResolvedValueOnce([{ id: 1 }])
+      .mockResolvedValueOnce([])
     prismaMock.commande.update.mockResolvedValue({
       ...commande,
       statut: 'annulee',
@@ -2459,12 +2506,9 @@ describe('CommandesService', () => {
     const commande = makePendingCleanupCommande({ id: 9 })
 
     prismaMock.commande.findMany.mockResolvedValue([{ id: 9 }])
-    prismaMock.commande.findUnique.mockResolvedValue(commande)
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
 
-    prismaMock.mouvementStock.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 1 })
-      .mockResolvedValueOnce(null)
+    prismaMock.mouvementStock.findFirst.mockResolvedValueOnce({ id: 1 })
 
     prismaMock.article.update.mockResolvedValue({
       id: 1,
@@ -2495,7 +2539,7 @@ describe('CommandesService', () => {
       },
     })
     expect(transactionClient.$queryRaw).toHaveBeenCalled()
-    expect(prismaMock.commande.findUnique).toHaveBeenCalledWith({
+    expect(prismaMock.commande.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: 9 },
       include: {
         lignes: {
@@ -2530,6 +2574,13 @@ describe('CommandesService', () => {
     expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 9 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
 
     expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({
@@ -2573,7 +2624,7 @@ describe('CommandesService', () => {
     'cleanupAbandonedCommandes should skip a commande that became %s before lock processing',
     async (statut) => {
       prismaMock.commande.findMany.mockResolvedValue([{ id: 9 }])
-      prismaMock.commande.findUnique.mockResolvedValue(
+      prismaMock.commande.findUniqueOrThrow.mockResolvedValue(
         makePendingCleanupCommande({ id: 9, statut }),
       )
 
@@ -2592,21 +2643,32 @@ describe('CommandesService', () => {
     },
   )
 
-  it('cleanupAbandonedCommandes should skip when the reservation was already released', async () => {
+  it('cleanupAbandonedCommandes should cancel without stock movement when the reservation was already released', async () => {
     prismaMock.commande.findMany.mockResolvedValue([{ id: 9 }])
-    prismaMock.commande.findUnique.mockResolvedValue(
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(
       makePendingCleanupCommande({ id: 9 }),
     )
     prismaMock.mouvementStock.findFirst.mockResolvedValueOnce({ id: 10 })
+    transactionClient.$queryRaw.mockResolvedValueOnce([]).mockResolvedValue([])
 
     await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
       scanned: 1,
-      cancelled: 0,
-      skipped: 1,
+      cancelled: 1,
+      skipped: 0,
       failed: 0,
     })
 
-    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(prismaMock.commande.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
+    })
     expect(
       mouvementsStockServiceMock.recordArticleMovement,
     ).not.toHaveBeenCalled()
@@ -2618,19 +2680,15 @@ describe('CommandesService', () => {
       { id: 2 },
       { id: 3 },
     ])
-    prismaMock.commande.findUnique
+    prismaMock.commande.findUniqueOrThrow
       .mockResolvedValueOnce(makePendingCleanupCommande({ id: 1 }))
       .mockResolvedValueOnce(makePendingCleanupCommande({ id: 2 }))
       .mockResolvedValueOnce(
         makePendingCleanupCommande({ id: 3, statut: 'nouvelle' }),
       )
     prismaMock.mouvementStock.findFirst
-      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 1 })
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 2 })
-      .mockResolvedValueOnce(null)
     prismaMock.article.update
       .mockResolvedValueOnce({ id: 1, stock: 10 })
       .mockRejectedValueOnce(
@@ -2654,6 +2712,13 @@ describe('CommandesService', () => {
     expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(3)
   })
@@ -2662,15 +2727,12 @@ describe('CommandesService', () => {
     prismaMock.commande.findMany
       .mockResolvedValueOnce([{ id: 9 }])
       .mockResolvedValueOnce([{ id: 9 }])
-    prismaMock.commande.findUnique
+    prismaMock.commande.findUniqueOrThrow
       .mockResolvedValueOnce(makePendingCleanupCommande({ id: 9 }))
       .mockResolvedValueOnce(
         makePendingCleanupCommande({ id: 9, statut: 'annulee' }),
       )
-    prismaMock.mouvementStock.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 1 })
-      .mockResolvedValueOnce(null)
+    prismaMock.mouvementStock.findFirst.mockResolvedValueOnce({ id: 1 })
     prismaMock.article.update.mockResolvedValue({
       id: 1,
       stock: 10,

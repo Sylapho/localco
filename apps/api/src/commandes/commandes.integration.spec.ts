@@ -39,6 +39,7 @@ type ArticleMock = {
 }
 
 type TransactionClient = {
+  $queryRaw: jest.Mock
   article: {
     findMany: jest.Mock
     update: jest.Mock
@@ -96,10 +97,12 @@ describe('Commandes integration', () => {
       findUnique: jest.fn(),
       updateMany: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   }
 
   const transactionClient: TransactionClient = {
+    $queryRaw: prismaMock.$queryRaw,
     article: prismaMock.article,
     commande: prismaMock.commande,
     commandeStatutHistorique: prismaMock.commandeStatutHistorique,
@@ -181,11 +184,37 @@ describe('Commandes integration', () => {
     await app.init()
 
     jest.clearAllMocks()
+    ;[
+      prismaMock.article.findMany,
+      prismaMock.article.update,
+      prismaMock.commande.findMany,
+      prismaMock.commande.findFirst,
+      prismaMock.commande.findUniqueOrThrow,
+      prismaMock.commande.create,
+      prismaMock.commande.update,
+      prismaMock.commande.updateMany,
+      prismaMock.commandeStatutHistorique.create,
+      prismaMock.mouvementStock.findFirst,
+      prismaMock.mouvementStock.findMany,
+      prismaMock.mouvementStock.create,
+      prismaMock.stripeWebhookEvent.create,
+      prismaMock.stripeWebhookEvent.findUnique,
+      prismaMock.stripeWebhookEvent.updateMany,
+      prismaMock.$queryRaw,
+      prismaMock.$transaction,
+      mouvementsStockServiceMock.recordArticleMovement,
+      mouvementsStockServiceMock.getSellableArticleStock,
+      configServiceMock.get,
+      emailsServiceMock.sendOrderConfirmation,
+      mockStripeCheckoutSessionsCreate,
+      mockStripeConstructEvent,
+    ].forEach((mock) => mock.mockReset())
 
     prismaMock.$transaction.mockImplementation(
       async <T>(callback: TransactionCallback<T>) =>
         callback(transactionClient),
     )
+    prismaMock.$queryRaw.mockResolvedValue([{ id: 1 }])
 
     prismaMock.commande.findMany.mockResolvedValue([])
     prismaMock.commande.updateMany.mockResolvedValue({ count: 1 })
@@ -856,6 +885,13 @@ describe('Commandes integration', () => {
     expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 203 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
     expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({
       data: {
@@ -955,6 +991,13 @@ describe('Commandes integration', () => {
     expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 204 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
     expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({
       data: {
@@ -1285,10 +1328,9 @@ describe('Commandes integration', () => {
       },
     })
 
-    prismaMock.commande.findMany.mockResolvedValue([pendingCommande])
-    prismaMock.mouvementStock.findFirst
-      .mockResolvedValueOnce({ id: 1 })
-      .mockResolvedValueOnce(null)
+    prismaMock.commande.findMany.mockResolvedValue([{ id: 404 }])
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue(pendingCommande)
+    prismaMock.mouvementStock.findFirst.mockResolvedValueOnce({ id: 1 })
     prismaMock.article.update.mockResolvedValue({
       id: 1,
       stock: 3,
@@ -1309,12 +1351,8 @@ describe('Commandes integration', () => {
         stripeId: 'cs_expired',
         statut: 'paiement_en_attente',
       },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
+      select: {
+        id: true,
       },
     })
 
@@ -1339,12 +1377,16 @@ describe('Commandes integration', () => {
       reference: 'commande:404:reservation:release',
     })
 
-    expect(prismaMock.commande.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 404,
-        statut: 'paiement_en_attente',
-      },
+    expect(prismaMock.commande.update).toHaveBeenCalledWith({
+      where: { id: 404 },
       data: { statut: 'annulee' },
+      include: {
+        lignes: {
+          include: {
+            article: true,
+          },
+        },
+      },
     })
 
     expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledWith({

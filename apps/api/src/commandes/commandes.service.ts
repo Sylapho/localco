@@ -81,6 +81,26 @@ type CleanupAbandonedCommandesResult = {
 
 type CleanupAbandonedCommandeStatus = 'cancelled' | 'skipped'
 
+type ReleaseOrderReservationResult = {
+  released: boolean
+  alreadyReleased: boolean
+  statusChanged: boolean
+  order: {
+    id: number
+    statut: string
+    createdAt?: Date
+    lignes: ReservationLine[]
+  }
+}
+
+type ReleaseOrderReservationOptions = {
+  finalStatus: 'annulee'
+  motif: string
+  releasableStatuses: string[]
+  idempotentStatuses?: string[]
+  cutoff?: Date
+}
+
 type ProductionOpenCommande = {
   id: number
   statut: string
@@ -515,6 +535,10 @@ export class CommandesService {
   async updateStatut(id: number, statut: CommandeStatut) {
     const commande = await this.findOne(id)
 
+    if (statut === 'annulee' && commande.statut !== 'traitee') {
+      return this.cancelCommande(id)
+    }
+
     if (commande.statut === 'annulee') {
       throw new BadRequestException('Une commande annulée ne peut plus changer')
     }
@@ -533,10 +557,6 @@ export class CommandesService {
       throw new BadRequestException(
         'Le stock de cette commande doit être vérifié',
       )
-    }
-
-    if (statut === 'annulee') {
-      return this.cancelCommande(id)
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -616,91 +636,45 @@ export class CommandesService {
     commandeId: number,
     cutoff: Date,
   ): Promise<CleanupAbandonedCommandeStatus> {
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw<Array<{ id: number }>>`
-        SELECT "id"
-        FROM "Commande"
-        WHERE "id" = ${commandeId}
-        FOR UPDATE
-      `
-
-      const commande = await tx.commande.findUnique({
-        where: { id: commandeId },
-        include: {
-          lignes: {
-            include: {
-              article: true,
-            },
-          },
-        },
-      })
-
-      if (
-        !commande ||
-        commande.statut !== 'paiement_en_attente' ||
-        commande.createdAt >= cutoff
-      ) {
-        return 'skipped'
-      }
-
-      const existingRelease = await tx.mouvementStock.findFirst({
-        where: { reference: this.getReservationReleaseReference(commande.id) },
-        select: { id: true },
-      })
-
-      if (existingRelease) {
-        return 'skipped'
-      }
-
-      await this.releaseReservedStock(tx, commande)
-
-      await tx.commande.update({
-        where: { id: commande.id },
-        data: { statut: 'annulee' },
-      })
-
-      await this.recordStatusHistory(tx, {
-        commandeId: commande.id,
-        ancienStatut: 'paiement_en_attente',
-        nouveauStatut: 'annulee',
-        motif: 'commande_abandonnee',
-      })
-
-      return 'cancelled'
+    const result = await this.releaseOrderReservation(commandeId, {
+      finalStatus: 'annulee',
+      motif: 'commande_abandonnee',
+      releasableStatuses: ['paiement_en_attente'],
+      cutoff,
     })
+
+    return result.released || result.statusChanged ? 'cancelled' : 'skipped'
   }
 
   private async cancelCommande(id: number) {
-    const commande = await this.findOne(id)
+    let commande: {
+      id: number
+      statut: string
+      lignes: ReservationLine[]
+    } = await this.findOne(id)
 
     if (
       commande.statut === 'paiement_en_attente' ||
-      commande.statut === 'paiement_a_verifier'
+      commande.statut === 'paiement_a_verifier' ||
+      commande.statut === 'annulee'
     ) {
-      return this.prisma.$transaction(async (tx) => {
-        await this.releaseReservedStock(tx, commande)
-
-        const updated = await tx.commande.update({
-          where: { id },
-          data: { statut: 'annulee' },
-          include: {
-            lignes: {
-              include: {
-                article: true,
-              },
-            },
-          },
-        })
-
-        await this.recordStatusHistory(tx, {
-          commandeId: id,
-          ancienStatut: commande.statut,
-          nouveauStatut: 'annulee',
-          motif: 'annulation',
-        })
-
-        return updated
+      const result = await this.releaseOrderReservation(id, {
+        finalStatus: 'annulee',
+        motif: 'annulation',
+        releasableStatuses: ['paiement_en_attente', 'paiement_a_verifier'],
+        idempotentStatuses: ['annulee'],
       })
+
+      if (
+        result.released ||
+        result.alreadyReleased ||
+        result.statusChanged ||
+        result.order.statut === 'annulee'
+      ) {
+        return result.order
+      }
+
+      commande = result.order
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -803,67 +777,23 @@ export class CommandesService {
         stripeId,
         statut: 'paiement_en_attente',
       },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
-      },
+      select: { id: true },
     })
 
-    await this.prisma.$transaction(async (tx) => {
-      for (const commande of commandes) {
-        const updateResult = await tx.commande.updateMany({
-          where: {
-            id: commande.id,
-            statut: 'paiement_en_attente',
-          },
-          data: { statut: 'annulee' },
-        })
-
-        if (updateResult.count === 0) {
-          continue
-        }
-
-        await this.releaseReservedStock(tx, commande)
-
-        await this.recordStatusHistory(tx, {
-          commandeId: commande.id,
-          ancienStatut: commande.statut,
-          nouveauStatut: 'annulee',
-          motif: 'checkout_expire',
-        })
-      }
-    })
+    for (const commande of commandes) {
+      await this.releaseOrderReservation(commande.id, {
+        finalStatus: 'annulee',
+        motif: 'checkout_expire',
+        releasableStatuses: ['paiement_en_attente'],
+      })
+    }
   }
 
   private async cancelCheckoutBeforePayment(commandeId: number, motif: string) {
-    await this.prisma.$transaction(async (tx) => {
-      const commande = await tx.commande.findUniqueOrThrow({
-        where: { id: commandeId },
-        include: {
-          lignes: {
-            include: {
-              article: true,
-            },
-          },
-        },
-      })
-
-      await this.releaseReservedStock(tx, commande)
-
-      await tx.commande.update({
-        where: { id: commandeId },
-        data: { statut: 'annulee' },
-      })
-
-      await this.recordStatusHistory(tx, {
-        commandeId,
-        ancienStatut: commande.statut,
-        nouveauStatut: 'annulee',
-        motif,
-      })
+    await this.releaseOrderReservation(commandeId, {
+      finalStatus: 'annulee',
+      motif,
+      releasableStatuses: ['paiement_en_attente'],
     })
   }
 
@@ -1108,26 +1038,125 @@ export class CommandesService {
     }
   }
 
-  private async releaseReservedStock(
+  private async releaseOrderReservation(
+    commandeId: number,
+    options: ReleaseOrderReservationOptions,
+  ): Promise<ReleaseOrderReservationResult> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT "id"
+        FROM "Commande"
+        WHERE "id" = ${commandeId}
+        FOR UPDATE
+      `
+
+      const commande = await tx.commande.findUniqueOrThrow({
+        where: { id: commandeId },
+        include: {
+          lignes: {
+            include: {
+              article: true,
+            },
+          },
+        },
+      })
+
+      if (options.cutoff && commande.createdAt >= options.cutoff) {
+        return {
+          released: false,
+          alreadyReleased: false,
+          statusChanged: false,
+          order: commande,
+        }
+      }
+
+      const idempotentStatuses = options.idempotentStatuses ?? [
+        options.finalStatus,
+      ]
+      const releasable = options.releasableStatuses.includes(commande.statut)
+      const alreadyFinal = idempotentStatuses.includes(commande.statut)
+
+      if (!releasable && !alreadyFinal) {
+        return {
+          released: false,
+          alreadyReleased: false,
+          statusChanged: false,
+          order: commande,
+        }
+      }
+
+      const reservation = await tx.mouvementStock.findFirst({
+        where: { reference: this.getReservationReference(commande.id) },
+        select: { id: true },
+      })
+
+      const releaseOperationCreated = reservation
+        ? await this.createReservationReleaseOperation(tx, commande.id)
+        : false
+      const alreadyReleased = Boolean(reservation && !releaseOperationCreated)
+
+      if (releaseOperationCreated) {
+        await this.restoreReservedStock(tx, commande)
+      }
+
+      const statusChanged =
+        releasable && commande.statut !== options.finalStatus
+
+      let order = commande
+
+      if (statusChanged) {
+        order = await tx.commande.update({
+          where: { id: commande.id },
+          data: { statut: options.finalStatus },
+          include: {
+            lignes: {
+              include: {
+                article: true,
+              },
+            },
+          },
+        })
+
+        await this.recordStatusHistory(tx, {
+          commandeId: commande.id,
+          ancienStatut: commande.statut,
+          nouveauStatut: options.finalStatus,
+          motif: options.motif,
+        })
+      }
+
+      return {
+        released: releaseOperationCreated,
+        alreadyReleased,
+        statusChanged,
+        order,
+      }
+    })
+  }
+
+  private async createReservationReleaseOperation(
+    tx: ReservationTransaction,
+    commandeId: number,
+  ) {
+    // This unique insert is the database-level idempotency gate for all
+    // reservation release paths, including concurrent API instances.
+    const rows = await tx.$queryRaw<Array<{ id: number }>>`
+      INSERT INTO "CommandeReservationRelease" ("commandeId")
+      VALUES (${commandeId})
+      ON CONFLICT ("commandeId") DO NOTHING
+      RETURNING "id"
+    `
+
+    return rows.length === 1
+  }
+
+  private async restoreReservedStock(
     tx: ReservationTransaction,
     commande: {
       id: number
       lignes: ReservationLine[]
     },
   ) {
-    const reservation = await tx.mouvementStock.findFirst({
-      where: { reference: this.getReservationReference(commande.id) },
-      select: { id: true },
-    })
-    const release = await tx.mouvementStock.findFirst({
-      where: { reference: this.getReservationReleaseReference(commande.id) },
-      select: { id: true },
-    })
-
-    if (!reservation || release) {
-      return
-    }
-
     for (const ligne of commande.lignes) {
       const stockAvant = ligne.article?.stock ?? 0
       const article = await tx.article.update({
