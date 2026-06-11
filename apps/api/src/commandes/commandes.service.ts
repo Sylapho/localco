@@ -68,6 +68,19 @@ type StripeWebhookClaim =
       duplicate: true
     }
 
+type CleanupAbandonedCommandesResult = {
+  scanned: number
+  cancelled: number
+  skipped: number
+  failed: number
+  failures?: {
+    commandeId: number
+    reason: string
+  }[]
+}
+
+type CleanupAbandonedCommandeStatus = 'cancelled' | 'skipped'
+
 type ProductionOpenCommande = {
   id: number
   statut: string
@@ -83,9 +96,11 @@ type ProductionOpenCommande = {
 export class CommandesService {
   private readonly logger = new Logger(CommandesService.name)
   private stripe: InstanceType<typeof Stripe> | null = null
-  private readonly abandonedDelayMinutes = 60
+  private readonly abandonedDelayMinutes: number
   private readonly defaultStripeWebhookProcessingTimeoutMs = 300_000
   private readonly maxStripeWebhookErrorLength = 2_000
+  private readonly defaultAbandonedOrderDelayMinutes = 60
+  private readonly maxCleanupFailureReasonLength = 200
   private readonly productionAllocationStatuses = [
     'paiement_en_attente',
     'paiement_a_verifier',
@@ -103,15 +118,15 @@ export class CommandesService {
     private readonly mouvementsStockService: MouvementsStockService,
     private readonly configService: ConfigService,
     private readonly emailsService: EmailsService,
-  ) {}
+  ) {
+    this.abandonedDelayMinutes = this.parseAbandonedOrderDelayMinutes()
+  }
 
   findPickupPoints() {
     return getPublicPickupPoints()
   }
 
   async findAll() {
-    await this.cleanupAbandonedCommandes()
-
     const commandes = await this.prisma.commande.findMany({
       where: {
         statut: {
@@ -134,8 +149,6 @@ export class CommandesService {
   }
 
   async findOne(id: number) {
-    await this.cleanupAbandonedCommandes()
-
     const commande = await this.prisma.commande.findUniqueOrThrow({
       where: { id },
       include: {
@@ -549,45 +562,108 @@ export class CommandesService {
   async cleanupAbandonedCommandes() {
     const cutoff = new Date(Date.now() - this.abandonedDelayMinutes * 60 * 1000)
 
-    const commandes = await this.prisma.commande.findMany({
+    const candidates = await this.prisma.commande.findMany({
       where: {
         statut: 'paiement_en_attente',
         createdAt: {
           lt: cutoff,
         },
       },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
+      select: {
+        id: true,
       },
     })
 
-    if (commandes.length === 0) {
-      return { count: 0 }
+    const result: CleanupAbandonedCommandesResult = {
+      scanned: candidates.length,
+      cancelled: 0,
+      skipped: 0,
+      failed: 0,
     }
+    const failures: NonNullable<CleanupAbandonedCommandesResult['failures']> =
+      []
 
-    await this.prisma.$transaction(async (tx) => {
-      for (const commande of commandes) {
-        await this.releaseReservedStock(tx, commande)
+    for (const candidate of candidates) {
+      try {
+        const status = await this.cleanupAbandonedCommande(candidate.id, cutoff)
 
-        await tx.commande.update({
-          where: { id: commande.id },
-          data: { statut: 'annulee' },
-        })
-
-        await this.recordStatusHistory(tx, {
-          commandeId: commande.id,
-          ancienStatut: commande.statut,
-          nouveauStatut: 'annulee',
-          motif: 'commande_abandonnee',
+        if (status === 'cancelled') {
+          result.cancelled += 1
+        } else {
+          result.skipped += 1
+        }
+      } catch (error) {
+        result.failed += 1
+        failures.push({
+          commandeId: candidate.id,
+          reason: this.formatCleanupFailureReason(error),
         })
       }
-    })
+    }
 
-    return { count: commandes.length }
+    if (failures.length > 0) {
+      result.failures = failures
+    }
+
+    return result
+  }
+
+  private async cleanupAbandonedCommande(
+    commandeId: number,
+    cutoff: Date,
+  ): Promise<CleanupAbandonedCommandeStatus> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT "id"
+        FROM "Commande"
+        WHERE "id" = ${commandeId}
+        FOR UPDATE
+      `
+
+      const commande = await tx.commande.findUnique({
+        where: { id: commandeId },
+        include: {
+          lignes: {
+            include: {
+              article: true,
+            },
+          },
+        },
+      })
+
+      if (
+        !commande ||
+        commande.statut !== 'paiement_en_attente' ||
+        commande.createdAt >= cutoff
+      ) {
+        return 'skipped'
+      }
+
+      const existingRelease = await tx.mouvementStock.findFirst({
+        where: { reference: this.getReservationReleaseReference(commande.id) },
+        select: { id: true },
+      })
+
+      if (existingRelease) {
+        return 'skipped'
+      }
+
+      await this.releaseReservedStock(tx, commande)
+
+      await tx.commande.update({
+        where: { id: commande.id },
+        data: { statut: 'annulee' },
+      })
+
+      await this.recordStatusHistory(tx, {
+        commandeId: commande.id,
+        ancienStatut: 'paiement_en_attente',
+        nouveauStatut: 'annulee',
+        motif: 'commande_abandonnee',
+      })
+
+      return 'cancelled'
+    })
   }
 
   private async cancelCommande(id: number) {
@@ -961,6 +1037,30 @@ export class CommandesService {
           : 'Unknown webhook processing error'
 
     return message.slice(0, this.maxStripeWebhookErrorLength)
+  }
+
+  private parseAbandonedOrderDelayMinutes() {
+    const configuredValue = this.configService.get<string>(
+      'ABANDONED_ORDER_DELAY_MINUTES',
+    )
+    const delayMinutes = configuredValue ? Number(configuredValue) : undefined
+
+    if (!delayMinutes || !Number.isFinite(delayMinutes) || delayMinutes <= 0) {
+      return this.defaultAbandonedOrderDelayMinutes
+    }
+
+    return delayMinutes
+  }
+
+  private formatCleanupFailureReason(error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : 'Unknown cleanup error'
+
+    return message.slice(0, this.maxCleanupFailureReasonLength)
   }
 
   private isUniqueConstraintError(error: unknown) {

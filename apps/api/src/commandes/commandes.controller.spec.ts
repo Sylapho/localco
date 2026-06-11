@@ -123,7 +123,7 @@ describe('CommandesController', () => {
   })
 
   it('cleanupAbandoned should cleanup pending commandes', async () => {
-    const result = { count: 2 }
+    const result = { scanned: 3, cancelled: 2, skipped: 1, failed: 0 }
     commandesServiceMock.cleanupAbandonedCommandes.mockResolvedValue(result)
 
     await expect(controller.cleanupAbandoned()).resolves.toEqual(result)

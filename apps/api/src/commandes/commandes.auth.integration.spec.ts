@@ -306,7 +306,10 @@ describe('Commandes admin auth integration', () => {
     })
 
     commandesServiceMock.cleanupAbandonedCommandes.mockResolvedValueOnce({
-      count: 2,
+      scanned: 3,
+      cancelled: 2,
+      skipped: 1,
+      failed: 0,
     })
 
     const response = await request(app.getHttpServer())
@@ -315,7 +318,10 @@ describe('Commandes admin auth integration', () => {
       .expect(201)
 
     expect(response.body).toEqual({
-      count: 2,
+      scanned: 3,
+      cancelled: 2,
+      skipped: 1,
+      failed: 0,
     })
     expect(
       commandesServiceMock.cleanupAbandonedCommandes,

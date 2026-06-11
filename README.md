@@ -341,6 +341,12 @@ Les secrets Better Auth et les secrets OAuth ne doivent pas être exposés côt�
 
 Le stockage actuel est en memoire et reste adapte au local ou a une instance API unique. Pour une production distribuee, la limite doit etre appliquee par une infrastructure partagee ou par un store distribue decide avec l'hebergement. La strategie est documentee dans `docs/CHECKOUT_RATE_LIMITING.md`.
 
+## Nettoyage des commandes abandonnées
+
+Les commandes `paiement_en_attente` trop anciennes peuvent être annulées par une commande planifiable externe. Le délai est configuré avec `ABANDONED_ORDER_DELAY_MINUTES` et vaut `60` minutes par défaut.
+
+La procédure, les scripts et les garanties d'idempotence multi-instance sont documentés dans `docs/ABANDONED_ORDERS_CLEANUP.md`.
+
 ## Resend
 
 Resend est utilisé côté API pour les e-mails transactionnels liés aux commandes.
@@ -413,6 +419,7 @@ Vérifier côté API :
 STRIPE_SECRET_KEY=sk_test_replace_me
 STRIPE_WEBHOOK_SECRET=whsec_replace_me
 STRIPE_WEBHOOK_PROCESSING_TIMEOUT_MS=300000
+ABANDONED_ORDER_DELAY_MINUTES=60
 SHOP_PUBLIC_URL=http://localhost:3001
 ```
 

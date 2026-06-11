@@ -65,6 +65,7 @@ describe('CommandesService', () => {
     commande: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -100,6 +101,7 @@ describe('CommandesService', () => {
   }
 
   type TransactionClient = {
+    $queryRaw: jest.Mock
     article: typeof prismaMock.article
     commande: typeof prismaMock.commande
     commandeStatutHistorique: typeof prismaMock.commandeStatutHistorique
@@ -109,6 +111,7 @@ describe('CommandesService', () => {
   type TransactionCallback<T> = (tx: TransactionClient) => Promise<T>
 
   const transactionClient: TransactionClient = {
+    $queryRaw: jest.fn(),
     article: prismaMock.article,
     commande: prismaMock.commande,
     commandeStatutHistorique: prismaMock.commandeStatutHistorique,
@@ -215,9 +218,11 @@ describe('CommandesService', () => {
       async <T>(callback: TransactionCallback<T>) =>
         callback(transactionClient),
     )
+    transactionClient.$queryRaw.mockResolvedValue([{ id: 1 }])
 
     prismaMock.article.findMany.mockResolvedValue([])
     prismaMock.commande.findMany.mockResolvedValue([])
+    prismaMock.commande.findUnique.mockResolvedValue(null)
     prismaMock.commande.updateMany.mockResolvedValue({ count: 1 })
     prismaMock.commandeStatutHistorique.create.mockResolvedValue({ id: 1 })
     prismaMock.mouvementStock.findFirst.mockResolvedValue(null)
@@ -263,32 +268,15 @@ describe('CommandesService', () => {
     emailsServiceMock.sendOrderConfirmation.mockResolvedValue(undefined)
   })
 
-  it('findAll should cleanup abandoned commandes before listing visible commandes', async () => {
+  it('findAll should list visible commandes without cleanup side effects', async () => {
     const commandes = [{ id: 1, statut: 'nouvelle', lignes: [] }]
 
-    prismaMock.commande.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(commandes)
+    prismaMock.commande.findMany.mockResolvedValueOnce(commandes)
 
     await expect(service.findAll()).resolves.toEqual(commandes)
 
-    expect(prismaMock.commande.findMany).toHaveBeenNthCalledWith(1, {
-      where: {
-        statut: 'paiement_en_attente',
-        createdAt: {
-          lt: expect.any(Date) as Date,
-        },
-      },
-      include: {
-        lignes: {
-          include: {
-            article: true,
-          },
-        },
-      },
-    })
-
-    expect(prismaMock.commande.findMany).toHaveBeenNthCalledWith(2, {
+    expect(prismaMock.commande.findMany).toHaveBeenCalledTimes(1)
+    expect(prismaMock.commande.findMany).toHaveBeenCalledWith({
       where: {
         statut: {
           not: 'paiement_en_attente',
@@ -305,6 +293,9 @@ describe('CommandesService', () => {
         createdAt: 'desc',
       },
     })
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(prismaMock.mouvementStock.create).not.toHaveBeenCalled()
   })
 
   it('findAll should allocate production needs from current stock and open orders', async () => {
@@ -324,9 +315,7 @@ describe('CommandesService', () => {
     })
     const commandes = [firstCommande, secondCommande]
 
-    prismaMock.commande.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(commandes)
+    prismaMock.commande.findMany.mockResolvedValueOnce(commandes)
     mockProductionLookup({
       currentStock: -4,
       openCommandes: commandes,
@@ -364,7 +353,7 @@ describe('CommandesService', () => {
         stock: true,
       },
     })
-    expect(prismaMock.commande.findMany).toHaveBeenNthCalledWith(3, {
+    expect(prismaMock.commande.findMany).toHaveBeenNthCalledWith(2, {
       where: {
         statut: {
           in: [
@@ -417,9 +406,7 @@ describe('CommandesService', () => {
         stock: currentStock,
       })
 
-      prismaMock.commande.findMany
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([commande])
+      prismaMock.commande.findMany.mockResolvedValueOnce([commande])
       mockProductionLookup({
         currentStock,
         openCommandes: [commande],
@@ -467,9 +454,7 @@ describe('CommandesService', () => {
       earlierCreatedSameDueDate,
     ]
 
-    prismaMock.commande.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(commandes)
+    prismaMock.commande.findMany.mockResolvedValueOnce(commandes)
     mockProductionLookup({
       currentStock: -6,
       openCommandes: commandes,
@@ -513,9 +498,10 @@ describe('CommandesService', () => {
         stock: -2,
       })
 
-      prismaMock.commande.findMany
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([visibleCommande, excludedCommande])
+      prismaMock.commande.findMany.mockResolvedValueOnce([
+        visibleCommande,
+        excludedCommande,
+      ])
       mockProductionLookup({
         currentStock: -2,
         openCommandes: [visibleCommande],
@@ -559,9 +545,10 @@ describe('CommandesService', () => {
       dateRetrait: new Date('2026-06-17T00:00:00.000Z'),
     })
 
-    prismaMock.commande.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([pendingCommande, visibleCommande])
+    prismaMock.commande.findMany.mockResolvedValueOnce([
+      pendingCommande,
+      visibleCommande,
+    ])
     mockProductionLookup({
       currentStock: -4,
       openCommandes: [pendingCommande, visibleCommande],
@@ -597,9 +584,7 @@ describe('CommandesService', () => {
       stock: -2,
     })
 
-    prismaMock.commande.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([commande])
+    prismaMock.commande.findMany.mockResolvedValueOnce([commande])
     mockProductionLookup({
       currentStock: -2,
       openCommandes: [commande],
@@ -625,9 +610,7 @@ describe('CommandesService', () => {
       stock: 0,
     })
 
-    prismaMock.commande.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([commande])
+    prismaMock.commande.findMany.mockResolvedValueOnce([commande])
     mockProductionLookup({
       currentStock: 0,
       openCommandes: [commande],
@@ -655,7 +638,7 @@ describe('CommandesService', () => {
     expect(prismaMock.mouvementStock.findMany).not.toHaveBeenCalled()
   })
 
-  it('findOne should cleanup abandoned commandes before loading details', async () => {
+  it('findOne should load details without cleanup side effects', async () => {
     const commande = {
       id: 7,
       statut: 'nouvelle',
@@ -663,7 +646,6 @@ describe('CommandesService', () => {
       historique: [],
     }
 
-    prismaMock.commande.findMany.mockResolvedValueOnce([])
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
 
     await expect(service.findOne(7)).resolves.toEqual(commande)
@@ -683,6 +665,10 @@ describe('CommandesService', () => {
         },
       },
     })
+    expect(prismaMock.commande.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(prismaMock.mouvementStock.create).not.toHaveBeenCalled()
   })
 
   it('findPublicCheckoutSummary should return a safe post-payment summary', async () => {
@@ -1653,6 +1639,45 @@ describe('CommandesService', () => {
     })
   })
 
+  it('handleStripeWebhook should not confirm an order already cancelled by abandoned cleanup', async () => {
+    mockStripeConstructEvent.mockReturnValue({
+      id: 'evt_paid_after_cleanup',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_cancelled',
+        },
+      },
+    })
+
+    prismaMock.commande.findFirst.mockResolvedValue({
+      id: 56,
+      statut: 'annulee',
+      stripeId: 'cs_cancelled',
+      lignes: [],
+    })
+
+    await expect(
+      service.handleStripeWebhook(Buffer.from('{}'), 'stripe-signature'),
+    ).resolves.toEqual({ received: true })
+
+    expect(prismaMock.commande.updateMany).not.toHaveBeenCalled()
+    expect(prismaMock.commandeStatutHistorique.create).not.toHaveBeenCalled()
+    expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
+    expect(prismaMock.stripeWebhookEvent.updateMany).toHaveBeenCalledWith({
+      where: {
+        eventId: 'evt_paid_after_cleanup',
+        status: 'processing',
+        processingStartedAt: expect.any(Date) as Date,
+      },
+      data: {
+        status: 'processed',
+        processedAt: expect.any(Date) as Date,
+        lastError: null,
+      },
+    })
+  })
+
   it('handleStripeWebhook should keep payment confirmation when confirmation email fails', async () => {
     const commande: CommandeMock = {
       id: 56,
@@ -2394,11 +2419,33 @@ describe('CommandesService', () => {
     })
   })
 
-  it('cleanupAbandonedCommandes should return count 0 when no old pending commande exists', async () => {
+  const makePendingCleanupCommande = (data: {
+    id: number
+    statut?: string
+    createdAt?: Date
+  }) => ({
+    id: data.id,
+    statut: data.statut ?? 'paiement_en_attente',
+    createdAt: data.createdAt ?? new Date('2026-06-10T08:00:00.000Z'),
+    lignes: [
+      {
+        articleId: 1,
+        quantite: 2,
+        article: {
+          stock: 8,
+        },
+      },
+    ],
+  })
+
+  it('cleanupAbandonedCommandes should return an empty summary when no old pending commande exists', async () => {
     prismaMock.commande.findMany.mockResolvedValue([])
 
     await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
-      count: 0,
+      scanned: 0,
+      cancelled: 0,
+      skipped: 0,
+      failed: 0,
     })
 
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
@@ -2406,24 +2453,14 @@ describe('CommandesService', () => {
     expect(prismaMock.commandeStatutHistorique.create).not.toHaveBeenCalled()
   })
 
-  it('cleanupAbandonedCommandes should release reserved stock before cancelling old pending commandes', async () => {
-    prismaMock.commande.findMany.mockResolvedValue([
-      {
-        id: 9,
-        statut: 'paiement_en_attente',
-        lignes: [
-          {
-            articleId: 1,
-            quantite: 2,
-            article: {
-              stock: 8,
-            },
-          },
-        ],
-      },
-    ])
+  it('cleanupAbandonedCommandes should lock, release stock and cancel an old pending commande', async () => {
+    const commande = makePendingCleanupCommande({ id: 9 })
+
+    prismaMock.commande.findMany.mockResolvedValue([{ id: 9 }])
+    prismaMock.commande.findUnique.mockResolvedValue(commande)
 
     prismaMock.mouvementStock.findFirst
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 1 })
       .mockResolvedValueOnce(null)
 
@@ -2438,7 +2475,10 @@ describe('CommandesService', () => {
     })
 
     await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
-      count: 1,
+      scanned: 1,
+      cancelled: 1,
+      skipped: 0,
+      failed: 0,
     })
 
     expect(prismaMock.commande.findMany).toHaveBeenCalledWith({
@@ -2448,6 +2488,13 @@ describe('CommandesService', () => {
           lt: expect.any(Date) as Date,
         },
       },
+      select: {
+        id: true,
+      },
+    })
+    expect(transactionClient.$queryRaw).toHaveBeenCalled()
+    expect(prismaMock.commande.findUnique).toHaveBeenCalledWith({
+      where: { id: 9 },
       include: {
         lignes: {
           include: {
@@ -2492,6 +2539,205 @@ describe('CommandesService', () => {
       },
     })
   })
+
+  it('cleanupAbandonedCommandes should not select recent pending commandes', async () => {
+    prismaMock.commande.findMany.mockResolvedValue([])
+
+    await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
+      scanned: 0,
+      cancelled: 0,
+      skipped: 0,
+      failed: 0,
+    })
+
+    expect(prismaMock.commande.findMany).toHaveBeenCalledWith({
+      where: {
+        statut: 'paiement_en_attente',
+        createdAt: {
+          lt: expect.any(Date) as Date,
+        },
+      },
+      select: {
+        id: true,
+      },
+    })
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(
+      mouvementsStockServiceMock.recordArticleMovement,
+    ).not.toHaveBeenCalled()
+  })
+
+  it.each([['annulee'], ['nouvelle']])(
+    'cleanupAbandonedCommandes should skip a commande that became %s before lock processing',
+    async (statut) => {
+      prismaMock.commande.findMany.mockResolvedValue([{ id: 9 }])
+      prismaMock.commande.findUnique.mockResolvedValue(
+        makePendingCleanupCommande({ id: 9, statut }),
+      )
+
+      await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
+        scanned: 1,
+        cancelled: 0,
+        skipped: 1,
+        failed: 0,
+      })
+
+      expect(prismaMock.commande.update).not.toHaveBeenCalled()
+      expect(prismaMock.commandeStatutHistorique.create).not.toHaveBeenCalled()
+      expect(
+        mouvementsStockServiceMock.recordArticleMovement,
+      ).not.toHaveBeenCalled()
+    },
+  )
+
+  it('cleanupAbandonedCommandes should skip when the reservation was already released', async () => {
+    prismaMock.commande.findMany.mockResolvedValue([{ id: 9 }])
+    prismaMock.commande.findUnique.mockResolvedValue(
+      makePendingCleanupCommande({ id: 9 }),
+    )
+    prismaMock.mouvementStock.findFirst.mockResolvedValueOnce({ id: 10 })
+
+    await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
+      scanned: 1,
+      cancelled: 0,
+      skipped: 1,
+      failed: 0,
+    })
+
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(
+      mouvementsStockServiceMock.recordArticleMovement,
+    ).not.toHaveBeenCalled()
+  })
+
+  it('cleanupAbandonedCommandes should process each commande independently and continue after a failure', async () => {
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: 1 },
+      { id: 2 },
+      { id: 3 },
+    ])
+    prismaMock.commande.findUnique
+      .mockResolvedValueOnce(makePendingCleanupCommande({ id: 1 }))
+      .mockResolvedValueOnce(makePendingCleanupCommande({ id: 2 }))
+      .mockResolvedValueOnce(
+        makePendingCleanupCommande({ id: 3, statut: 'nouvelle' }),
+      )
+    prismaMock.mouvementStock.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 1 })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 2 })
+      .mockResolvedValueOnce(null)
+    prismaMock.article.update
+      .mockResolvedValueOnce({ id: 1, stock: 10 })
+      .mockRejectedValueOnce(
+        new Error('stock release failed with a long reason'),
+      )
+
+    await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
+      scanned: 3,
+      cancelled: 1,
+      skipped: 1,
+      failed: 1,
+      failures: [
+        {
+          commandeId: 2,
+          reason: 'stock release failed with a long reason',
+        },
+      ],
+    })
+
+    expect(prismaMock.commande.update).toHaveBeenCalledTimes(1)
+    expect(prismaMock.commande.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { statut: 'annulee' },
+    })
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(3)
+  })
+
+  it('cleanupAbandonedCommandes should not double release stock when called twice for the same commande', async () => {
+    prismaMock.commande.findMany
+      .mockResolvedValueOnce([{ id: 9 }])
+      .mockResolvedValueOnce([{ id: 9 }])
+    prismaMock.commande.findUnique
+      .mockResolvedValueOnce(makePendingCleanupCommande({ id: 9 }))
+      .mockResolvedValueOnce(
+        makePendingCleanupCommande({ id: 9, statut: 'annulee' }),
+      )
+    prismaMock.mouvementStock.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 1 })
+      .mockResolvedValueOnce(null)
+    prismaMock.article.update.mockResolvedValue({
+      id: 1,
+      stock: 10,
+    })
+
+    await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
+      scanned: 1,
+      cancelled: 1,
+      skipped: 0,
+      failed: 0,
+    })
+    await expect(service.cleanupAbandonedCommandes()).resolves.toEqual({
+      scanned: 1,
+      cancelled: 0,
+      skipped: 1,
+      failed: 0,
+    })
+
+    expect(
+      mouvementsStockServiceMock.recordArticleMovement,
+    ).toHaveBeenCalledTimes(1)
+    expect(prismaMock.commande.update).toHaveBeenCalledTimes(1)
+    expect(prismaMock.commandeStatutHistorique.create).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['45', 45],
+    [undefined, 60],
+    ['0', 60],
+    ['-5', 60],
+    ['not-a-number', 60],
+  ])(
+    'cleanupAbandonedCommandes should use configured abandoned delay %s',
+    async (configuredValue, expectedDelayMinutes) => {
+      const now = new Date('2026-06-11T12:00:00.000Z').getTime()
+      jest.spyOn(Date, 'now').mockReturnValue(now)
+      configServiceMock.get.mockImplementation((key: string) => {
+        if (key === 'ABANDONED_ORDER_DELAY_MINUTES') {
+          return configuredValue
+        }
+        return undefined
+      })
+
+      const configuredService = new CommandesService(
+        prismaMock as never,
+        mouvementsStockServiceMock as never,
+        configServiceMock as never,
+        emailsServiceMock as never,
+      )
+
+      prismaMock.commande.findMany.mockResolvedValue([])
+
+      await configuredService.cleanupAbandonedCommandes()
+
+      expect(prismaMock.commande.findMany).toHaveBeenCalledWith({
+        where: {
+          statut: 'paiement_en_attente',
+          createdAt: {
+            lt: new Date(now - expectedDelayMinutes * 60 * 1000),
+          },
+        },
+        select: {
+          id: true,
+        },
+      })
+
+      jest.restoreAllMocks()
+    },
+  )
 })
 
 function getNextDateForWeekday(targetWeekday: number) {

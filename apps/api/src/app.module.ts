@@ -10,6 +10,8 @@ import { AuthModule } from './auth/auth.module'
 import { MouvementsStockModule } from './mouvements-stock/mouvements-stock.module'
 import { CommandesModule } from './commandes/commandes.module'
 import { BoutiqueModule } from './boutique/boutique.module'
+import { AppController } from './app.controller'
+import { AppService } from './app.service'
 
 @Module({
   imports: [
@@ -25,5 +27,7 @@ import { BoutiqueModule } from './boutique/boutique.module'
     CommandesModule,
     BoutiqueModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
