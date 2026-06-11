@@ -303,6 +303,26 @@ Le back-office doit donc afficher clairement ces besoins de production et de pr�
 
 Les quantités à produire sont recalculées depuis le stock courant et les commandes encore ouvertes. Les paiements en attente réservent du stock dans cette allocation, mais seuls les statuts opérationnels (`nouvelle`, `preparee`, `paiement_a_verifier`) affichent un besoin de production.
 
+#### Stock physique, stock réservé et déficit de précommande
+
+LocalCo distingue les notions suivantes :
+
+- Le stock physique par lot est représenté par
+  `StockLot.remainingQuantity`. Un lot périmé conserve une quantité physique
+  tant qu'il n'a pas été explicitement passé en perte.
+- Le stock comptable d'un article est représenté par `Article.stock`. Il tient
+  compte des entrées, des sorties et des réservations de commandes.
+- Le stock réservé n'est pas stocké dans un champ séparé. Une réservation est
+  représentée par un mouvement négatif de commande et est déjà déduite de
+  `Article.stock`.
+- Lorsque `Article.stock` est négatif, sa valeur absolue représente le déficit
+  de précommande, donc la quantité restant à produire ou à préparer.
+- La quantité physique passée en perte est toujours strictement positive.
+  Le mouvement de stock correspondant utilise un delta négatif.
+- Une perte diminue toujours le stock comptable. Lorsque le stock est déjà
+  négatif, la perte augmente le déficit de production et ne doit jamais
+  augmenter artificiellement le stock.
+
 Les commandes internes sont protégées par Better Auth et des rôles métier.
 
 ## Stripe et webhooks

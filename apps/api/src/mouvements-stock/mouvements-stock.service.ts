@@ -71,13 +71,21 @@ export class MouvementsStockService {
 
   async markLotAsLoss(id: number, createdByUserId?: string) {
     return this.prisma.$transaction(async (tx) => {
+      const lockedLotIdentity = await this.lockLotAndTarget(tx, id)
+
       const lot = await tx.stockLot.findUniqueOrThrow({
         where: { id },
-        include: {
-          article: true,
-          mp: true,
-        },
       })
+
+      if (
+        lot.target !== lockedLotIdentity.target ||
+        lot.articleId !== lockedLotIdentity.articleId ||
+        lot.mpId !== lockedLotIdentity.mpId
+      ) {
+        throw new BadRequestException(
+          'La cible du lot a changé pendant le traitement',
+        )
+      }
 
       if (!this.isExpired(lot.expiresAt)) {
         throw new BadRequestException(
@@ -85,22 +93,39 @@ export class MouvementsStockService {
         )
       }
 
-      if (lot.remainingQuantity <= 0) {
-        throw new BadRequestException('Ce lot ne contient plus de stock')
-      }
+      const lossQuantity = lot.remainingQuantity
+
+      this.assertStrictlyPositiveLossQuantity(lossQuantity)
 
       if (lot.target === 'article') {
-        if (!lot.article || !lot.articleId) {
+        if (lot.articleId === null) {
           throw new BadRequestException('Lot article invalide')
         }
 
-        const quantity = Math.min(lot.remainingQuantity, lot.article.stock)
-        const updatedArticle = await tx.article.update({
+        if (!Number.isInteger(lossQuantity)) {
+          throw new BadRequestException(
+            'La quantité passée en perte doit être entière pour un article',
+          )
+        }
+
+        const article = await tx.article.findUniqueOrThrow({
+          where: { id: lot.articleId },
+        })
+
+        const stockAfter = article.stock - lossQuantity
+        const movementQuantity = -lossQuantity
+
+        this.assertValidStockMovement({
+          type: 'perte',
+          quantite: movementQuantity,
+          stockAvant: article.stock,
+          stockApres: stockAfter,
+        })
+
+        await tx.article.update({
           where: { id: lot.articleId },
           data: {
-            stock: {
-              decrement: quantity,
-            },
+            stock: stockAfter,
           },
         })
 
@@ -116,9 +141,9 @@ export class MouvementsStockService {
             type: 'perte',
             cible: 'article',
             articleId: lot.articleId,
-            quantite: -quantity,
-            stockAvant: lot.article.stock,
-            stockApres: updatedArticle.stock,
+            quantite: movementQuantity,
+            stockAvant: article.stock,
+            stockApres: stockAfter,
             motif: `Lot périmé #${id}`,
             reference: `stock-lot:${id}:perte`,
             createdByUserId,
@@ -130,17 +155,28 @@ export class MouvementsStockService {
         })
       }
 
-      if (!lot.mp || !lot.mpId) {
+      if (lot.target !== 'matiere_premiere' || lot.mpId === null) {
         throw new BadRequestException('Lot matière première invalide')
       }
 
-      const quantity = Math.min(lot.remainingQuantity, lot.mp.stock)
-      const updatedMatiere = await tx.matierePremiere.update({
+      const matiere = await tx.matierePremiere.findUniqueOrThrow({
+        where: { id: lot.mpId },
+      })
+
+      const stockAfter = matiere.stock - lossQuantity
+      const movementQuantity = -lossQuantity
+
+      this.assertValidStockMovement({
+        type: 'perte',
+        quantite: movementQuantity,
+        stockAvant: matiere.stock,
+        stockApres: stockAfter,
+      })
+
+      await tx.matierePremiere.update({
         where: { id: lot.mpId },
         data: {
-          stock: {
-            decrement: quantity,
-          },
+          stock: stockAfter,
         },
       })
 
@@ -156,9 +192,9 @@ export class MouvementsStockService {
           type: 'perte',
           cible: 'matiere_premiere',
           mpId: lot.mpId,
-          quantite: -quantity,
-          stockAvant: lot.mp.stock,
-          stockApres: updatedMatiere.stock,
+          quantite: movementQuantity,
+          stockAvant: matiere.stock,
+          stockApres: stockAfter,
           motif: `Lot périmé #${id}`,
           reference: `stock-lot:${id}:perte`,
           createdByUserId,
@@ -230,6 +266,7 @@ export class MouvementsStockService {
       createdByUserId?: string
     },
   ) {
+    this.assertValidStockMovement(data)
     await this.applyLotMovement(tx, {
       target: 'article',
       targetId: data.articleId,
@@ -267,6 +304,7 @@ export class MouvementsStockService {
       createdByUserId?: string
     },
   ) {
+    this.assertValidStockMovement(data)
     await this.applyLotMovement(tx, {
       target: 'matiere_premiere',
       targetId: data.mpId,
@@ -503,6 +541,87 @@ export class MouvementsStockService {
       })
 
       remainingToConsume -= consumed
+    }
+  }
+  private async lockLotAndTarget(tx: MouvementStockTransaction, lotId: number) {
+    const lot = await tx.stockLot.findUniqueOrThrow({
+      where: { id: lotId },
+      select: {
+        target: true,
+        articleId: true,
+        mpId: true,
+      },
+    })
+
+    if (lot.target === 'article') {
+      if (lot.articleId === null) {
+        throw new BadRequestException('Lot article invalide')
+      }
+
+      await tx.$queryRaw`
+        SELECT "id"
+        FROM "Article"
+        WHERE "id" = ${lot.articleId}
+        FOR UPDATE
+      `
+    } else if (lot.target === 'matiere_premiere') {
+      if (lot.mpId === null) {
+        throw new BadRequestException('Lot matière première invalide')
+      }
+
+      await tx.$queryRaw`
+        SELECT "id"
+        FROM "MatierePremiere"
+        WHERE "id" = ${lot.mpId}
+        FOR UPDATE
+      `
+    } else {
+      throw new BadRequestException('Type de lot invalide')
+    }
+
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "StockLot"
+      WHERE "id" = ${lotId}
+      FOR UPDATE
+    `
+
+    return lot
+  }
+
+  private assertStrictlyPositiveLossQuantity(quantity: number) {
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      throw new BadRequestException(
+        'La quantité passée en perte doit être strictement positive',
+      )
+    }
+  }
+
+  private assertValidStockMovement(data: {
+    type: MouvementStockType
+    quantite: number
+    stockAvant: number
+    stockApres: number
+  }) {
+    if (data.type !== 'perte') {
+      return
+    }
+
+    const expectedStockAfter = data.stockAvant + data.quantite
+    const tolerance = 1e-9
+
+    const isInvalid =
+      !Number.isFinite(data.quantite) ||
+      !Number.isFinite(data.stockAvant) ||
+      !Number.isFinite(data.stockApres) ||
+      data.quantite >= 0 ||
+      data.stockApres >= data.stockAvant ||
+      Math.abs(expectedStockAfter - data.stockApres) > tolerance
+
+    if (isInvalid) {
+      throw new BadRequestException(
+        'Un mouvement de perte doit avoir un delta négatif et ne peut pas augmenter le stock',
+      )
     }
   }
 

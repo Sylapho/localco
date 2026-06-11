@@ -3,6 +3,7 @@ import { MouvementsStockService } from './mouvements-stock.service'
 
 describe('MouvementsStockService', () => {
   const tx = {
+    $queryRaw: jest.fn(),
     article: {
       findUniqueOrThrow: jest.fn(),
       update: jest.fn(),
@@ -199,5 +200,114 @@ describe('MouvementsStockService', () => {
         quantite: -2,
       }),
     ).rejects.toBeInstanceOf(BadRequestException)
+  })
+
+  it('markLotAsLoss should never increase a negative article stock', async () => {
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() - 1)
+    expiresAt.setHours(0, 0, 0, 0)
+
+    const movement = {
+      id: 42,
+      type: 'perte',
+      cible: 'article',
+      articleId: 1,
+      quantite: -2,
+      stockAvant: -3,
+      stockApres: -5,
+    }
+
+    tx.stockLot.findUniqueOrThrow
+      .mockResolvedValueOnce({
+        target: 'article',
+        articleId: 1,
+        mpId: null,
+      })
+      .mockResolvedValueOnce({
+        id: 12,
+        target: 'article',
+        articleId: 1,
+        mpId: null,
+        remainingQuantity: 2,
+        expiresAt,
+      })
+
+    tx.article.findUniqueOrThrow.mockResolvedValue({
+      id: 1,
+      stock: -3,
+    })
+
+    tx.article.update.mockResolvedValue({
+      id: 1,
+      stock: -5,
+    })
+
+    tx.stockLot.update.mockResolvedValue({
+      id: 12,
+      remainingQuantity: 0,
+    })
+
+    tx.mouvementStock.create.mockResolvedValue(movement)
+
+    await expect(service.markLotAsLoss(12, 'user_123')).resolves.toEqual(
+      movement,
+    )
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2)
+
+    expect(tx.article.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: {
+        stock: -5,
+      },
+    })
+
+    expect(tx.stockLot.update).toHaveBeenCalledWith({
+      where: { id: 12 },
+      data: {
+        remainingQuantity: 0,
+      },
+    })
+
+    expect(tx.mouvementStock.create).toHaveBeenCalledWith({
+      data: {
+        type: 'perte',
+        cible: 'article',
+        articleId: 1,
+        quantite: -2,
+        stockAvant: -3,
+        stockApres: -5,
+        motif: 'Lot périmé #12',
+        reference: 'stock-lot:12:perte',
+        createdByUserId: 'user_123',
+      },
+      include: {
+        article: true,
+        mp: true,
+      },
+    })
+
+    const createdMovement = tx.mouvementStock.create.mock.calls[0][0].data
+
+    expect(createdMovement.quantite).toBeLessThan(0)
+    expect(createdMovement.stockApres).toBeLessThan(createdMovement.stockAvant)
+  })
+
+  it('recordArticleMovement should reject a positive loss movement', async () => {
+    await expect(
+      service.recordArticleMovement(tx as never, {
+        articleId: 1,
+        quantite: 2,
+        stockAvant: -3,
+        stockApres: -1,
+        type: 'perte',
+        motif: 'Perte invalide',
+      }),
+    ).rejects.toThrow(
+      'Un mouvement de perte doit avoir un delta négatif et ne peut pas augmenter le stock',
+    )
+
+    expect(tx.stockLot.findMany).not.toHaveBeenCalled()
+    expect(tx.mouvementStock.create).not.toHaveBeenCalled()
   })
 })
