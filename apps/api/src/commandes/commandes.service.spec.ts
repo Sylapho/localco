@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service'
 import { CommandesService } from './commandes.service'
 import { CreateCommandeDto } from './dto/create-commande.dto'
 import { CommandeStatut } from './dto/update-commande-statut.dto'
+import { StripeCheckoutGateway } from './stripe-checkout.gateway'
 
 const mockStripeCheckoutSessionsCreate = jest.fn()
 const mockStripeConstructEvent = jest.fn()
@@ -191,6 +192,7 @@ describe('CommandesService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommandesService,
+        StripeCheckoutGateway,
         {
           provide: PrismaService,
           useValue: prismaMock,
@@ -2717,6 +2719,7 @@ describe('CommandesService', () => {
         mouvementsStockServiceMock as never,
         configServiceMock as never,
         emailsServiceMock as never,
+        new StripeCheckoutGateway(configServiceMock as never),
       )
 
       prismaMock.commande.findMany.mockResolvedValue([])

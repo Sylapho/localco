@@ -347,6 +347,12 @@ Les commandes `paiement_en_attente` trop anciennes peuvent être annulées par u
 
 La procédure, les scripts et les garanties d'idempotence multi-instance sont documentés dans `docs/ABANDONED_ORDERS_CLEANUP.md`.
 
+### Tests E2E API
+
+La suite E2E API utilise le vrai `AppModule`, Prisma et une base PostgreSQL dediee. Elle mocke uniquement Stripe, Resend et la verification de session Better Auth dans les fichiers de test.
+
+La configuration locale et CI est documentee dans `docs/API_E2E_TESTS.md`.
+
 ## Resend
 
 Resend est utilisé côté API pour les e-mails transactionnels liés aux commandes.

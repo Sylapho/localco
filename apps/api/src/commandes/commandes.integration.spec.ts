@@ -11,6 +11,7 @@ import { CommandesController } from './commandes.controller'
 import { CommandesService } from './commandes.service'
 import { BetterAuthGuard } from '../auth/better-auth.guard'
 import { RolesGuard } from '../auth/roles.guard'
+import { StripeCheckoutGateway } from './stripe-checkout.gateway'
 
 const mockStripeCheckoutSessionsCreate = jest.fn()
 const mockStripeConstructEvent = jest.fn()
@@ -126,6 +127,7 @@ describe('Commandes integration', () => {
       controllers: [CommandesController],
       providers: [
         CommandesService,
+        StripeCheckoutGateway,
         {
           provide: PrismaService,
           useValue: prismaMock,

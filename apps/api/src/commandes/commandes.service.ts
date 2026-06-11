@@ -6,13 +6,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import Stripe from 'stripe'
 import { EmailsService } from '../emails/emails.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateCommandeDto } from './dto/create-commande.dto'
 import { CommandeStatut } from './dto/update-commande-statut.dto'
 import { getPublicPickupPoints, validatePickupSlot } from './pickup-slots'
+import { StripeCheckoutGateway } from './stripe-checkout.gateway'
 
 type StockMovementTransaction = Parameters<
   MouvementsStockService['recordArticleMovement']
@@ -95,7 +95,6 @@ type ProductionOpenCommande = {
 @Injectable()
 export class CommandesService {
   private readonly logger = new Logger(CommandesService.name)
-  private stripe: InstanceType<typeof Stripe> | null = null
   private readonly abandonedDelayMinutes: number
   private readonly defaultStripeWebhookProcessingTimeoutMs = 300_000
   private readonly maxStripeWebhookErrorLength = 2_000
@@ -118,6 +117,7 @@ export class CommandesService {
     private readonly mouvementsStockService: MouvementsStockService,
     private readonly configService: ConfigService,
     private readonly emailsService: EmailsService,
+    private readonly stripeCheckoutGateway: StripeCheckoutGateway,
   ) {
     this.abandonedDelayMinutes = this.parseAbandonedOrderDelayMinutes()
   }
@@ -298,7 +298,10 @@ export class CommandesService {
   }
 
   async createCheckout(data: CreateCommandeDto) {
-    const stripe = this.getStripe()
+    if (!this.configService.get<string>('STRIPE_SECRET_KEY')) {
+      throw new BadRequestException('STRIPE_SECRET_KEY est manquant')
+    }
+
     const shopUrl =
       this.configService.get<string>('SHOP_PUBLIC_URL') ??
       'http://localhost:3001'
@@ -349,10 +352,12 @@ export class CommandesService {
       return created
     })
 
-    let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
+    let session: Awaited<
+      ReturnType<StripeCheckoutGateway['createCheckoutSession']>
+    >
 
     try {
-      session = await stripe.checkout.sessions.create(
+      session = await this.stripeCheckoutGateway.createCheckoutSession(
         {
           mode: 'payment',
           customer_email: data.email,
@@ -439,7 +444,6 @@ export class CommandesService {
     rawBody: Buffer | undefined,
     signature: string | string[] | undefined,
   ) {
-    const stripe = this.getStripe()
     const webhookSecret = this.configService.get<string>(
       'STRIPE_WEBHOOK_SECRET',
     )
@@ -452,7 +456,7 @@ export class CommandesService {
     let event: StripeCheckoutWebhookEvent
 
     try {
-      event = stripe.webhooks.constructEvent(
+      event = this.stripeCheckoutGateway.constructWebhookEvent(
         rawBody,
         stripeSignature,
         webhookSecret,
@@ -1399,20 +1403,6 @@ export class CommandesService {
     await tx.commandeStatutHistorique.create({
       data,
     })
-  }
-
-  private getStripe() {
-    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY')
-
-    if (!secretKey) {
-      throw new BadRequestException('STRIPE_SECRET_KEY est manquant')
-    }
-
-    if (!this.stripe) {
-      this.stripe = new Stripe(secretKey)
-    }
-
-    return this.stripe
   }
 
   private async prepareCommande(data: CreateCommandeDto) {

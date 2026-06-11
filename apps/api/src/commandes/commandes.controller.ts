@@ -37,6 +37,8 @@ export class CommandesController {
   }
 
   @Post()
+  @UseGuards(BetterAuthGuard, RolesGuard)
+  @Roles(ROLES.GERANT, ROLES.VENDEUR)
   create(@Body() body: CreateCommandeDto) {
     return this.commandesService.create(body)
   }

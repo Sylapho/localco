@@ -57,6 +57,7 @@ Objectif business : vendre simplement des produits alimentaires locaux en ligne,
 - Le rate limiting checkout est en mémoire ; il est isolé dans un module remplaçable, mais il n'est pas adapté comme unique protection à plusieurs instances ou à une production distribuée.
 - Les logs, métriques et alertes ne sont pas encore structurés pour la production.
 - Le nettoyage des commandes abandonnées est prévu pour un scheduler externe documenté dans `docs/ABANDONED_ORDERS_CLEANUP.md`.
+- La suite E2E API critique est documentee dans `docs/API_E2E_TESTS.md` et doit rester branchee a la CI.
 - La procédure de déploiement, rollback, sauvegarde et restauration PostgreSQL doit être écrite.
 - Les webhooks Stripe doivent être validés contre un environnement réel ou Stripe CLI avant mise en ligne.
 - Les droits Better Auth doivent être testés sur les pages internes sensibles autant que sur les routes API.

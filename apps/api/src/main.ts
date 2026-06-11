@@ -1,8 +1,7 @@
 import 'dotenv/config'
-import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
-import { createCheckoutRateLimitMiddleware } from './rate-limit/checkout-rate-limit.middleware'
+import { configureApp } from './bootstrap/configure-app'
 
 function getCorsOrigins() {
   const configuredOrigins = process.env.API_CORS_ORIGINS
@@ -20,22 +19,12 @@ function getCorsOrigins() {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true })
 
-  app.use('/api/commandes/checkout', createCheckoutRateLimitMiddleware())
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  )
+  configureApp(app)
 
   app.enableCors({
     origin: getCorsOrigins(),
     credentials: true,
   })
-
-  app.setGlobalPrefix('api')
 
   const port = process.env.PORT || 4000
   await app.listen(port)
