@@ -126,6 +126,12 @@ export class CommandesService {
     'nouvelle',
     'preparee',
   ]
+  private readonly cancellableStockReleaseStatuses = [
+    'paiement_en_attente',
+    'paiement_a_verifier',
+    'nouvelle',
+    'preparee',
+  ]
   private readonly visibleProductionStatuses = [
     'paiement_a_verifier',
     'nouvelle',
@@ -647,79 +653,23 @@ export class CommandesService {
   }
 
   private async cancelCommande(id: number) {
-    let commande: {
-      id: number
-      statut: string
-      lignes: ReservationLine[]
-    } = await this.findOne(id)
+    const result = await this.releaseOrderReservation(id, {
+      finalStatus: 'annulee',
+      motif: 'annulation',
+      releasableStatuses: this.cancellableStockReleaseStatuses,
+      idempotentStatuses: ['annulee'],
+    })
 
     if (
-      commande.statut === 'paiement_en_attente' ||
-      commande.statut === 'paiement_a_verifier' ||
-      commande.statut === 'annulee'
+      result.released ||
+      result.alreadyReleased ||
+      result.statusChanged ||
+      result.order.statut === 'annulee'
     ) {
-      const result = await this.releaseOrderReservation(id, {
-        finalStatus: 'annulee',
-        motif: 'annulation',
-        releasableStatuses: ['paiement_en_attente', 'paiement_a_verifier'],
-        idempotentStatuses: ['annulee'],
-      })
-
-      if (
-        result.released ||
-        result.alreadyReleased ||
-        result.statusChanged ||
-        result.order.statut === 'annulee'
-      ) {
-        return result.order
-      }
-
-      commande = result.order
+      return result.order
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      for (const ligne of commande.lignes) {
-        const article = await tx.article.update({
-          where: { id: ligne.articleId },
-          data: {
-            stock: {
-              increment: ligne.quantite,
-            },
-          },
-        })
-
-        await this.mouvementsStockService.recordArticleMovement(tx, {
-          articleId: ligne.articleId,
-          quantite: ligne.quantite,
-          stockAvant: article.stock - ligne.quantite,
-          stockApres: article.stock,
-          type: 'commande',
-          motif: `Annulation commande #${id}`,
-          reference: `commande:${id}:annulation`,
-        })
-      }
-
-      const updated = await tx.commande.update({
-        where: { id },
-        data: { statut: 'annulee' },
-        include: {
-          lignes: {
-            include: {
-              article: true,
-            },
-          },
-        },
-      })
-
-      await this.recordStatusHistory(tx, {
-        commandeId: id,
-        ancienStatut: commande.statut,
-        nouveauStatut: 'annulee',
-        motif: 'annulation',
-      })
-
-      return updated
-    })
+    throw new BadRequestException('Cette commande ne peut pas être annulée')
   }
 
   private async confirmPaidCommande(stripeId: string) {
@@ -1085,15 +1035,10 @@ export class CommandesService {
         }
       }
 
-      const reservation = await tx.mouvementStock.findFirst({
-        where: { reference: this.getReservationReference(commande.id) },
-        select: { id: true },
-      })
-
-      const releaseOperationCreated = reservation
+      const releaseOperationCreated = releasable
         ? await this.createReservationReleaseOperation(tx, commande.id)
         : false
-      const alreadyReleased = Boolean(reservation && !releaseOperationCreated)
+      const alreadyReleased = releasable && !releaseOperationCreated
 
       if (releaseOperationCreated) {
         await this.restoreReservedStock(tx, commande)
@@ -1176,6 +1121,52 @@ export class CommandesService {
         type: 'commande',
         motif: `Libération réservation commande #${commande.id}`,
         reference: this.getReservationReleaseReference(commande.id),
+      })
+
+      await this.restoreArticleLotUpToReleasedQuantity(tx, {
+        articleId: ligne.articleId,
+        releasedQuantity: ligne.quantite,
+        stockAfter: article.stock,
+        reference: this.getReservationReleaseReference(commande.id),
+      })
+    }
+  }
+
+  private async restoreArticleLotUpToReleasedQuantity(
+    tx: ReservationTransaction,
+    data: {
+      articleId: number
+      releasedQuantity: number
+      stockAfter: number
+      reference: string
+    },
+  ) {
+    const aggregate = await tx.stockLot.aggregate({
+      where: {
+        target: 'article',
+        articleId: data.articleId,
+        remainingQuantity: {
+          gt: 0,
+        },
+      },
+      _sum: {
+        remainingQuantity: true,
+      },
+    })
+
+    const remainingLotQuantity = aggregate._sum.remainingQuantity ?? 0
+    const lotDeficit = Math.max(0, data.stockAfter - remainingLotQuantity)
+    const restoredLotQuantity = Math.min(data.releasedQuantity, lotDeficit)
+
+    if (restoredLotQuantity > 0) {
+      await tx.stockLot.create({
+        data: {
+          target: 'article',
+          articleId: data.articleId,
+          initialQuantity: restoredLotQuantity,
+          remainingQuantity: restoredLotQuantity,
+          reference: data.reference,
+        },
       })
     }
   }

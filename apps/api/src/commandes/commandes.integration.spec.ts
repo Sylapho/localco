@@ -60,6 +60,10 @@ type TransactionClient = {
     findMany: jest.Mock
     create: jest.Mock
   }
+  stockLot: {
+    aggregate: jest.Mock
+    create: jest.Mock
+  }
 }
 
 type TransactionCallback<T> = (tx: TransactionClient) => Promise<T>
@@ -92,6 +96,10 @@ describe('Commandes integration', () => {
       findMany: jest.fn(),
       create: jest.fn(),
     },
+    stockLot: {
+      aggregate: jest.fn(),
+      create: jest.fn(),
+    },
     stripeWebhookEvent: {
       create: jest.fn(),
       findUnique: jest.fn(),
@@ -107,6 +115,7 @@ describe('Commandes integration', () => {
     commande: prismaMock.commande,
     commandeStatutHistorique: prismaMock.commandeStatutHistorique,
     mouvementStock: prismaMock.mouvementStock,
+    stockLot: prismaMock.stockLot,
   }
 
   const mouvementsStockServiceMock = {
@@ -197,6 +206,8 @@ describe('Commandes integration', () => {
       prismaMock.mouvementStock.findFirst,
       prismaMock.mouvementStock.findMany,
       prismaMock.mouvementStock.create,
+      prismaMock.stockLot.aggregate,
+      prismaMock.stockLot.create,
       prismaMock.stripeWebhookEvent.create,
       prismaMock.stripeWebhookEvent.findUnique,
       prismaMock.stripeWebhookEvent.updateMany,
@@ -222,6 +233,12 @@ describe('Commandes integration', () => {
     prismaMock.mouvementStock.findFirst.mockResolvedValue(null)
     prismaMock.mouvementStock.findMany.mockResolvedValue([])
     prismaMock.mouvementStock.create.mockResolvedValue({ id: 1 })
+    prismaMock.stockLot.aggregate.mockResolvedValue({
+      _sum: {
+        remainingQuantity: 0,
+      },
+    })
+    prismaMock.stockLot.create.mockResolvedValue({ id: 1 })
     prismaMock.stripeWebhookEvent.create.mockResolvedValue({ id: 1 })
     prismaMock.stripeWebhookEvent.findUnique.mockResolvedValue(null)
     prismaMock.stripeWebhookEvent.updateMany.mockResolvedValue({ count: 1 })
