@@ -165,6 +165,7 @@ model Commande {
   lignes        LigneCommande[]
   historique    CommandeStatutHistorique[]
   reservationRelease CommandeReservationRelease?
+  stripeCheckoutReconciliations StripeCheckoutReconciliation[]
 
   @@index([statut])
   @@index([stripeId])
@@ -218,6 +219,38 @@ model StripeWebhookEvent {
   updatedAt           DateTime                 @updatedAt
 
   @@index([status, processingStartedAt])
+}
+
+enum StripeCheckoutReconciliationOperation {
+  expire_checkout_session
+  review_paid_cancelled_checkout
+  review_checkout_payment_mismatch
+  review_checkout_attachment_conflict
+}
+
+enum StripeCheckoutReconciliationStatus {
+  pending
+  resolved
+  failed
+}
+
+model StripeCheckoutReconciliation {
+  id              Int                                    @id @default(autoincrement())
+  commandeId      Int
+  stripeSessionId String
+  operation       StripeCheckoutReconciliationOperation
+  status          StripeCheckoutReconciliationStatus     @default(pending)
+  attempts        Int                                    @default(0)
+  lastError       String?
+  lastAttemptedAt DateTime?
+  resolvedAt      DateTime?
+  createdAt       DateTime                               @default(now())
+  updatedAt       DateTime                               @updatedAt
+  commande        Commande                               @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+
+  @@index([status, operation])
+  @@index([commandeId])
+  @@index([stripeSessionId])
 }
 
 model JourneeCaisse {

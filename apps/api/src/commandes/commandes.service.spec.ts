@@ -16,6 +16,7 @@ import { CommandeStatut } from './dto/update-commande-statut.dto'
 import { StripeCheckoutGateway } from './stripe-checkout.gateway'
 
 const mockStripeCheckoutSessionsCreate = jest.fn()
+const mockStripeCheckoutSessionsExpire = jest.fn()
 const mockStripeConstructEvent = jest.fn()
 
 jest.mock('stripe', () => {
@@ -23,6 +24,7 @@ jest.mock('stripe', () => {
     checkout: {
       sessions: {
         create: mockStripeCheckoutSessionsCreate,
+        expire: mockStripeCheckoutSessionsExpire,
       },
     },
     webhooks: {
@@ -90,6 +92,7 @@ describe('CommandesService', () => {
       findUnique: jest.fn(),
       updateMany: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   }
 
@@ -138,6 +141,17 @@ describe('CommandesService', () => {
     lieu: validPickupPoint,
     dateRetrait: validPickupDate,
     lignes: [{ articleId: 1, quantite: 2 }],
+    ...overrides,
+  })
+
+  const checkoutSessionWebhookObject = (
+    id: string,
+    overrides: Record<string, unknown> = {},
+  ) => ({
+    id,
+    payment_status: 'paid',
+    amount_total: 1250,
+    currency: 'eur',
     ...overrides,
   })
 
@@ -241,6 +255,7 @@ describe('CommandesService', () => {
       prismaMock.stripeWebhookEvent.create,
       prismaMock.stripeWebhookEvent.findUnique,
       prismaMock.stripeWebhookEvent.updateMany,
+      prismaMock.$queryRaw,
       prismaMock.$transaction,
       transactionClient.$queryRaw,
       mouvementsStockServiceMock.recordArticleMovement,
@@ -248,6 +263,7 @@ describe('CommandesService', () => {
       configServiceMock.get,
       emailsServiceMock.sendOrderConfirmation,
       mockStripeCheckoutSessionsCreate,
+      mockStripeCheckoutSessionsExpire,
       mockStripeConstructEvent,
     ].forEach((mock) => mock.mockReset())
 
@@ -274,6 +290,7 @@ describe('CommandesService', () => {
     prismaMock.stripeWebhookEvent.create.mockResolvedValue({ id: 1 })
     prismaMock.stripeWebhookEvent.findUnique.mockResolvedValue(null)
     prismaMock.stripeWebhookEvent.updateMany.mockResolvedValue({ count: 1 })
+    prismaMock.$queryRaw.mockResolvedValue([])
 
     mouvementsStockServiceMock.recordArticleMovement.mockResolvedValue({
       id: 1,
@@ -297,6 +314,7 @@ describe('CommandesService', () => {
       id: 'cs_test_123',
       url: 'https://checkout.stripe.com/pay/cs_test_123',
     })
+    mockStripeCheckoutSessionsExpire.mockResolvedValue({ id: 'cs_test_123' })
 
     mockStripeConstructEvent.mockReturnValue({
       id: 'evt_unhandled',
@@ -1466,6 +1484,7 @@ describe('CommandesService', () => {
       where: { id: 47 },
       data: { stripeId: 'cs_test_123' },
     })
+    expect(mockStripeCheckoutSessionsExpire).toHaveBeenCalledWith('cs_test_123')
     expect(prismaMock.commande.update).toHaveBeenNthCalledWith(2, {
       where: { id: 47 },
       data: { statut: 'annulee' },
@@ -1497,6 +1516,73 @@ describe('CommandesService', () => {
       },
     })
     expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
+  })
+
+  it('createCheckout should record reconciliation when unpersisted Stripe session expiration fails', async () => {
+    const articles: ArticleMock[] = [
+      {
+        id: 1,
+        nom: 'Baguette',
+        prixCents: 200,
+        stock: 10,
+        online: true,
+      },
+    ]
+
+    prismaMock.article.findMany.mockResolvedValue(articles)
+    prismaMock.commande.create.mockResolvedValue({
+      id: 48,
+      statut: 'paiement_en_attente',
+      totalTtcCents: 400,
+      lignes: [],
+    })
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue({
+      id: 48,
+      statut: 'paiement_en_attente',
+      lignes: [
+        {
+          articleId: 1,
+          quantite: 2,
+          article: {
+            stock: 8,
+          },
+        },
+      ],
+    })
+    prismaMock.article.update
+      .mockResolvedValueOnce({
+        id: 1,
+        stock: 8,
+      })
+      .mockResolvedValueOnce({
+        id: 1,
+        stock: 10,
+      })
+    prismaMock.commande.update
+      .mockRejectedValueOnce(new Error('Database unavailable'))
+      .mockResolvedValueOnce({
+        id: 48,
+        statut: 'annulee',
+      })
+    mockStripeCheckoutSessionsExpire.mockRejectedValueOnce(
+      new Error('Stripe timeout'),
+    )
+
+    await expect(service.createCheckout(baseDto())).rejects.toBeInstanceOf(
+      BadRequestException,
+    )
+
+    expect(mockStripeCheckoutSessionsExpire).toHaveBeenCalledWith('cs_test_123')
+    expect(
+      transactionClient.$queryRaw.mock.calls.some((call) =>
+        call.includes('expire_checkout_session'),
+      ),
+    ).toBe(true)
+    expect(
+      transactionClient.$queryRaw.mock.calls.some((call) =>
+        call.includes('Stripe timeout'),
+      ),
+    ).toBe(true)
   })
 
   it('handleStripeWebhook should reject invalid webhook input', async () => {
@@ -1586,6 +1672,7 @@ describe('CommandesService', () => {
       id: 55,
       statut: 'paiement_en_attente',
       stripeId: 'cs_paid',
+      totalTtcCents: 1250,
       lignes: [
         {
           articleId: 1,
@@ -1608,13 +1695,13 @@ describe('CommandesService', () => {
       id: 'evt_paid',
       type: 'checkout.session.completed',
       data: {
-        object: {
-          id: 'cs_paid',
-        },
+        object: checkoutSessionWebhookObject('cs_paid'),
       },
     })
 
-    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: commande.id, stripeId: commande.stripeId },
+    ])
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
     prismaMock.commande.update.mockResolvedValue(updatedCommande)
 
@@ -1640,9 +1727,11 @@ describe('CommandesService', () => {
       },
     })
 
-    expect(prismaMock.commande.findFirst).toHaveBeenCalledWith({
-      where: { stripeId: 'cs_paid' },
-      select: { id: true },
+    expect(prismaMock.commande.findMany).toHaveBeenCalledWith({
+      where: {
+        OR: [{ stripeId: 'cs_paid' }],
+      },
+      select: { id: true, stripeId: true },
     })
 
     expect(prismaMock.article.update).not.toHaveBeenCalled()
@@ -1656,7 +1745,7 @@ describe('CommandesService', () => {
     expect(transactionClient.$queryRaw).toHaveBeenCalled()
     expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 55 },
-      data: { statut: 'nouvelle' },
+      data: { statut: 'nouvelle', stripeId: 'cs_paid' },
       include: {
         lignes: {
           include: {
@@ -1692,24 +1781,151 @@ describe('CommandesService', () => {
     })
   })
 
+  it.each([
+    [
+      'unpaid payment_status',
+      checkoutSessionWebhookObject('cs_invalid_payment', {
+        payment_status: 'unpaid',
+      }),
+      'review_checkout_payment_mismatch',
+    ],
+    [
+      'unexpected amount',
+      checkoutSessionWebhookObject('cs_invalid_payment', {
+        amount_total: 1249,
+      }),
+      'review_checkout_payment_mismatch',
+    ],
+    [
+      'unexpected currency',
+      checkoutSessionWebhookObject('cs_invalid_payment', {
+        currency: 'usd',
+      }),
+      'review_checkout_payment_mismatch',
+    ],
+    [
+      'invalid metadata order id',
+      checkoutSessionWebhookObject('cs_invalid_payment', {
+        metadata: {
+          commandeId: 'not-a-number',
+        },
+      }),
+      'review_checkout_attachment_conflict',
+    ],
+  ])(
+    'handleStripeWebhook should not confirm when checkout session has %s',
+    async (_label, sessionObject, expectedOperation) => {
+      const commande: CommandeMock = {
+        id: 61,
+        statut: 'paiement_en_attente',
+        stripeId: 'cs_invalid_payment',
+        totalTtcCents: 1250,
+        lignes: [],
+      }
+
+      mockStripeConstructEvent.mockReturnValue({
+        id: 'evt_invalid_payment',
+        type: 'checkout.session.completed',
+        data: {
+          object: sessionObject,
+        },
+      })
+
+      prismaMock.commande.findMany.mockResolvedValue([
+        { id: commande.id, stripeId: commande.stripeId },
+      ])
+      prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
+
+      await expect(
+        service.handleStripeWebhook(Buffer.from('{}'), 'stripe-signature'),
+      ).resolves.toEqual({ received: true })
+
+      expect(prismaMock.commande.update).not.toHaveBeenCalled()
+      expect(prismaMock.commandeStatutHistorique.create).not.toHaveBeenCalled()
+      expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
+      expect(
+        transactionClient.$queryRaw.mock.calls.some((call) =>
+          call.includes(expectedOperation),
+        ),
+      ).toBe(true)
+    },
+  )
+
+  it('handleStripeWebhook should not confirm when Stripe attachments point to different orders', async () => {
+    mockStripeConstructEvent.mockReturnValue({
+      id: 'evt_attachment_conflict',
+      type: 'checkout.session.completed',
+      data: {
+        object: checkoutSessionWebhookObject('cs_attachment_conflict', {
+          metadata: {
+            commandeId: '62',
+          },
+          client_reference_id: '63',
+        }),
+      },
+    })
+
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: 62, stripeId: 'cs_attachment_conflict' },
+      { id: 63, stripeId: null },
+    ])
+
+    await expect(
+      service.handleStripeWebhook(Buffer.from('{}'), 'stripe-signature'),
+    ).resolves.toEqual({ received: true })
+
+    expect(prismaMock.commande.findUniqueOrThrow).not.toHaveBeenCalled()
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(prismaMock.$queryRaw).toHaveBeenCalled()
+  })
+
+  it('handleStripeWebhook should not confirm an order in a final incompatible status', async () => {
+    mockStripeConstructEvent.mockReturnValue({
+      id: 'evt_final_status',
+      type: 'checkout.session.completed',
+      data: {
+        object: checkoutSessionWebhookObject('cs_final_status'),
+      },
+    })
+
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: 64, stripeId: 'cs_final_status' },
+    ])
+    prismaMock.commande.findUniqueOrThrow.mockResolvedValue({
+      id: 64,
+      statut: 'traitee',
+      stripeId: 'cs_final_status',
+      totalTtcCents: 1250,
+      lignes: [],
+    })
+
+    await expect(
+      service.handleStripeWebhook(Buffer.from('{}'), 'stripe-signature'),
+    ).resolves.toEqual({ received: true })
+
+    expect(prismaMock.commande.update).not.toHaveBeenCalled()
+    expect(prismaMock.commandeStatutHistorique.create).not.toHaveBeenCalled()
+    expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
+    expect(transactionClient.$queryRaw).toHaveBeenCalled()
+  })
+
   it('handleStripeWebhook should not confirm an order already cancelled by abandoned cleanup', async () => {
     mockStripeConstructEvent.mockReturnValue({
       id: 'evt_paid_after_cleanup',
       type: 'checkout.session.completed',
       data: {
-        object: {
-          id: 'cs_cancelled',
-        },
+        object: checkoutSessionWebhookObject('cs_cancelled'),
       },
     })
 
-    prismaMock.commande.findFirst.mockResolvedValue({
-      id: 56,
-    })
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: 56, stripeId: 'cs_cancelled' },
+    ])
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue({
       id: 56,
       statut: 'annulee',
       stripeId: 'cs_cancelled',
+      totalTtcCents: 1250,
       lignes: [],
     })
 
@@ -1719,6 +1935,7 @@ describe('CommandesService', () => {
 
     expect(prismaMock.commande.updateMany).not.toHaveBeenCalled()
     expect(prismaMock.commandeStatutHistorique.create).not.toHaveBeenCalled()
+    expect(transactionClient.$queryRaw).toHaveBeenCalled()
     expect(emailsServiceMock.sendOrderConfirmation).not.toHaveBeenCalled()
     expect(prismaMock.stripeWebhookEvent.updateMany).toHaveBeenCalledWith({
       where: {
@@ -1739,6 +1956,7 @@ describe('CommandesService', () => {
       id: 56,
       statut: 'paiement_en_attente',
       stripeId: 'cs_paid_email',
+      totalTtcCents: 1250,
       lignes: [],
     }
     const updatedCommande = {
@@ -1750,13 +1968,13 @@ describe('CommandesService', () => {
       id: 'evt_paid_email',
       type: 'checkout.session.completed',
       data: {
-        object: {
-          id: 'cs_paid_email',
-        },
+        object: checkoutSessionWebhookObject('cs_paid_email'),
       },
     })
 
-    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: commande.id, stripeId: commande.stripeId },
+    ])
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
     prismaMock.commande.update.mockResolvedValue(updatedCommande)
     emailsServiceMock.sendOrderConfirmation.mockRejectedValueOnce(
@@ -1769,7 +1987,7 @@ describe('CommandesService', () => {
 
     expect(prismaMock.commande.update).toHaveBeenCalledWith({
       where: { id: 56 },
-      data: { statut: 'nouvelle' },
+      data: { statut: 'nouvelle', stripeId: 'cs_paid_email' },
       include: {
         lignes: {
           include: {
@@ -1799,19 +2017,18 @@ describe('CommandesService', () => {
       id: 'evt_business_failure',
       type: 'checkout.session.completed',
       data: {
-        object: {
-          id: 'cs_business_failure',
-        },
+        object: checkoutSessionWebhookObject('cs_business_failure'),
       },
     })
 
-    prismaMock.commande.findFirst.mockResolvedValue({
-      id: 57,
-    })
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: 57, stripeId: 'cs_business_failure' },
+    ])
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue({
       id: 57,
       statut: 'paiement_en_attente',
       stripeId: 'cs_business_failure',
+      totalTtcCents: 1250,
       lignes: [],
     })
     prismaMock.commande.update.mockRejectedValueOnce(databaseError)
@@ -1841,6 +2058,7 @@ describe('CommandesService', () => {
       id: 58,
       statut: 'paiement_en_attente',
       stripeId: 'cs_retry',
+      totalTtcCents: 1250,
       lignes: [],
     }
     const updatedCommande = {
@@ -1852,9 +2070,7 @@ describe('CommandesService', () => {
       id: 'evt_retry',
       type: 'checkout.session.completed',
       data: {
-        object: {
-          id: 'cs_retry',
-        },
+        object: checkoutSessionWebhookObject('cs_retry'),
       },
     })
 
@@ -1870,7 +2086,9 @@ describe('CommandesService', () => {
       processingStartedAt: failedAt,
       processedAt: null,
     })
-    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: commande.id, stripeId: commande.stripeId },
+    ])
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
     prismaMock.commande.update.mockResolvedValue(updatedCommande)
 
@@ -1929,6 +2147,7 @@ describe('CommandesService', () => {
       id: 59,
       statut: 'paiement_en_attente',
       stripeId: 'cs_concurrent',
+      totalTtcCents: 1250,
       lignes: [],
     }
     const updatedCommande = {
@@ -1940,9 +2159,7 @@ describe('CommandesService', () => {
       id: 'evt_concurrent',
       type: 'checkout.session.completed',
       data: {
-        object: {
-          id: 'cs_concurrent',
-        },
+        object: checkoutSessionWebhookObject('cs_concurrent'),
       },
     })
 
@@ -1961,8 +2178,10 @@ describe('CommandesService', () => {
     prismaMock.stripeWebhookEvent.updateMany
       .mockResolvedValueOnce({ count: 0 })
       .mockResolvedValueOnce({ count: 1 })
-    prismaMock.commande.findFirst.mockReturnValueOnce(
-      businessLookup.then((commande) => ({ id: commande.id })),
+    prismaMock.commande.findMany.mockReturnValueOnce(
+      businessLookup.then((commande) => [
+        { id: commande.id, stripeId: commande.stripeId },
+      ]),
     )
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
     prismaMock.commande.update.mockResolvedValue(updatedCommande)
@@ -2025,6 +2244,7 @@ describe('CommandesService', () => {
       id: 60,
       statut: 'paiement_en_attente',
       stripeId: 'cs_stale',
+      totalTtcCents: 1250,
       lignes: [],
     }
     const updatedCommande = {
@@ -2036,9 +2256,7 @@ describe('CommandesService', () => {
       id: 'evt_stale',
       type: 'checkout.session.completed',
       data: {
-        object: {
-          id: 'cs_stale',
-        },
+        object: checkoutSessionWebhookObject('cs_stale'),
       },
     })
 
@@ -2054,7 +2272,9 @@ describe('CommandesService', () => {
       processingStartedAt: new Date('2026-06-10T10:00:00.000Z'),
       processedAt: null,
     })
-    prismaMock.commande.findFirst.mockResolvedValue({ id: commande.id })
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: commande.id, stripeId: commande.stripeId },
+    ])
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue(commande)
     prismaMock.commande.update.mockResolvedValue(updatedCommande)
 
@@ -2136,7 +2356,9 @@ describe('CommandesService', () => {
       },
     })
 
-    prismaMock.commande.findMany.mockResolvedValue([{ id: 77 }])
+    prismaMock.commande.findMany.mockResolvedValue([
+      { id: 77, stripeId: 'cs_expired' },
+    ])
     prismaMock.commande.findUniqueOrThrow.mockResolvedValue(pendingCommande)
     prismaMock.mouvementStock.findFirst.mockResolvedValueOnce({ id: 1 })
     prismaMock.article.update.mockResolvedValue({
@@ -2150,11 +2372,11 @@ describe('CommandesService', () => {
 
     expect(prismaMock.commande.findMany).toHaveBeenCalledWith({
       where: {
-        stripeId: 'cs_expired',
-        statut: 'paiement_en_attente',
+        OR: [{ stripeId: 'cs_expired' }],
       },
       select: {
         id: true,
+        stripeId: true,
       },
     })
 
