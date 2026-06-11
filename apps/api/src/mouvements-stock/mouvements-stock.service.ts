@@ -57,7 +57,7 @@ export class MouvementsStockService {
         article: true,
         mp: true,
       },
-      orderBy: [{ expiresAt: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ expiresAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     })
   }
 
@@ -344,6 +344,8 @@ export class MouvementsStockService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await this.lockArticle(tx, data.articleId)
+
       const article = await tx.article.findUniqueOrThrow({
         where: { id: data.articleId },
       })
@@ -401,6 +403,8 @@ export class MouvementsStockService {
     createdByUserId?: string
   }) {
     return this.prisma.$transaction(async (tx) => {
+      await this.lockMatierePremiere(tx, data.mpId)
+
       const matiere = await tx.matierePremiere.findUniqueOrThrow({
         where: { id: data.mpId },
       })
@@ -492,57 +496,79 @@ export class MouvementsStockService {
     quantity: number,
   ) {
     let remainingToConsume = quantity
-    const lots = (await tx.stockLot.findMany({
-      where: {
-        target,
-        articleId: target === 'article' ? targetId : undefined,
-        mpId: target === 'matiere_premiere' ? targetId : undefined,
-        remainingQuantity: {
-          gt: 0,
-        },
-      },
-      select: {
-        id: true,
-        remainingQuantity: true,
-        expiresAt: true,
-        createdAt: true,
-      },
-    })) as StockLotRecord[]
+    const lots = await this.lockConsumableLots(tx, target, targetId)
 
-    const sortedLots = lots.sort((a, b) => {
-      if (this.isExpired(a.expiresAt) && this.isExpired(b.expiresAt)) {
-        return a.createdAt.getTime() - b.createdAt.getTime()
-      }
-
-      if (this.isExpired(a.expiresAt)) return 1
-      if (this.isExpired(b.expiresAt)) return -1
-
-      if (a.expiresAt && b.expiresAt) {
-        return a.expiresAt.getTime() - b.expiresAt.getTime()
-      }
-
-      if (a.expiresAt) return -1
-      if (b.expiresAt) return 1
-
-      return a.createdAt.getTime() - b.createdAt.getTime()
-    })
-
-    for (const lot of sortedLots) {
+    for (const lot of lots) {
       if (remainingToConsume <= 0) return
-      if (this.isExpired(lot.expiresAt)) continue
 
       const consumed = Math.min(lot.remainingQuantity, remainingToConsume)
 
-      await tx.stockLot.update({
-        where: { id: lot.id },
+      const updated = await tx.stockLot.updateMany({
+        where: {
+          id: lot.id,
+          remainingQuantity: {
+            gte: consumed,
+          },
+        },
         data: {
-          remainingQuantity: lot.remainingQuantity - consumed,
+          remainingQuantity: {
+            decrement: consumed,
+          },
         },
       })
+
+      if (updated.count !== 1) {
+        throw new BadRequestException(
+          'Le lot de stock a changé pendant la consommation',
+        )
+      }
 
       remainingToConsume -= consumed
     }
   }
+
+  private async lockConsumableLots(
+    tx: MouvementStockTransaction,
+    target: StockLotTarget,
+    targetId: number,
+  ) {
+    const today = this.startOfToday()
+
+    // Keep one deterministic FEFO lock order across consumers to avoid
+    // double consumption and reduce deadlock risk between API instances.
+    if (target === 'article') {
+      return tx.$queryRaw<StockLotRecord[]>`
+        SELECT "id", "remainingQuantity", "expiresAt", "createdAt"
+        FROM "StockLot"
+        WHERE "target" = 'article'
+          AND "articleId" = ${targetId}
+          AND "remainingQuantity" > 0
+          AND ("expiresAt" IS NULL OR "expiresAt" >= ${today})
+        ORDER BY
+          CASE WHEN "expiresAt" IS NULL THEN 1 ELSE 0 END ASC,
+          "expiresAt" ASC NULLS LAST,
+          "createdAt" ASC,
+          "id" ASC
+        FOR UPDATE
+      `
+    }
+
+    return tx.$queryRaw<StockLotRecord[]>`
+      SELECT "id", "remainingQuantity", "expiresAt", "createdAt"
+      FROM "StockLot"
+      WHERE "target" = 'matiere_premiere'
+        AND "mpId" = ${targetId}
+        AND "remainingQuantity" > 0
+        AND ("expiresAt" IS NULL OR "expiresAt" >= ${today})
+      ORDER BY
+        CASE WHEN "expiresAt" IS NULL THEN 1 ELSE 0 END ASC,
+        "expiresAt" ASC NULLS LAST,
+        "createdAt" ASC,
+        "id" ASC
+      FOR UPDATE
+    `
+  }
+
   private async lockLotAndTarget(tx: MouvementStockTransaction, lotId: number) {
     const lot = await tx.stockLot.findUniqueOrThrow({
       where: { id: lotId },
@@ -558,23 +584,13 @@ export class MouvementsStockService {
         throw new BadRequestException('Lot article invalide')
       }
 
-      await tx.$queryRaw`
-        SELECT "id"
-        FROM "Article"
-        WHERE "id" = ${lot.articleId}
-        FOR UPDATE
-      `
+      await this.lockArticle(tx, lot.articleId)
     } else if (lot.target === 'matiere_premiere') {
       if (lot.mpId === null) {
         throw new BadRequestException('Lot matière première invalide')
       }
 
-      await tx.$queryRaw`
-        SELECT "id"
-        FROM "MatierePremiere"
-        WHERE "id" = ${lot.mpId}
-        FOR UPDATE
-      `
+      await this.lockMatierePremiere(tx, lot.mpId)
     } else {
       throw new BadRequestException('Type de lot invalide')
     }
@@ -587,6 +603,27 @@ export class MouvementsStockService {
     `
 
     return lot
+  }
+
+  private async lockArticle(tx: MouvementStockTransaction, articleId: number) {
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "Article"
+      WHERE "id" = ${articleId}
+      FOR UPDATE
+    `
+  }
+
+  private async lockMatierePremiere(
+    tx: MouvementStockTransaction,
+    mpId: number,
+  ) {
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "MatierePremiere"
+      WHERE "id" = ${mpId}
+      FOR UPDATE
+    `
   }
 
   private assertStrictlyPositiveLossQuantity(quantity: number) {

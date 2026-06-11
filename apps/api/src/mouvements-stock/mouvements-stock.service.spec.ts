@@ -20,6 +20,7 @@ describe('MouvementsStockService', () => {
       findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
   }
 
@@ -39,7 +40,9 @@ describe('MouvementsStockService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    tx.$queryRaw.mockResolvedValue([])
     tx.stockLot.findMany.mockResolvedValue([])
+    tx.stockLot.updateMany.mockResolvedValue({ count: 1 })
     service = new MouvementsStockService(prismaMock as never)
   })
 
@@ -74,7 +77,7 @@ describe('MouvementsStockService', () => {
         article: true,
         mp: true,
       },
-      orderBy: [{ expiresAt: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ expiresAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     })
   })
 
@@ -307,7 +310,74 @@ describe('MouvementsStockService', () => {
       'Un mouvement de perte doit avoir un delta négatif et ne peut pas augmenter le stock',
     )
 
-    expect(tx.stockLot.findMany).not.toHaveBeenCalled()
+    expect(tx.$queryRaw).not.toHaveBeenCalled()
+    expect(tx.mouvementStock.create).not.toHaveBeenCalled()
+  })
+
+  it('recordArticleMovement should lock consumable lots and decrement them conditionally', async () => {
+    const expiresAt = new Date('2026-06-20T00:00:00.000Z')
+    const createdAt = new Date('2026-06-01T00:00:00.000Z')
+
+    tx.$queryRaw.mockResolvedValueOnce([
+      {
+        id: 7,
+        remainingQuantity: 3,
+        expiresAt,
+        createdAt,
+      },
+    ])
+
+    tx.mouvementStock.create.mockResolvedValue({
+      id: 1,
+      type: 'ajustement',
+    })
+
+    await service.recordArticleMovement(tx as never, {
+      articleId: 1,
+      quantite: -2,
+      stockAvant: 5,
+      stockApres: 3,
+      type: 'ajustement',
+      motif: 'Sortie',
+    })
+
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1)
+    expect(tx.stockLot.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 7,
+        remainingQuantity: {
+          gte: 2,
+        },
+      },
+      data: {
+        remainingQuantity: {
+          decrement: 2,
+        },
+      },
+    })
+  })
+
+  it('recordArticleMovement should reject when a locked lot cannot be decremented', async () => {
+    tx.$queryRaw.mockResolvedValueOnce([
+      {
+        id: 7,
+        remainingQuantity: 2,
+        expiresAt: new Date('2026-06-20T00:00:00.000Z'),
+        createdAt: new Date('2026-06-01T00:00:00.000Z'),
+      },
+    ])
+    tx.stockLot.updateMany.mockResolvedValueOnce({ count: 0 })
+
+    await expect(
+      service.recordArticleMovement(tx as never, {
+        articleId: 1,
+        quantite: -2,
+        stockAvant: 5,
+        stockApres: 3,
+        type: 'ajustement',
+      }),
+    ).rejects.toThrow('Le lot de stock a changé pendant la consommation')
+
     expect(tx.mouvementStock.create).not.toHaveBeenCalled()
   })
 })
