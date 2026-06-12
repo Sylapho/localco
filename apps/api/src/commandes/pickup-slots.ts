@@ -1,6 +1,18 @@
 import { BadRequestException } from '@nestjs/common'
 
-export const pickupPoints = [
+const AUTHEUIL_AUTHOUILLET_AMAP_ANCHOR_DATE = '2026-06-18'
+const HOULBEC_COCHEREL_AMAP_ANCHOR_DATE = '2026-06-25'
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+const AMAP_ALTERNATION_DAYS = 14
+
+export type PickupPoint = {
+  label: string
+  schedule: string
+  allowedWeekdays: readonly number[]
+  alternatingWeekAnchorDate?: string
+}
+
+export const pickupPoints: readonly PickupPoint[] = [
   {
     label: 'Marché de Gaillon',
     schedule: 'Mardi matin, 8h-12h',
@@ -30,15 +42,15 @@ export const pickupPoints = [
     label: "AMAP d'Houlbec-Cocherel",
     schedule: 'Jeudi, tous les 15 jours',
     allowedWeekdays: [4],
+    alternatingWeekAnchorDate: HOULBEC_COCHEREL_AMAP_ANCHOR_DATE,
   },
   {
     label: 'AMAP Autheuil-Authouillet',
     schedule: 'Jeudi, tous les 15 jours',
     allowedWeekdays: [4],
+    alternatingWeekAnchorDate: AUTHEUIL_AUTHOUILLET_AMAP_ANCHOR_DATE,
   },
 ] as const
-
-export type PickupPoint = (typeof pickupPoints)[number]
 
 export function formatPickupPoint(point: PickupPoint) {
   return `${point.label} - ${point.schedule}`
@@ -79,13 +91,33 @@ export function validatePickupSlot(lieu: string, dateRetrait?: string) {
     throw new BadRequestException('La date de retrait ne peut pas être passée')
   }
 
-  const allowedWeekdays: readonly number[] = pickupPoint.allowedWeekdays
-
-  if (!allowedWeekdays.includes(pickupDate.getDay())) {
+  if (!isPickupDateAllowed(pickupPoint, pickupDate)) {
     throw new BadRequestException(
       'La date de retrait ne correspond pas au lieu choisi',
     )
   }
+}
+
+export function isPickupDateAllowed(point: PickupPoint, date: Date) {
+  if (!point.allowedWeekdays.includes(date.getDay())) {
+    return false
+  }
+
+  if (!point.alternatingWeekAnchorDate) {
+    return true
+  }
+
+  const anchorDate = parsePickupDate(point.alternatingWeekAnchorDate)
+
+  if (!anchorDate) {
+    return false
+  }
+
+  return (
+    (getUtcDayNumber(date) - getUtcDayNumber(anchorDate)) %
+      AMAP_ALTERNATION_DAYS ===
+    0
+  )
 }
 
 function parsePickupDate(value: string) {
@@ -111,4 +143,10 @@ function parsePickupDate(value: string) {
   }
 
   return date
+}
+
+function getUtcDayNumber(date: Date) {
+  return Math.floor(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / MS_PER_DAY,
+  )
 }

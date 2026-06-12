@@ -48,6 +48,7 @@ export type PickupPoint = {
   label: string
   schedule: string
   allowedWeekdays: number[]
+  alternatingWeekAnchorDate?: string
   value: string
 }
 

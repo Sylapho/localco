@@ -130,7 +130,7 @@ export default function CheckoutClient({
       setError({
         title: 'Point de retrait indisponible',
         message:
-          'Aucun point de retrait ne peut Ãªtre proposÃ© pour le moment. RÃ©essayez plus tard.',
+          'Aucun point de retrait ne peut être proposé pour le moment. Réessayez plus tard.',
       })
       return
     }

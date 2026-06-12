@@ -2,8 +2,12 @@ export type PickupPoint = {
   label: string
   schedule: string
   allowedWeekdays: number[]
+  alternatingWeekAnchorDate?: string
   value: string
 }
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+const AMAP_ALTERNATION_DAYS = 14
 
 const weekdayLabels = [
   'dimanche',
@@ -27,6 +31,31 @@ function parseInputDate(value: string) {
   const [year, month, day] = value.split('-').map(Number)
 
   return new Date(year, month - 1, day)
+}
+
+function getUtcDayNumber(date: Date) {
+  return Math.floor(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) /
+      MS_PER_DAY,
+  )
+}
+
+function isPickupDateAllowed(point: PickupPoint, date: Date) {
+  if (!point.allowedWeekdays.includes(date.getDay())) {
+    return false
+  }
+
+  if (!point.alternatingWeekAnchorDate) {
+    return true
+  }
+
+  const anchorDate = parseInputDate(point.alternatingWeekAnchorDate)
+
+  return (
+    (getUtcDayNumber(date) - getUtcDayNumber(anchorDate)) %
+      AMAP_ALTERNATION_DAYS ===
+    0
+  )
 }
 
 export function formatPickupPoint(point: PickupPoint) {
@@ -56,7 +85,7 @@ export function getNextPickupDates(point: PickupPoint, count = 8) {
   cursor.setHours(0, 0, 0, 0)
 
   while (dates.length < count) {
-    if (point.allowedWeekdays.includes(cursor.getDay())) {
+    if (isPickupDateAllowed(point, cursor)) {
       dates.push(formatInputDate(cursor))
     }
 
