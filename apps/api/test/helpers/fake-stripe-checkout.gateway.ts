@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import {
+  CheckoutSessionStateResult,
   ExpireCheckoutSessionError,
   ExpireCheckoutSessionResult,
   StripeCheckoutGateway,
@@ -15,6 +16,7 @@ export class FakeStripeCheckoutGateway {
     options?: Parameters<StripeCheckoutGateway['createCheckoutSession']>[1]
   }[] = []
   readonly expiredSessions: string[] = []
+  readonly retrievedSessions: string[] = []
   private nextSession: CheckoutSession = {
     id: 'cs_test_e2e_success',
     object: 'checkout.session',
@@ -23,13 +25,24 @@ export class FakeStripeCheckoutGateway {
   private nextError: Error | null = null
   private nextExpirationError: Error | null = null
   private nextExpirationResult: ExpireCheckoutSessionResult | null = null
+  private nextRetrieveResult: CheckoutSessionStateResult | null = null
+  private nextExpirationBarrier: {
+    started: Promise<void>
+    released: Promise<ExpireCheckoutSessionResult>
+    release: (result: ExpireCheckoutSessionResult) => void
+  } | null = null
+  private resolveNextExpirationStarted: (() => void) | null = null
 
   reset() {
     this.createdSessions.length = 0
     this.expiredSessions.length = 0
+    this.retrievedSessions.length = 0
     this.nextError = null
     this.nextExpirationError = null
     this.nextExpirationResult = null
+    this.nextRetrieveResult = null
+    this.nextExpirationBarrier = null
+    this.resolveNextExpirationStarted = null
     this.nextSession = {
       id: 'cs_test_e2e_success',
       object: 'checkout.session',
@@ -59,6 +72,38 @@ export class FakeStripeCheckoutGateway {
     this.nextExpirationResult = result
   }
 
+  setNextRetrieveResult(result: CheckoutSessionStateResult) {
+    this.nextRetrieveResult = result
+  }
+
+  pauseNextExpiration() {
+    let resolveStarted: () => void = () => {}
+    let release: (result: ExpireCheckoutSessionResult) => void = () => {}
+    const started = new Promise<void>((resolve) => {
+      resolveStarted = resolve
+    })
+    const released = new Promise<ExpireCheckoutSessionResult>((resolve) => {
+      release = resolve
+    })
+
+    this.resolveNextExpirationStarted = resolveStarted
+    this.nextExpirationBarrier = {
+      started,
+      released,
+      release: (result) => {
+        release(result)
+        this.nextExpirationResult = null
+      },
+    }
+
+    return {
+      started,
+      release: (result: ExpireCheckoutSessionResult) => {
+        this.nextExpirationBarrier?.release(result)
+      },
+    }
+  }
+
   createCheckoutSession(
     params: Parameters<StripeCheckoutGateway['createCheckoutSession']>[0],
     options?: Parameters<StripeCheckoutGateway['createCheckoutSession']>[1],
@@ -74,25 +119,50 @@ export class FakeStripeCheckoutGateway {
     return Promise.resolve(this.nextSession)
   }
 
-  expireCheckoutSession(sessionId: string) {
+  retrieveCheckoutSession(sessionId: string) {
+    this.retrievedSessions.push(sessionId)
+
+    if (this.nextRetrieveResult) {
+      const result = this.nextRetrieveResult
+      this.nextRetrieveResult = null
+      return Promise.resolve(result)
+    }
+
+    return Promise.resolve({
+      status: 'open_unpaid',
+    } satisfies CheckoutSessionStateResult)
+  }
+
+  async expireCheckoutSession(sessionId: string) {
     this.expiredSessions.push(sessionId)
+    this.resolveNextExpirationStarted?.()
+    this.resolveNextExpirationStarted = null
+
+    if (this.nextExpirationBarrier) {
+      const barrier = this.nextExpirationBarrier
+      this.nextExpirationBarrier = null
+      return barrier.released
+    }
 
     if (this.nextExpirationError) {
       const error = this.nextExpirationError
       this.nextExpirationError = null
-      return Promise.reject(error)
+      return {
+        status: 'failed',
+        retryable: true,
+        reason: error.message,
+      } satisfies ExpireCheckoutSessionResult
     }
 
     if (this.nextExpirationResult) {
       const result = this.nextExpirationResult
       this.nextExpirationResult = null
-      return Promise.resolve(result)
+      return result
     }
 
-    return Promise.resolve({
-      expired: true,
-      alreadyFinal: false,
-    } satisfies ExpireCheckoutSessionResult)
+    return {
+      status: 'expired',
+    } satisfies ExpireCheckoutSessionResult
   }
 
   constructWebhookEvent(

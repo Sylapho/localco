@@ -3,9 +3,9 @@
 ## Objectif
 
 Les commandes creees par Stripe Checkout passent en `paiement_en_attente` et
-reservent du stock. Si le client ne finalise pas le paiement et que Stripe ne
-confirme pas la session, la reservation doit etre liberee pour ne pas bloquer le
-stock disponible.
+reservent du stock. Si le client ne finalise pas le paiement et que la session
+Stripe est expiree ou expiree par le nettoyage, la reservation peut etre liberee
+pour ne pas bloquer le stock disponible.
 
 Ce nettoyage est separe des lectures du back-office : consulter les commandes ne
 modifie plus le stock ni les statuts.
@@ -17,9 +17,22 @@ ABANDONED_ORDER_DELAY_MINUTES=60
 ```
 
 Cette valeur indique apres combien de minutes une commande
-`paiement_en_attente` sans confirmation Stripe peut etre annulee
-automatiquement. La valeur par defaut est `60`. Une valeur absente, nulle,
-negative ou non numerique retombe sur ce defaut.
+`paiement_en_attente` devient candidate au nettoyage. La valeur par defaut est
+`60`. Une valeur absente, nulle, negative ou non numerique retombe sur ce
+defaut.
+
+Ce delai local ne represente pas une duree de vie garantie de Stripe Checkout.
+Il sert uniquement a selectionner les commandes a verifier. Avant toute
+annulation locale, le nettoyage relit la commande sous verrou PostgreSQL, utilise
+le `stripeId` relu, puis verifie ou expire la session Stripe. Le stock n'est
+libere qu'apres confirmation que la session est neutralisee (`expired` ou deja
+expiree).
+
+Si Stripe indique que la session est deja payee, introuvable, ou si l'appel
+Stripe echoue avec un etat indetermine, la commande n'est pas annulee et le
+stock reste reserve. Une entree durable de reconciliation
+`StripeCheckoutReconciliation` est creee ou mise a jour afin d'eviter les
+doublons entre executions successives.
 
 Le delai metier et la frequence du scheduler sont distincts. Exemple courant :
 
@@ -77,11 +90,15 @@ une plateforme multi-instance, cela multiplierait les executions concurrentes.
 Le nettoyage est concu pour etre relance sans danger :
 
 - il selectionne les IDs potentiellement eligibles ;
-- chaque commande est traitee dans une transaction PostgreSQL separee ;
-- la ligne de commande est verrouillee avec `SELECT ... FOR UPDATE` ;
-- le statut et le delai sont relus apres obtention du verrou ;
+- chaque commande est d'abord relue dans une transaction courte avec
+  `SELECT ... FOR UPDATE` ;
+- le statut, le delai et le `stripeId` sont relus apres obtention du verrou ;
+- l'appel Stripe est effectue hors transaction longue ;
+- une seconde transaction verrouille la commande et revalide son statut, son
+  delai et son `stripeId` avant l'annulation locale ;
 - une reservation deja liberee est ignoree ;
-- une commande confirmee par Stripe entre la selection et le verrou est ignoree.
+- une commande confirmee par Stripe entre la selection, l'appel Stripe et le
+  verrou final est ignoree.
 
 Ainsi, deux schedulers ou un scheduler et l'endpoint manuel peuvent se chevaucher
 sans liberer deux fois le stock.
@@ -106,4 +123,6 @@ Pour verifier un run :
 2. verifier l'historique des commandes annulees avec le motif
    `commande_abandonnee` ;
 3. verifier les mouvements de stock `commande:{id}:reservation:release` ;
-4. surveiller les echecs sans exposer de donnees personnelles dans les logs.
+4. verifier les reconciliations Stripe actives pour les sessions payees,
+   introuvables ou en erreur ;
+5. surveiller les echecs sans exposer de donnees personnelles dans les logs.

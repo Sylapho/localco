@@ -376,7 +376,7 @@ Le stockage actuel est en memoire et reste adapte au local ou a une instance API
 
 ## Nettoyage des commandes abandonnées
 
-Les commandes `paiement_en_attente` trop anciennes peuvent être annulées par une commande planifiable externe. Le délai est configuré avec `ABANDONED_ORDER_DELAY_MINUTES` et vaut `60` minutes par défaut.
+Les commandes `paiement_en_attente` trop anciennes deviennent candidates à une commande planifiable externe. Le délai est configuré avec `ABANDONED_ORDER_DELAY_MINUTES` et vaut `60` minutes par défaut. Avant toute annulation locale, le nettoyage relit la commande sous verrou, vérifie ou expire la session Stripe Checkout, puis libère le stock uniquement si la session est neutralisée. Une session déjà payée, introuvable ou une erreur Stripe conserve la réservation et crée une réconciliation durable.
 
 La procédure, les scripts et les garanties d'idempotence multi-instance sont documentés dans `docs/ABANDONED_ORDERS_CLEANUP.md`.
 

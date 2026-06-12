@@ -14,6 +14,7 @@ import { RolesGuard } from '../auth/roles.guard'
 import { StripeCheckoutGateway } from './stripe-checkout.gateway'
 
 const mockStripeCheckoutSessionsCreate = jest.fn()
+const mockStripeCheckoutSessionsRetrieve = jest.fn()
 const mockStripeCheckoutSessionsExpire = jest.fn()
 const mockStripeConstructEvent = jest.fn()
 
@@ -22,6 +23,7 @@ jest.mock('stripe', () => {
     checkout: {
       sessions: {
         create: mockStripeCheckoutSessionsCreate,
+        retrieve: mockStripeCheckoutSessionsRetrieve,
         expire: mockStripeCheckoutSessionsExpire,
       },
     },
@@ -220,6 +222,7 @@ describe('Commandes integration', () => {
       configServiceMock.get,
       emailsServiceMock.sendOrderConfirmation,
       mockStripeCheckoutSessionsCreate,
+      mockStripeCheckoutSessionsRetrieve,
       mockStripeCheckoutSessionsExpire,
       mockStripeConstructEvent,
     ].forEach((mock) => mock.mockReset())
@@ -270,7 +273,16 @@ describe('Commandes integration', () => {
       id: 'cs_test_123',
       url: 'https://checkout.stripe.com/pay/cs_test_123',
     })
-    mockStripeCheckoutSessionsExpire.mockResolvedValue({ id: 'cs_test_123' })
+    mockStripeCheckoutSessionsRetrieve.mockResolvedValue({
+      id: 'cs_test_123',
+      status: 'open',
+      payment_status: 'unpaid',
+    })
+    mockStripeCheckoutSessionsExpire.mockResolvedValue({
+      id: 'cs_test_123',
+      status: 'expired',
+      payment_status: 'unpaid',
+    })
 
     mockStripeConstructEvent.mockReturnValue({
       id: 'evt_unhandled',

@@ -16,6 +16,7 @@ import { CommandeStatut } from './dto/update-commande-statut.dto'
 import { StripeCheckoutGateway } from './stripe-checkout.gateway'
 
 const mockStripeCheckoutSessionsCreate = jest.fn()
+const mockStripeCheckoutSessionsRetrieve = jest.fn()
 const mockStripeCheckoutSessionsExpire = jest.fn()
 const mockStripeConstructEvent = jest.fn()
 
@@ -24,6 +25,7 @@ jest.mock('stripe', () => {
     checkout: {
       sessions: {
         create: mockStripeCheckoutSessionsCreate,
+        retrieve: mockStripeCheckoutSessionsRetrieve,
         expire: mockStripeCheckoutSessionsExpire,
       },
     },
@@ -263,6 +265,7 @@ describe('CommandesService', () => {
       configServiceMock.get,
       emailsServiceMock.sendOrderConfirmation,
       mockStripeCheckoutSessionsCreate,
+      mockStripeCheckoutSessionsRetrieve,
       mockStripeCheckoutSessionsExpire,
       mockStripeConstructEvent,
     ].forEach((mock) => mock.mockReset())
@@ -314,7 +317,16 @@ describe('CommandesService', () => {
       id: 'cs_test_123',
       url: 'https://checkout.stripe.com/pay/cs_test_123',
     })
-    mockStripeCheckoutSessionsExpire.mockResolvedValue({ id: 'cs_test_123' })
+    mockStripeCheckoutSessionsRetrieve.mockResolvedValue({
+      id: 'cs_test_123',
+      status: 'open',
+      payment_status: 'unpaid',
+    })
+    mockStripeCheckoutSessionsExpire.mockResolvedValue({
+      id: 'cs_test_123',
+      status: 'expired',
+      payment_status: 'unpaid',
+    })
 
     mockStripeConstructEvent.mockReturnValue({
       id: 'evt_unhandled',
@@ -2739,10 +2751,12 @@ describe('CommandesService', () => {
   const makePendingCleanupCommande = (data: {
     id: number
     statut?: string
+    stripeId?: string | null
     createdAt?: Date
   }) => ({
     id: data.id,
     statut: data.statut ?? 'paiement_en_attente',
+    stripeId: data.stripeId ?? `cs_cleanup_${data.id}`,
     createdAt: data.createdAt ?? new Date('2026-06-10T08:00:00.000Z'),
     lignes: [
       {
@@ -2950,6 +2964,8 @@ describe('CommandesService', () => {
     ])
     prismaMock.commande.findUniqueOrThrow
       .mockResolvedValueOnce(makePendingCleanupCommande({ id: 1 }))
+      .mockResolvedValueOnce(makePendingCleanupCommande({ id: 1 }))
+      .mockResolvedValueOnce(makePendingCleanupCommande({ id: 2 }))
       .mockResolvedValueOnce(makePendingCleanupCommande({ id: 2 }))
       .mockResolvedValueOnce(
         makePendingCleanupCommande({ id: 3, statut: 'nouvelle' }),
@@ -2988,7 +3004,7 @@ describe('CommandesService', () => {
         },
       },
     })
-    expect(prismaMock.$transaction).toHaveBeenCalledTimes(3)
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(5)
   })
 
   it('cleanupAbandonedCommandes should not double release stock when called twice for the same commande', async () => {
@@ -2996,6 +3012,7 @@ describe('CommandesService', () => {
       .mockResolvedValueOnce([{ id: 9 }])
       .mockResolvedValueOnce([{ id: 9 }])
     prismaMock.commande.findUniqueOrThrow
+      .mockResolvedValueOnce(makePendingCleanupCommande({ id: 9 }))
       .mockResolvedValueOnce(makePendingCleanupCommande({ id: 9 }))
       .mockResolvedValueOnce(
         makePendingCleanupCommande({ id: 9, statut: 'annulee' }),

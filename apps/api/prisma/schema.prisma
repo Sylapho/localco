@@ -223,9 +223,11 @@ model StripeWebhookEvent {
 
 enum StripeCheckoutReconciliationOperation {
   expire_checkout_session
+  review_paid_pending_checkout
   review_paid_cancelled_checkout
   review_checkout_payment_mismatch
   review_checkout_attachment_conflict
+  review_missing_checkout_session
 }
 
 enum StripeCheckoutReconciliationStatus {

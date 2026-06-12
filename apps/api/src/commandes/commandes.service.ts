@@ -18,7 +18,10 @@ import {
 import { CreateCommandeDto } from './dto/create-commande.dto'
 import { CommandeStatut } from './dto/update-commande-statut.dto'
 import { getPublicPickupPoints, validatePickupSlot } from './pickup-slots'
-import { StripeCheckoutGateway } from './stripe-checkout.gateway'
+import {
+  CheckoutSessionExpirationResult,
+  StripeCheckoutGateway,
+} from './stripe-checkout.gateway'
 
 type StockMovementTransaction = Parameters<
   MouvementsStockService['recordArticleMovement']
@@ -74,9 +77,11 @@ type StripeCheckoutSessionWebhookObject = {
 
 type StripeCheckoutReconciliationOperation =
   | 'expire_checkout_session'
+  | 'review_paid_pending_checkout'
   | 'review_paid_cancelled_checkout'
   | 'review_checkout_payment_mismatch'
   | 'review_checkout_attachment_conflict'
+  | 'review_missing_checkout_session'
 
 type CheckoutSessionCommandeCandidate = {
   id: number
@@ -106,6 +111,20 @@ type CleanupAbandonedCommandesResult = {
 
 type CleanupAbandonedCommandeStatus = 'cancelled' | 'skipped'
 
+type CleanupAbandonedCommandePreflight =
+  | {
+      eligible: true
+      stripeSessionId: string
+    }
+  | {
+      eligible: false
+      reconciliation?: {
+        stripeSessionId: string
+        operation: StripeCheckoutReconciliationOperation
+        lastError: string
+      }
+    }
+
 type ReleaseOrderReservationResult = {
   released: boolean
   alreadyReleased: boolean
@@ -124,6 +143,7 @@ type ReleaseOrderReservationOptions = {
   releasableStatuses: string[]
   idempotentStatuses?: string[]
   cutoff?: Date
+  requiredStripeSessionId?: string | null
   reconciliation?: {
     stripeSessionId: string
     operation: StripeCheckoutReconciliationOperation
@@ -645,14 +665,200 @@ export class CommandesService {
     commandeId: number,
     cutoff: Date,
   ): Promise<CleanupAbandonedCommandeStatus> {
+    const preflight = await this.prepareAbandonedCommandeCleanup(
+      commandeId,
+      cutoff,
+    )
+
+    if (!preflight.eligible) {
+      if (preflight.reconciliation) {
+        await this.recordStripeCheckoutCleanupReconciliation(commandeId, {
+          expectedStripeSessionId: null,
+          stripeSessionId: preflight.reconciliation.stripeSessionId,
+          operation: preflight.reconciliation.operation,
+          lastError: preflight.reconciliation.lastError,
+          attempts: 0,
+        })
+      }
+
+      return 'skipped'
+    }
+
+    const expirationResult =
+      await this.stripeCheckoutGateway.expireCheckoutSession(
+        preflight.stripeSessionId,
+      )
+
+    if (
+      expirationResult.status !== 'expired' &&
+      expirationResult.status !== 'already_expired'
+    ) {
+      await this.handleAbandonedCheckoutExpirationBlocked(
+        commandeId,
+        preflight.stripeSessionId,
+        expirationResult,
+      )
+
+      return 'skipped'
+    }
+
     const result = await this.releaseOrderReservation(commandeId, {
       finalStatus: 'annulee',
       motif: 'commande_abandonnee',
       releasableStatuses: ['paiement_en_attente'],
       cutoff,
+      requiredStripeSessionId: preflight.stripeSessionId,
     })
 
     return result.released || result.statusChanged ? 'cancelled' : 'skipped'
+  }
+
+  private async prepareAbandonedCommandeCleanup(
+    commandeId: number,
+    cutoff: Date,
+  ): Promise<CleanupAbandonedCommandePreflight> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT "id"
+        FROM "Commande"
+        WHERE "id" = ${commandeId}
+        FOR UPDATE
+      `
+
+      const commande = await tx.commande.findUniqueOrThrow({
+        where: { id: commandeId },
+        select: {
+          id: true,
+          statut: true,
+          stripeId: true,
+          createdAt: true,
+        },
+      })
+
+      if (
+        commande.statut !== 'paiement_en_attente' ||
+        commande.createdAt >= cutoff
+      ) {
+        return { eligible: false }
+      }
+
+      if (!commande.stripeId) {
+        return {
+          eligible: false,
+          reconciliation: {
+            stripeSessionId: this.getMissingCheckoutSessionReference(
+              commande.id,
+            ),
+            operation: 'review_missing_checkout_session',
+            lastError:
+              'Abandoned pending payment order has no Stripe checkout session id',
+          },
+        }
+      }
+
+      return {
+        eligible: true,
+        stripeSessionId: commande.stripeId,
+      }
+    })
+  }
+
+  private async handleAbandonedCheckoutExpirationBlocked(
+    commandeId: number,
+    stripeSessionId: string,
+    expirationResult: Exclude<
+      CheckoutSessionExpirationResult,
+      { status: 'expired' | 'already_expired' }
+    >,
+  ) {
+    if (expirationResult.status === 'already_paid') {
+      await this.recordStripeCheckoutCleanupReconciliation(commandeId, {
+        expectedStripeSessionId: stripeSessionId,
+        stripeSessionId,
+        operation: 'review_paid_pending_checkout',
+        lastError: expirationResult.paymentIntentId
+          ? `Stripe checkout session is already paid with payment intent ${expirationResult.paymentIntentId}`
+          : 'Stripe checkout session is already paid',
+        attempts: 0,
+      })
+
+      return
+    }
+
+    if (expirationResult.status === 'not_found') {
+      await this.recordStripeCheckoutCleanupReconciliation(commandeId, {
+        expectedStripeSessionId: stripeSessionId,
+        stripeSessionId,
+        operation: 'expire_checkout_session',
+        lastError:
+          'Stripe checkout session was not found while cleaning abandoned order',
+        attempts: 1,
+      })
+
+      return
+    }
+
+    await this.recordStripeCheckoutCleanupReconciliation(commandeId, {
+      expectedStripeSessionId: stripeSessionId,
+      stripeSessionId,
+      operation: 'expire_checkout_session',
+      lastError: expirationResult.reason,
+      attempts: 1,
+    })
+  }
+
+  private async recordStripeCheckoutCleanupReconciliation(
+    commandeId: number,
+    data: {
+      expectedStripeSessionId: string | null
+      stripeSessionId: string
+      operation: StripeCheckoutReconciliationOperation
+      lastError: string
+      attempts: number
+    },
+  ) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT "id"
+        FROM "Commande"
+        WHERE "id" = ${commandeId}
+        FOR UPDATE
+      `
+
+      const commande = await tx.commande.findUniqueOrThrow({
+        where: { id: commandeId },
+        select: {
+          id: true,
+          statut: true,
+          stripeId: true,
+        },
+      })
+
+      if (
+        data.expectedStripeSessionId !== null &&
+        commande.stripeId !== data.expectedStripeSessionId
+      ) {
+        return
+      }
+
+      if (commande.statut === 'nouvelle') {
+        return
+      }
+
+      const operation =
+        data.operation === 'review_paid_pending_checkout' &&
+        commande.statut === 'annulee'
+          ? 'review_paid_cancelled_checkout'
+          : data.operation
+
+      await this.createActiveStripeCheckoutReconciliation(tx, {
+        commandeId: commande.id,
+        stripeSessionId: data.stripeSessionId,
+        operation,
+        lastError: data.lastError,
+        attempts: data.attempts,
+      })
+    })
   }
 
   private async cancelCommande(id: number) {
@@ -913,21 +1119,23 @@ export class CommandesService {
     commandeId: number,
     stripeSessionId: string,
   ) {
-    try {
-      const result =
-        await this.stripeCheckoutGateway.expireCheckoutSession(stripeSessionId)
+    const result =
+      await this.stripeCheckoutGateway.expireCheckoutSession(stripeSessionId)
 
-      this.logger.log({
-        message: 'Stripe checkout session expiration attempted',
-        commandeId,
-        stripeSessionId,
-        reconciliationOperation: 'expire_checkout_session',
-        result: result.expired ? 'expired' : result.reason,
-      })
+    this.logger.log({
+      message: 'Stripe checkout session expiration attempted',
+      commandeId,
+      stripeSessionId,
+      reconciliationOperation: 'expire_checkout_session',
+      result: result.status,
+    })
 
+    if (result.status === 'expired' || result.status === 'already_expired') {
       return { needsReconciliation: false as const }
-    } catch (error) {
-      const formattedError = this.formatStripeReconciliationError(error)
+    }
+
+    if (result.status === 'failed') {
+      const formattedError = this.formatStripeReconciliationError(result.reason)
 
       this.logger.error({
         message: 'Stripe checkout session expiration failed',
@@ -941,6 +1149,13 @@ export class CommandesService {
         needsReconciliation: true as const,
         error: formattedError,
       }
+    }
+
+    return {
+      needsReconciliation: true as const,
+      error: this.formatStripeReconciliationError(
+        `Stripe checkout session expiration did not neutralize the session: ${result.status}`,
+      ),
     }
   }
 
@@ -1482,6 +1697,18 @@ export class CommandesService {
         }
       }
 
+      if (
+        options.requiredStripeSessionId !== undefined &&
+        commande.stripeId !== options.requiredStripeSessionId
+      ) {
+        return {
+          released: false,
+          alreadyReleased: false,
+          statusChanged: false,
+          order: commande,
+        }
+      }
+
       const idempotentStatuses = options.idempotentStatuses ?? [
         options.finalStatus,
       ]
@@ -1654,6 +1881,10 @@ export class CommandesService {
 
   private getReservationReleaseReference(commandeId: number) {
     return `commande:${commandeId}:reservation:release`
+  }
+
+  private getMissingCheckoutSessionReference(commandeId: number) {
+    return `commande:${commandeId}:missing-checkout-session`
   }
 
   private async withProductionNeeds<T extends CommandeWithProductionLines>(
