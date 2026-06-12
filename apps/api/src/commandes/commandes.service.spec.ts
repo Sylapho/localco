@@ -523,10 +523,13 @@ describe('CommandesService', () => {
 
     const result = await service.findAll()
     const productionByCommandeId = new Map(
-      result.map((commande) => [
-        commande.id,
-        commande.lignes[0].productionQuantity,
-      ]),
+      result.map((commande) => {
+        const ligne = commande.lignes[0] as unknown as {
+          productionQuantity: number
+        }
+
+        return [commande.id, ligne.productionQuantity]
+      }),
     )
 
     expect(productionByCommandeId).toEqual(
@@ -2466,7 +2469,13 @@ describe('CommandesService', () => {
     })
   })
 
-  it.each([
+  it.each<
+    [
+      string,
+      CommandeStatut,
+      typeof BadRequestException | typeof ConflictException,
+    ]
+  >([
     ['annulee', 'preparee', ConflictException],
     ['traitee', 'preparee', ConflictException],
     ['paiement_en_attente', 'preparee', BadRequestException],

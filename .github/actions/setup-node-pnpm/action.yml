@@ -1,0 +1,34 @@
+name: Setup Node.js and pnpm
+description: Install Node.js, pnpm, cache the pnpm store, and install workspace dependencies.
+
+inputs:
+  node-version:
+    description: Node.js version to install.
+    required: true
+  pnpm-version:
+    description: pnpm version to install.
+    required: true
+  install:
+    description: Run pnpm install with the frozen lockfile.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Setup Node
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
+
+    - name: Install dependencies
+      if: inputs.install == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile

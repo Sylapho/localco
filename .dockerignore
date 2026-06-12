@@ -6,6 +6,8 @@ node_modules
 .github
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
 !.env.docker.example
 !**/.env.example
@@ -17,7 +19,10 @@ dist
 coverage
 **/coverage
 playwright-report
+**/playwright-report
 test-results
+**/test-results
+**/tsconfig.tsbuildinfo
 
 .DS_Store
 *.log

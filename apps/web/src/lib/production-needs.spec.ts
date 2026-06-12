@@ -37,25 +37,46 @@ function makeCommande(data: {
           tvaBps: 550,
           stock: data.stock,
           online: true,
+          createdAt: '2026-06-10T08:00:00.000Z',
+          updatedAt: '2026-06-10T08:00:00.000Z',
         },
       },
     ],
   }
 }
 
+function daysFromNow(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  date.setHours(12, 0, 0, 0)
+
+  return date.toISOString()
+}
+
+function dateKeyFromIso(value: string) {
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Europe/Paris',
+  }).format(new Date(value))
+}
+
 test('getProductionNeeds groups fallback needs by due date and urgency', () => {
+  const urgentDate = daysFromNow(1)
+  const plannedDate = daysFromNow(4)
   const needs = getProductionNeeds([
     makeCommande({
       id: 1,
       quantite: 5,
       stock: -4,
-      dateRetrait: '2026-06-12T00:00:00.000Z',
+      dateRetrait: urgentDate,
     }),
     makeCommande({
       id: 2,
       quantite: 2,
       stock: -4,
-      dateRetrait: '2026-06-15T00:00:00.000Z',
+      dateRetrait: plannedDate,
     }),
   ])
 
@@ -68,13 +89,13 @@ test('getProductionNeeds groups fallback needs by due date and urgency', () => {
     })),
     [
       {
-        dueDateKey: '2026-06-12',
+        dueDateKey: dateKeyFromIso(urgentDate),
         quantityToProduce: 2,
         commandeIds: [1],
         urgency: 'urgent',
       },
       {
-        dueDateKey: '2026-06-15',
+        dueDateKey: dateKeyFromIso(plannedDate),
         quantityToProduce: 2,
         commandeIds: [2],
         urgency: 'planned',

@@ -21,7 +21,7 @@ describe('RolesGuard', () => {
       switchToHttp: () => ({
         getRequest: () => request,
       }),
-    } as ExecutionContext
+    } as unknown as ExecutionContext
   }
 
   it('should allow routes without roles metadata', () => {

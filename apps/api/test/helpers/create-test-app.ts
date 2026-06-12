@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
-import { App } from 'supertest/types'
 import { BetterAuthGuard } from '../../src/auth/better-auth.guard'
 import { configureApp } from '../../src/bootstrap/configure-app'
 import { AppModule } from '../../src/app.module'
@@ -13,7 +12,7 @@ import { FakeEmailsService } from './fake-emails.service'
 import { FakeStripeCheckoutGateway } from './fake-stripe-checkout.gateway'
 
 export type E2eTestApp = {
-  app: INestApplication<App>
+  app: INestApplication
   prisma: PrismaService
   emails: FakeEmailsService
   stripe: FakeStripeCheckoutGateway
@@ -36,7 +35,7 @@ export async function createTestApp(): Promise<E2eTestApp> {
     .useClass(E2eBetterAuthGuard)
     .compile()
 
-  const app = moduleFixture.createNestApplication<App>({ rawBody: true })
+  const app = moduleFixture.createNestApplication({ rawBody: true })
   configureApp(app)
   await app.init()
 

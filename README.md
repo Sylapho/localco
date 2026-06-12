@@ -216,9 +216,16 @@ pnpm lint
 pnpm lint:api
 pnpm lint:web
 pnpm lint:shop
+pnpm typecheck
+pnpm typecheck:api
+pnpm typecheck:web
+pnpm typecheck:shop
 pnpm test
 pnpm test:api
+pnpm test:web
 pnpm test:api:e2e
+pnpm test:shop:e2e
+pnpm test:shop:smoke
 ```
 
 Commandes par package :
@@ -226,6 +233,7 @@ Commandes par package :
 ```bash
 pnpm --filter @localco/api build
 pnpm --filter @localco/api lint
+pnpm --filter @localco/api typecheck
 pnpm --filter @localco/api test
 pnpm --filter @localco/api test:e2e
 
@@ -233,14 +241,19 @@ pnpm --filter @localco/web dev
 pnpm --filter @localco/web build
 pnpm --filter @localco/web start
 pnpm --filter @localco/web lint
+pnpm --filter @localco/web typecheck
+pnpm --filter @localco/web test
 
 pnpm --filter @localco/shop dev
 pnpm --filter @localco/shop build
 pnpm --filter @localco/shop start
 pnpm --filter @localco/shop lint
+pnpm --filter @localco/shop typecheck
+pnpm --filter @localco/shop test:e2e
+pnpm --filter @localco/shop test:e2e:smoke
 ```
 
-`pnpm check` exécute le lint du workspace, les tests API en série, puis le build complet.
+`pnpm check` exécute le lint du workspace, le typecheck, les tests unitaires API et Web, puis le build complet.
 
 ## Prisma et base de données
 
@@ -393,11 +406,16 @@ La CI GitHub Actions se déclenche sur :
 
 Elle utilise Node.js 22 et pnpm 10.33.0.
 
-Jobs actuels :
+Workflows actifs :
 
-- API : PostgreSQL 16, installation, génération Prisma, migrations Prisma, lint, tests API, build API.
-- Web : installation, lint web, build web.
-- Shop : installation, lint shop, build shop.
+- `CI` : lint, typecheck, tests unitaires API/Web, builds API/Web/Shop, E2E API PostgreSQL 16, E2E Shop Playwright, smoke full-stack, audit pnpm, build Docker et publication GHCR sur `main`.
+- `Dependency Review` : analyse des changements de dépendances sur pull request.
+- `CodeQL` : analyse JavaScript/TypeScript sur pull request, push `main` et planification hebdomadaire.
+- `Dependabot` : mises à jour hebdomadaires pnpm/npm, GitHub Actions et Docker.
+
+Les rapports de couverture API et Playwright sont publiés comme artefacts CI. Le détail des jobs, des dépendances et des commandes locales équivalentes est documenté dans `docs/CI.md`.
+
+La CI construit des images de production pour API, Web et Shop. Aucune cible de déploiement n'est automatisée tant qu'un hébergeur réel n'est pas choisi ; le contrat attendu est documenté dans `docs/DEPLOYMENT.md`.
 
 ## Roadmap courte
 
