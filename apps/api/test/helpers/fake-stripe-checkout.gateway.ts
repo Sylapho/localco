@@ -95,11 +95,12 @@ export class FakeStripeCheckoutGateway {
         this.nextExpirationResult = null
       },
     }
+    const barrier = this.nextExpirationBarrier
 
     return {
       started,
       release: (result: ExpireCheckoutSessionResult) => {
-        this.nextExpirationBarrier?.release(result)
+        barrier.release(result)
       },
     }
   }
