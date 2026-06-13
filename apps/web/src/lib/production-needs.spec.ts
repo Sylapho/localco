@@ -1,4 +1,4 @@
-import test from 'node:test'
+import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   getProductionNeeds,
@@ -62,7 +62,16 @@ function dateKeyFromIso(value: string) {
   }).format(new Date(value))
 }
 
-test('getProductionNeeds groups fallback needs by due date and urgency', () => {
+test('getProductionNeeds groups fallback needs by due date and urgency', (t) => {
+  mock.timers.enable({
+    apis: ['Date'],
+    now: new Date('2026-06-10T10:00:00.000Z'),
+  })
+
+  t.after(() => {
+    mock.timers.reset()
+  })
+
   const urgentDate = daysFromNow(1)
   const plannedDate = daysFromNow(4)
   const needs = getProductionNeeds([
