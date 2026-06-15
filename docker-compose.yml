@@ -59,6 +59,11 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-re_replace_me}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-Les Cocottes de Diane <commande@example.com>}
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "500"
+      WATCHPACK_POLLING: "true"
+      TSC_WATCHFILE: UsePolling
+      TSC_WATCHDIRECTORY: RecursiveDirectoryUsingPolling
     ports:
       - "${API_PORT:-4000}:4000"
     volumes:
@@ -81,17 +86,24 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     working_dir: /workspace
-    command: pnpm --filter @localco/web dev --hostname 0.0.0.0
+    command: pnpm --filter @localco/web exec next dev --webpack --hostname 0.0.0.0 --port 3000
     environment:
       NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+
       DATABASE_URL: ${DATABASE_URL:-postgresql://localco:localco_dev@postgres:5432/localco_db}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
       API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:4000/api}
       NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:-http://localhost:4000}
+
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "500"
     ports:
       - "${WEB_PORT:-3000}:3000"
     volumes:
@@ -111,11 +123,17 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     working_dir: /workspace
-    command: pnpm --filter @localco/shop dev --hostname 0.0.0.0
+    command: pnpm --filter @localco/shop exec next dev --webpack --hostname 0.0.0.0 --port 3001
     environment:
       NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
       API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:4000/api}
+
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "500"
     ports:
       - "${SHOP_PORT:-3001}:3001"
     volumes:
