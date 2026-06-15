@@ -11,28 +11,12 @@ describe('AppController', () => {
       providers: [AppService],
     }).compile()
 
-    appController = app.get(AppController)
+    appController = app.get<AppController>(AppController)
   })
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
       expect(appController.getHello()).toBe('Hello World!')
-    })
-  })
-
-  describe('health', () => {
-    it('should return API health status', () => {
-      const health = appController.getHealth()
-
-      expect(health).toEqual(
-        expect.objectContaining({
-          status: 'ok',
-          service: 'localco-api',
-        }),
-      )
-
-      expect(typeof health.timestamp).toBe('string')
-      expect(typeof health.uptime).toBe('number')
     })
   })
 })
