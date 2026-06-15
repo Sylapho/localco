@@ -56,8 +56,8 @@ export default function CookiesPage() {
       <LegalSection title="Contact">
         <p>
           Pour toute question relative aux cookies ou à vos données personnelles,
-          vous pouvez contacter <strong>[NOM DE LA SOCIÉTÉ]</strong> à l’adresse
-          suivante : <strong>[EMAIL CONTACT]</strong>.
+          vous pouvez contacter <strong>Les Cocottes de Diane</strong> à l’adresse
+          suivante : <strong>contact@lescocottesdediane.fr</strong>.
         </p>
       </LegalSection>
     </LegalPage>
