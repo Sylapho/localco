@@ -93,9 +93,6 @@ export default function ShopClient({ articles, pickupPoints }: ShopClientProps) 
     Partial<Record<ProductCategory, boolean>>
   >({})
 
-  const [recentlyAddedArticleId, setRecentlyAddedArticleId] = useState<number | null>(
-  null,
-)
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
