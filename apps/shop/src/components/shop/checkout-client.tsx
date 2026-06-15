@@ -416,20 +416,6 @@ export default function CheckoutClient({
                   .
                 </p>
 
-                <p className="mt-3 text-xs leading-5 text-[#7a6d73]">
-                  En continuant, vous acceptez les{' '}
-                  <Link href="/cgv" className="font-bold text-[#8c0055]">
-                    CGV
-                  </Link>{' '}
-                  et la{' '}
-                  <Link
-                    href="/confidentialite"
-                    className="font-bold text-[#8c0055]"
-                  >
-                    politique de confidentialité
-                  </Link>
-                  .
-                </p>
               </section>
 
               {error ? <CheckoutErrorNotice error={error} /> : null}
