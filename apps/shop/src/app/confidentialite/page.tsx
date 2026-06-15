@@ -1,6 +1,5 @@
 import LegalPage, {
-  LegalSection,
-  ToComplete,
+  LegalSection
 } from '@/components/shop/legal-page'
 import type { Metadata } from 'next'
 
@@ -16,12 +15,12 @@ export default function ConfidentialitePage() {
     >
       <LegalSection title="Responsable du traitement">
         <p>
-          Le responsable du traitement est <strong>[NOM DE LA SOCIÉTÉ]</strong>,
-          immatriculée sous le numéro SIRET <strong>[SIRET]</strong>, située à{' '}
-          <strong>[ADRESSE]</strong>.
+          Le responsable du traitement est <strong>Les Cocottes de Diane</strong>,
+          immatriculée sous le numéro SIRET <strong>90136070100014</strong>, située à{' '}
+          <strong>46 Rue de la Muette, 27490 Clef Vallée d’Eure</strong>.
         </p>
         <p>
-          Contact données personnelles : <strong>[EMAIL CONTACT]</strong>.
+          Contact données personnelles : <strong>contact@lescocottesdediane.fr</strong>.
         </p>
       </LegalSection>
 
@@ -48,7 +47,7 @@ export default function ConfidentialitePage() {
           Les traitements liés à la commande reposent principalement sur
           l’exécution du contrat conclu avec le client. Certains traitements
           peuvent également être nécessaires au respect d’obligations légales ou
-          reposer sur l’intérêt légitime de <strong>[NOM DE LA SOCIÉTÉ]</strong>,
+          reposer sur l’intérêt légitime de <strong>Les Cocottes de Diane</strong>,
           notamment pour la gestion de la relation client et la sécurité du site.
         </p>
       </LegalSection>
@@ -56,7 +55,7 @@ export default function ConfidentialitePage() {
       <LegalSection title="Paiement">
         <p>
           Les paiements sont traités par le prestataire de paiement utilisé sur
-          le site. <strong>[NOM DE LA SOCIÉTÉ]</strong> ne conserve pas les
+          le site. <strong>Les Cocottes de Diane</strong> ne conserve pas les
           données complètes de carte bancaire.
         </p>
       </LegalSection>
@@ -72,12 +71,9 @@ export default function ConfidentialitePage() {
 
       <LegalSection title="Durée de conservation">
         <p>
-          Les données liées aux commandes sont conservées pendant la durée
-          nécessaire au traitement de la commande, puis selon les durées imposées
-          par les obligations légales, comptables ou fiscales.
-        </p>
-        <p>
-          Durée précise de conservation : <ToComplete>à compléter</ToComplete>.
+          Les données liées aux commandes sont conservées pendant la durée nécessaire au traitement de la commande, 
+          puis archivées pendant une durée maximale de <strong>10 ans</strong> à compter de la clôture de l’exercice comptable concerné,
+          afin de respecter les obligations légales, comptables et fiscales applicables.
         </p>
       </LegalSection>
 
@@ -89,8 +85,8 @@ export default function ConfidentialitePage() {
         </p>
         <p>
           Pour exercer ses droits, le client peut contacter{' '}
-          <strong>[NOM DE LA SOCIÉTÉ]</strong> à l’adresse suivante :{' '}
-          <strong>[EMAIL CONTACT]</strong>.
+          <strong>Les Cocottes de Diane</strong> à l’adresse suivante :{' '}
+          <strong>contact@lescocottesdediane.fr</strong>.
         </p>
         <p>
           Le client peut également introduire une réclamation auprès de la CNIL.

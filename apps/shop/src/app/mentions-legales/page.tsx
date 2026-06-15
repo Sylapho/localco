@@ -16,18 +16,18 @@ export default function MentionsLegalesPage() {
     >
       <LegalSection title="Éditeur du site">
         <p>
-          Le présent site est édité par <strong>[NOM DE LA SOCIÉTÉ]</strong>,
-          immatriculée sous le numéro SIRET <strong>[SIRET]</strong>, dont le
-          siège social est situé à <strong>[ADRESSE]</strong>.
+          Le présent site est édité par <strong>Les Cocottes de Diane</strong>,
+          immatriculée sous le numéro SIRET <strong>90136070100014</strong>, dont le
+          siège social est situé à <strong>46 Rue de la Muette, 27490 Clef Vallée d’Eure</strong>.
         </p>
         <p>
           Nom commercial : <strong>Les Cocottes de Diane</strong>.
         </p>
         <p>
-          Statut juridique : <ToComplete>à compléter</ToComplete>
+          Statut juridique : <strong>Entrepreneur individuel</strong>
           <br />
           Numéro de TVA intracommunautaire :{' '}
-          <ToComplete>à compléter si applicable</ToComplete>
+            <strong>FR20901360701</strong>
         </p>
       </LegalSection>
 
@@ -35,7 +35,7 @@ export default function MentionsLegalesPage() {
         <p>
           Pour toute question relative au site, à une commande ou au retrait en
           magasin, vous pouvez nous contacter à l’adresse suivante :{' '}
-          <strong>[EMAIL CONTACT]</strong>.
+          <strong>contact@lescocottesdediane.fr</strong>.
         </p>
         <p>
           Téléphone : <ToComplete>à compléter si applicable</ToComplete>
@@ -45,8 +45,8 @@ export default function MentionsLegalesPage() {
       <LegalSection title="Responsable de la publication">
         <p>
           Le responsable de la publication est{' '}
-          <strong>[NOM DU RESPONSABLE]</strong>, représentant de{' '}
-          <strong>[NOM DE LA SOCIÉTÉ]</strong>.
+          <strong>BAUDOIN QUENTIN</strong>, représentant de{' '}
+          <strong>Les Cocottes de Diane</strong>.
         </p>
       </LegalSection>
 
@@ -84,7 +84,7 @@ export default function MentionsLegalesPage() {
         <p>
           Toute reproduction, représentation, modification ou exploitation,
           totale ou partielle, sans autorisation préalable écrite de{' '}
-          <strong>[NOM DE LA SOCIÉTÉ]</strong>, est interdite.
+          <strong>Les Cocottes de Diane</strong>, est interdite.
         </p>
       </LegalSection>
     </LegalPage>
