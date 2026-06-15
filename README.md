@@ -1,5 +1,7 @@
 # LocalCo
 
+![CI](https://github.com/Sylapho/localco/actions/workflows/ci.yml/badge.svg)
+
 LocalCo est un monorepo TypeScript pour gérer une activité de commerce local, avec une API métier, une interface interne et une boutique Click & Collect.
 
 Le projet regroupe :
