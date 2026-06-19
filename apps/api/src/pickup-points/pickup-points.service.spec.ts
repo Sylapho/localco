@@ -19,6 +19,33 @@ describe('PickupPointsService', () => {
     service = new PickupPointsService(prismaMock as unknown as PrismaService)
   })
 
+  it('findAll should return pickup points with merchant ordering', async () => {
+    const result = [
+      {
+        id: 1,
+        label: 'MarchÃ© de Caen',
+        schedule: '10h00 - 12h00',
+        active: true,
+      },
+    ]
+    prismaMock.pickupPoint.findMany.mockResolvedValue(result)
+
+    await expect(service.findAll()).resolves.toEqual(result)
+    expect(prismaMock.pickupPoint.findMany).toHaveBeenCalledWith({
+      orderBy: [
+        {
+          active: 'desc',
+        },
+        {
+          label: 'asc',
+        },
+        {
+          schedule: 'asc',
+        },
+      ],
+    })
+  })
+
   it('creates a pickup point with normalized weekdays', async () => {
     const created = {
       id: 1,
@@ -94,6 +121,21 @@ describe('PickupPointsService', () => {
     expect(prismaMock.pickupPoint.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { active: false },
+    })
+  })
+
+  it('reactivates a pickup point', async () => {
+    prismaMock.pickupPoint.findUnique.mockResolvedValue({ id: 1 })
+    prismaMock.pickupPoint.update.mockResolvedValue({ id: 1, active: true })
+
+    await expect(service.reactivate(1)).resolves.toEqual({
+      id: 1,
+      active: true,
+    })
+
+    expect(prismaMock.pickupPoint.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { active: true },
     })
   })
 
