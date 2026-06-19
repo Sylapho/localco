@@ -1,8 +1,20 @@
-import { IsBoolean, IsNumber, IsOptional, IsString, Min } from 'class-validator'
+import { ArticleCategory } from '../../../prisma/generated/prisma/client'
+import {
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator'
 
 export class CreateArticleDto {
   @IsString()
   nom!: string
+
+  @IsOptional()
+  @IsEnum(ArticleCategory)
+  category?: ArticleCategory
 
   @IsNumber()
   @Min(0)

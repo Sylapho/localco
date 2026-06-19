@@ -157,6 +157,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const baguette = await prisma.article.create({
     data: {
       nom: 'Baguette tradition',
+      category: 'OTHER',
       prixCents: eurosToCents(1.2),
       tvaBps: 550,
       stock: 120,
@@ -169,6 +170,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const croissant = await prisma.article.create({
     data: {
       nom: 'Croissant',
+      category: 'OTHER',
       prixCents: eurosToCents(1.1),
       tvaBps: 550,
       stock: 90,
@@ -181,6 +183,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const painChocolat = await prisma.article.create({
     data: {
       nom: 'Pain au chocolat',
+      category: 'OTHER',
       prixCents: eurosToCents(1.2),
       tvaBps: 550,
       stock: 80,
@@ -193,6 +196,7 @@ async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
   const flan = await prisma.article.create({
     data: {
       nom: 'Flan patissier',
+      category: 'OTHER',
       prixCents: eurosToCents(3.5),
       tvaBps: 550,
       stock: 25,
@@ -317,6 +321,7 @@ async function seedShopCatalogue(prisma: PrismaClient) {
     data: shopArticles.map(([nom, prix, description]) => ({
       nom,
       prixCents: eurosToCents(prix),
+      category: getShopArticleCategory(nom),
       tvaBps: 550,
       stock: nom === 'Maxi Pack' ? 10 : 20,
       online: true,
@@ -331,6 +336,46 @@ async function seedShopCatalogue(prisma: PrismaClient) {
       allergenes: getShopArticleAllergenes(nom),
     })),
   })
+}
+
+function getShopArticleCategory(nom: string) {
+  const lowerName = nom.toLowerCase()
+
+  if (lowerName.includes('pack')) {
+    return 'PACKS'
+  }
+
+  if (lowerName.includes('œufs') || lowerName.includes('oeufs')) {
+    return 'EGGS'
+  }
+
+  if (
+    lowerName.includes('terrine') ||
+    lowerName.includes('rillettes') ||
+    lowerName.includes('mousse') ||
+    lowerName.includes('gésiers') ||
+    lowerName.includes('gesiers')
+  ) {
+    return 'JARS'
+  }
+
+  if (lowerName.includes('brochette')) {
+    return 'SKEWERS'
+  }
+
+  if (
+    lowerName.includes('saucisse') ||
+    lowerName.includes('merguez') ||
+    lowerName.includes('paupiette') ||
+    lowerName.includes('ballotine') ||
+    lowerName.includes('cordon bleu') ||
+    lowerName.includes('chicken') ||
+    lowerName.includes('milanaise')
+  ) {
+    return 'PREPARATIONS'
+  }
+
+  return 'CUTS'
 }
 
 function getShopArticleIngredients(nom: string) {

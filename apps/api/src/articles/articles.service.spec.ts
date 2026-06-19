@@ -154,6 +154,7 @@ describe('ArticlesService', () => {
     expect(prismaMock.article.create).toHaveBeenCalledWith({
       data: {
         nom: 'Pain au chocolat',
+        category: undefined,
         prixCents: 150,
         tvaBps: 550,
         stock: 0,
@@ -182,6 +183,7 @@ describe('ArticlesService', () => {
       where: { id: 1 },
       data: {
         nom: undefined,
+        category: undefined,
         prixCents: 130,
         tvaBps: undefined,
         online: undefined,

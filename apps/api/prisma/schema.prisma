@@ -16,6 +16,7 @@ datasource db {
 model Article {
   id              Int              @id @default(autoincrement())
   nom             String
+  category        ArticleCategory  @default(OTHER)
   prixCents       Int
   tvaBps          Int              @default(550)
   stock           Int              @default(0)
@@ -34,6 +35,17 @@ model Article {
   stockLots       StockLot[]
 
   @@index([online])
+  @@index([category])
+}
+
+enum ArticleCategory {
+  JARS
+  CUTS
+  PREPARATIONS
+  SKEWERS
+  EGGS
+  PACKS
+  OTHER
 }
 
 model MatierePremiere {

@@ -1,3 +1,5 @@
+import type { ArticleCategory } from '@/lib/article-categories'
+
 const PUBLIC_API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 const SERVER_API_URL = process.env.API_INTERNAL_URL ?? PUBLIC_API_URL
@@ -5,6 +7,7 @@ const SERVER_API_URL = process.env.API_INTERNAL_URL ?? PUBLIC_API_URL
 export type ShopArticle = {
   id: number
   nom: string
+  category?: ArticleCategory | null
   prixCents: number
   tvaBps: number
   stock: number

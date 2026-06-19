@@ -6,6 +6,7 @@ import {
   getArticleNomenclature,
   getProductionCapacity,
 } from '@/lib/api'
+import { getArticleCategoryLabel } from '@/lib/article-categories'
 import { requireUiPermission } from '@/lib/auth-session'
 import { formatCurrencyFromCents } from '@/lib/money'
 import {
@@ -102,6 +103,10 @@ export default async function ArticleDetailPage({ params }: PageProps) {
           ) : null}
           <p>
             <span className="font-medium">TVA :</span> {article.tvaBps / 100} %
+          </p>
+          <p>
+            <span className="font-medium">Catégorie :</span>{' '}
+            {getArticleCategoryLabel(article.category)}
           </p>
           <p>
             <span className="font-medium">Stock :</span> {article.stock}

@@ -2,6 +2,14 @@
 
 import type { PickupPoint, ShopArticle } from '@/lib/api'
 import {
+  articleCategories,
+  articleCategoryLabels,
+  categoryFilterLabels,
+  getArticleCategory,
+  type ArticleCategory,
+  type CategoryFilter,
+} from '@/lib/article-categories'
+import {
   buildCartLines,
   formatCurrency,
   getCartCount,
@@ -20,77 +28,18 @@ type ShopClientProps = {
   pickupPoints: PickupPoint[]
 }
 
-type ProductCategory =
-  | 'Bocaux'
-  | 'Découpes'
-  | 'Préparations'
-  | 'Brochettes'
-  | 'Œufs'
-  | 'Packs'
-
-type CategoryFilter = 'Toutes' | ProductCategory
-
-const productCategories: ProductCategory[] = [
-  'Bocaux',
-  'Découpes',
-  'Préparations',
-  'Brochettes',
-  'Œufs',
-  'Packs',
-]
-
-const categories: CategoryFilter[] = ['Toutes', ...productCategories]
+const categories: CategoryFilter[] = ['ALL', ...articleCategories]
 const maxCartQuantity = 99
-
-function getArticleCategory(article: ShopArticle): ProductCategory {
-  const text = `${article.nom} ${article.description ?? ''}`.toLowerCase()
-
-  if (text.includes('pack')) {
-    return 'Packs'
-  }
-
-  if (text.includes('œuf') || text.includes('oeuf')) {
-    return 'Œufs'
-  }
-
-  if (
-    text.includes('terrine') ||
-    text.includes('rillettes') ||
-    text.includes('mousse') ||
-    text.includes('gésiers') ||
-    text.includes('gesiers')
-  ) {
-    return 'Bocaux'
-  }
-
-  if (text.includes('brochette')) {
-    return 'Brochettes'
-  }
-
-  if (
-    text.includes('saucisse') ||
-    text.includes('merguez') ||
-    text.includes('paupiette') ||
-    text.includes('ballotine') ||
-    text.includes('cordon bleu') ||
-    text.includes('chicken') ||
-    text.includes('milanaise')
-  ) {
-    return 'Préparations'
-  }
-
-  return 'Découpes'
-}
 
 export default function ShopClient({ articles, pickupPoints }: ShopClientProps) {
   const [cart, setCart] = useState<Cart>({})
   const [cartReady, setCartReady] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState<CategoryFilter>('Toutes')
+  const [category, setCategory] = useState<CategoryFilter>('ALL')
   const [onlyAvailable, setOnlyAvailable] = useState(false)
   const [openCategories, setOpenCategories] = useState<
-    Partial<Record<ProductCategory, boolean>>
+    Partial<Record<ArticleCategory, boolean>>
   >({})
 
 
@@ -123,27 +72,29 @@ export default function ShopClient({ articles, pickupPoints }: ShopClientProps) 
       : true
 
     const matchesCategory =
-      category === 'Toutes' ? true : getArticleCategory(article) === category
+      category === 'ALL'
+        ? true
+        : getArticleCategory(article.category) === category
 
     const matchesAvailability = onlyAvailable ? article.stock > 0 : true
 
     return matchesSearch && matchesCategory && matchesAvailability
   })
 
-  const groupedArticles = productCategories
+  const groupedArticles = articleCategories
     .map((item) => ({
       category: item,
       articles: filteredArticles.filter(
-        (article) => getArticleCategory(article) === item,
+        (article) => getArticleCategory(article.category) === item,
       ),
     }))
     .filter((group) => group.articles.length > 0)
 
-  function isCategoryOpen(categoryName: ProductCategory, index: number) {
+  function isCategoryOpen(categoryName: ArticleCategory, index: number) {
     return openCategories[categoryName] ?? index === 0
   }
 
-  function toggleCategory(categoryName: ProductCategory, index: number) {
+  function toggleCategory(categoryName: ArticleCategory, index: number) {
     const currentlyOpen = isCategoryOpen(categoryName, index)
 
     setOpenCategories((currentCategories) => ({
@@ -340,7 +291,7 @@ export default function ShopClient({ articles, pickupPoints }: ShopClientProps) 
                   : 'border border-[#e8e1e4] bg-white text-[#4a3d43] hover:border-[#b5006e]'
               }`}
             >
-              {item}
+              {categoryFilterLabels[item]}
             </button>
           ))}
         </div>
@@ -367,7 +318,7 @@ export default function ShopClient({ articles, pickupPoints }: ShopClientProps) 
                   >
                     <div>
                       <h3 className="text-lg font-black text-[#181014]">
-                        {group.category}
+                        {articleCategoryLabels[group.category]}
                       </h3>
                       <p className="mt-0.5 text-xs font-semibold text-[#7a6d73]">
                         {group.articles.length} produit

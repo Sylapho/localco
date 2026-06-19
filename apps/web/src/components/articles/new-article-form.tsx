@@ -1,6 +1,12 @@
 'use client'
 
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
+import {
+  articleCategories,
+  articleCategoryLabels,
+  defaultArticleCategory,
+  type ArticleCategory,
+} from '@/lib/article-categories'
 import { eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
@@ -13,6 +19,9 @@ export default function NewArticleForm() {
   const sessionFetch = useSessionFetch()
 
   const [nom, setNom] = useState('')
+  const [category, setCategory] = useState<ArticleCategory>(
+    defaultArticleCategory,
+  )
   const [prix, setPrix] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [description, setDescription] = useState('')
@@ -32,6 +41,7 @@ export default function NewArticleForm() {
         },
         body: JSON.stringify({
           nom,
+          category,
           prixCents: eurosToCents(Number(prix)),
           online: true,
           imageUrl: imageUrl || undefined,
@@ -79,6 +89,22 @@ export default function NewArticleForm() {
           className="rounded border px-3 py-2"
           required
         />
+      </div>
+
+      <div className="grid gap-1">
+        <label htmlFor="category">Catégorie</label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as ArticleCategory)}
+          className="rounded border px-3 py-2"
+        >
+          {articleCategories.map((item) => (
+            <option key={item} value={item}>
+              {articleCategoryLabels[item]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-1">

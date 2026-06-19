@@ -65,6 +65,7 @@ export class ArticlesService {
     return this.prisma.article.create({
       data: {
         nom: data.nom,
+        category: data.category,
         prixCents: data.prixCents,
         tvaBps: data.tvaBps ?? 550,
         stock: 0,
@@ -82,6 +83,7 @@ export class ArticlesService {
       where: { id },
       data: {
         nom: data.nom,
+        category: data.category,
         prixCents: data.prixCents,
         tvaBps: data.tvaBps,
         online: data.online,

@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { getApiErrorMessage } from '@/lib/api-error'
+import type { ArticleCategory } from '@/lib/article-categories'
 import { headers as nextHeaders } from 'next/headers'
 
 const API_URL = process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL
@@ -28,6 +29,7 @@ async function apiFetch(path: string, init: RequestInit = {}) {
 export type Article = {
   id: number
   nom: string
+  category?: ArticleCategory | null
   prixCents: number
   tvaBps: number
   stock: number
@@ -42,6 +44,7 @@ export type Article = {
 
 export type ArticlePayload = {
   nom: string
+  category?: ArticleCategory
   prixCents: number
   online?: boolean
   imageUrl?: string | null

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import ArticleImage from '@/components/articles/article-image'
 import { getArticles } from '@/lib/api'
+import { getArticleCategoryLabel } from '@/lib/article-categories'
 import { requireUiPermission } from '@/lib/auth-session'
 import { formatCurrencyFromCents } from '@/lib/money'
 import { canManageArticles, canViewArticles } from '@/lib/permissions'
@@ -38,6 +39,7 @@ export default async function ArticlesPage() {
               <p className="mt-2">
                 Prix : {formatCurrencyFromCents(article.prixCents)}
               </p>
+              <p>Catégorie : {getArticleCategoryLabel(article.category)}</p>
               <p>Stock : {article.stock}</p>
               <p>En ligne : {article.online ? 'Oui' : 'Non'}</p>
 

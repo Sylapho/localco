@@ -2,6 +2,13 @@
 
 import type { Article } from '@/lib/api'
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
+import {
+  articleCategories,
+  articleCategoryLabels,
+  defaultArticleCategory,
+  isArticleCategory,
+  type ArticleCategory,
+} from '@/lib/article-categories'
 import { centsToEuros, eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
 import { useRouter } from 'next/navigation'
@@ -20,6 +27,11 @@ export default function EditArticleForm({
   const sessionFetch = useSessionFetch()
 
   const [nom, setNom] = useState(article.nom)
+  const [category, setCategory] = useState<ArticleCategory>(
+    isArticleCategory(article.category)
+      ? article.category
+      : defaultArticleCategory,
+  )
   const [prix, setPrix] = useState(String(centsToEuros(article.prixCents)))
   const [imageUrl, setImageUrl] = useState(article.imageUrl ?? '')
   const [description, setDescription] = useState(article.description ?? '')
@@ -40,6 +52,7 @@ export default function EditArticleForm({
         },
         body: JSON.stringify({
           nom,
+          category,
           prixCents: eurosToCents(Number(prix)),
           imageUrl: imageUrl || null,
           description: description || undefined,
@@ -87,6 +100,22 @@ export default function EditArticleForm({
           className="rounded border px-3 py-2"
           required
         />
+      </div>
+
+      <div className="grid gap-1">
+        <label htmlFor="category">Catégorie</label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as ArticleCategory)}
+          className="rounded border px-3 py-2"
+        >
+          {articleCategories.map((item) => (
+            <option key={item} value={item}>
+              {articleCategoryLabels[item]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-1">
