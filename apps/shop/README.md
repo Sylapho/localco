@@ -1,182 +1,64 @@
 # LocalCo Shop
 
-Boutique publique Next.js de LocalCo.
+Boutique publique Next.js pour le parcours Click & Collect client.
 
-Cette application permet aux clients de consulter les produits, composer un panier, créer une commande Click & Collect et payer via Stripe Checkout.
+## Rôle
 
-## Rôle de l’application
+- Afficher le catalogue client sur `http://localhost:3001`.
+- Gérer le panier côté navigateur.
+- Collecter les coordonnées et le point/date de retrait.
+- Appeler l'API pour créer une commande et une session Stripe Checkout.
+- Afficher les pages de succès, annulation et suivi client.
 
-La boutique permet de :
+## Variables utiles
 
-- afficher les produits disponibles ;
-- consulter les informations produit ;
-- ajouter des articles au panier ;
-- créer une commande ;
-- rediriger vers Stripe Checkout ;
-- afficher les pages de succès ou d’annulation ;
-- permettre un parcours client simple pour du retrait physique.
-
-## Stack technique
-
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- Stripe Checkout
-- API LocalCo NestJS
-- pnpm
-
-## Port local
-
-```txt
-http://localhost:3001
-```
-
-## Structure principale
-
-```txt
-apps/shop
-├── app/                 # App Router Next.js
-├── components/          # Composants de la boutique
-├── lib/                 # Helpers, panier, client API
-├── public/              # Assets statiques
-└── README.md
-```
-
-## Variables d’environnement
-
-Configuration locale recommandée :
+Copier `apps/shop/.env.example` vers `apps/shop/.env.local`.
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000/api
-NEXT_PUBLIC_SHOP_URL=http://localhost:3001
+API_INTERNAL_URL=http://localhost:4000/api
 ```
 
-## Installation
+La boutique ne contient pas de secret Stripe. Le paiement est préparé par l'API avec des clés Stripe de test.
+
+## Commandes
 
 Depuis la racine du monorepo :
 
 ```bash
-pnpm install
+pnpm dev:shop
+pnpm lint:shop
+pnpm typecheck:shop
+pnpm test:shop:e2e
+pnpm test:shop:smoke
+pnpm build:shop
 ```
 
-## Lancer la boutique en développement
+Commandes propres au package :
 
 ```bash
 pnpm --filter @localco/shop dev
-```
-
-La boutique est ensuite disponible sur :
-
-```txt
-http://localhost:3001
-```
-
-## Build
-
-```bash
+pnpm --filter @localco/shop lint
+pnpm --filter @localco/shop typecheck
+pnpm --filter @localco/shop test:e2e
+pnpm --filter @localco/shop test:e2e:smoke
 pnpm --filter @localco/shop build
-```
-
-## Lancer en production locale
-
-```bash
 pnpm --filter @localco/shop start
 ```
 
-## Tests
+Il n'existe pas de script `test` unitaire pour `apps/shop` actuellement ; les tests disponibles sont Playwright E2E.
 
-```bash
-pnpm --filter @localco/shop test
-```
+## Pages utiles en démo
 
-## Docker
+- `/` : catalogue et panier.
+- `/checkout` : coordonnées, retrait et préparation du paiement.
+- `/success` : retour après paiement Stripe.
+- `/cancel` : retour après annulation Stripe.
+- `/suivi` : suivi public par token.
+- `/click-and-collect`, `/cgv`, `/mentions-legales`, `/confidentialite`, `/cookies` : pages d'information.
 
-La boutique peut être lancée avec les autres services depuis la racine du projet :
+## Documentation liée
 
-```bash
-pnpm docker:dev
-```
-
-Services utilisés en développement :
-
-```txt
-API  : http://localhost:4000/api
-Web  : http://localhost:3000
-Shop : http://localhost:3001
-```
-
-## Parcours client
-
-Le parcours principal est le suivant :
-
-1. Le client consulte les produits.
-2. Le client ajoute des produits au panier.
-3. Le client valide son panier.
-4. La boutique demande à l’API de créer une commande.
-5. L’API crée une session Stripe Checkout.
-6. Le client paie sur Stripe.
-7. Stripe notifie l’API via webhook.
-8. L’API confirme ou vérifie la commande.
-9. Le client revient sur une page de succès ou d’annulation.
-
-## Responsabilités de la boutique
-
-La boutique doit offrir une expérience simple et claire au client.
-
-Elle peut :
-
-- afficher les produits ;
-- gérer l’état local du panier ;
-- envoyer une demande de commande à l’API ;
-- rediriger vers Stripe Checkout ;
-- afficher les erreurs compréhensibles.
-
-Elle ne doit pas :
-
-- modifier directement le stock ;
-- confirmer elle-même un paiement ;
-- faire confiance uniquement au retour navigateur Stripe ;
-- appliquer seule les règles métier sensibles ;
-- considérer une commande comme payée sans validation côté API.
-
-## Stripe Checkout
-
-La boutique utilise Stripe Checkout via l’API.
-
-La logique de paiement doit rester côté API :
-
-- création de session ;
-- association avec une commande ;
-- vérification du montant ;
-- vérification de la devise ;
-- traitement des webhooks ;
-- réconciliation des cas incohérents.
-
-## Click & Collect
-
-LocalCo est pensé pour un modèle Click & Collect.
-
-La boutique doit donc rendre clairs :
-
-- les produits disponibles ;
-- le fonctionnement du retrait ;
-- le paiement ;
-- les informations de commande ;
-- les conditions d’annulation ou de vérification.
-
-## Qualité attendue
-
-Avant de pousser une modification importante sur la boutique :
-
-```bash
-pnpm --filter @localco/shop test
-pnpm --filter @localco/shop build
-```
-
-## Notes de développement
-
-- Les appels API doivent utiliser `NEXT_PUBLIC_API_URL`.
-- Le panier doit rester simple et prévisible.
-- Le paiement final doit toujours être validé par l’API.
-- Les messages d’erreur doivent être compréhensibles pour un utilisateur non technique.
+- [README principal](../../README.md)
+- [Démo portfolio](../../docs/DEMO.md)
+- [Déploiement](../../docs/DEPLOYMENT.md)

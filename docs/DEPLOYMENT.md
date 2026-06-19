@@ -4,6 +4,8 @@ Aucune cible de déploiement réelle n'est configurée dans le dépôt à ce sta
 
 La CI prépare donc la livraison jusqu'à la construction et, sur `main`, la publication optionnelle des images de production dans GitHub Container Registry.
 
+Avant de déployer, vérifier que la démonstration locale fonctionne avec le scénario de [`docs/DEMO.md`](DEMO.md). Après déploiement, contrôler les health checks, la boutique, le back-office et un scénario de commande complet avec des clés Stripe de test.
+
 ## Images produites
 
 Sur un push réussi vers `main`, le workflow publie :

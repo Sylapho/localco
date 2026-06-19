@@ -62,12 +62,53 @@ cd localco
 pnpm install
 ```
 
+## Démo rapide
+
+Cette séquence lance une démonstration locale complète pour présenter le projet.
+
+```bash
+pnpm install
+cp .env.example .env
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env.local
+cp apps/shop/.env.example apps/shop/.env.local
+pnpm db:up
+pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
+```
+
+URLs locales :
+
+- Boutique client : `http://localhost:3001`
+- Back-office : `http://localhost:3000`
+- API : `http://localhost:4000/api`
+- Health API : `http://localhost:4000/api/health`
+- Readiness API : `http://localhost:4000/api/health/ready`
+
+Commandes de contrôle :
+
+```bash
+pnpm test
+pnpm build
+```
+
+Notes pour la démo :
+
+- `pnpm db:seed` existe et charge un catalogue boutique, des stocks, des lots et un historique de caisse.
+- Stripe doit être configuré avec des clés de test dans `apps/api/.env` pour aller jusqu'au paiement Checkout. Sans clé Stripe, le parcours reste compréhensible jusqu'à la préparation du paiement.
+- Le back-office est protégé par Better Auth. Les inscriptions sont désactivées ; utilisez un compte existant ou créez-en un via les outils d'administration prévus avant une démonstration complète.
+- Le scénario détaillé à montrer à un recruteur est documenté dans [`docs/DEMO.md`](docs/DEMO.md).
+
 ## Variables d'environnement
 
 Les fichiers `.env`, `.env.local` et les secrets réels ne doivent jamais être commit.
 
 Des exemples sont fournis dans :
 
+- `.env.example`
+- `.env.docker.example`
 - `apps/api/.env.example`
 - `apps/web/.env.example`
 - `apps/shop/.env.example`
@@ -97,11 +138,11 @@ API_CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 CHECKOUT_RATE_LIMIT_WINDOW_MS=60000
 CHECKOUT_RATE_LIMIT_MAX=10
 
-STRIPE_SECRET_KEY=sk_test_replace_me
-STRIPE_WEBHOOK_SECRET=whsec_replace_me
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 
-RESEND_API_KEY=re_replace_me
-RESEND_FROM_EMAIL="Les Cocottes de Diane <commande@example.com>"
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
 ```
 
 ### Web
@@ -116,10 +157,11 @@ Variables publiques utilisées par l'interface web :
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000/api
+API_INTERNAL_URL=http://localhost:4000/api
 NEXT_PUBLIC_AUTH_URL=http://localhost:4000
 ```
 
-L'application web contient aussi la configuration Better Auth côté serveur. Selon les pages utilisées, elle peut nécessiter :
+L'application web contient aussi la configuration Better Auth côté serveur. Pour lancer le back-office complet, elle nécessite aussi :
 
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
@@ -143,6 +185,7 @@ Variable utilisée par la boutique :
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000/api
+API_INTERNAL_URL=http://localhost:4000/api
 ```
 
 ## Développement

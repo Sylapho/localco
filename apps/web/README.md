@@ -1,170 +1,67 @@
 # LocalCo Web
 
-Interface interne Next.js de LocalCo.
+Back-office Next.js de LocalCo pour piloter l'activité interne.
 
-Cette application sert de back-office pour gérer l’activité interne : articles, commandes, stocks, rôles, opérations métier et suivi administratif.
+## Rôle
 
-## Rôle de l’application
+- Tableau de bord interne sur `http://localhost:3000`.
+- Gestion des commandes Click & Collect et de leur préparation.
+- Suivi des articles, matières premières, lots, mouvements de stock et production.
+- Caisse du jour, ventes et historique de clôture.
+- Administration des utilisateurs, points de retrait et réconciliations Stripe pour les rôles autorisés.
 
-Le back-office permet de :
+## Variables utiles
 
-- consulter et gérer les articles ;
-- consulter et gérer les commandes ;
-- suivre les statuts de commande ;
-- visualiser les stocks ;
-- accéder aux opérations internes ;
-- gérer les rôles et l’accès utilisateur ;
-- suivre les cas liés aux paiements Stripe ;
-- utiliser l’API LocalCo via des appels HTTP sécurisés.
-
-## Stack technique
-
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- Better Auth
-- API LocalCo NestJS
-- pnpm
-
-## Port local
-
-```txt
-http://localhost:3000
-```
-
-## Structure principale
-
-```txt
-apps/web
-├── app/                 # App Router Next.js
-├── components/          # Composants UI
-├── lib/                 # Helpers, clients et fonctions partagées
-├── public/              # Assets statiques
-└── README.md
-```
-
-## Variables d’environnement
-
-Configuration locale recommandée :
+Copier `apps/web/.env.example` vers `apps/web/.env.local`.
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000/api
-BETTER_AUTH_URL=http://localhost:3000
-BETTER_AUTH_SECRET=change-me
+API_INTERNAL_URL=http://localhost:4000/api
+NEXT_PUBLIC_AUTH_URL=http://localhost:4000
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
 ```
 
-## Installation
+`DATABASE_URL` est nécessaire côté serveur pour Better Auth. Les providers OAuth sont optionnels. Les inscriptions par e-mail sont désactivées ; un compte doit être créé par l'administration Better Auth.
+
+## Commandes
 
 Depuis la racine du monorepo :
 
 ```bash
-pnpm install
+pnpm dev:web
+pnpm lint:web
+pnpm typecheck:web
+pnpm test:web
+pnpm build:web
 ```
 
-## Lancer l’application en développement
+Commandes propres au package :
 
 ```bash
 pnpm --filter @localco/web dev
-```
-
-L’interface est ensuite disponible sur :
-
-```txt
-http://localhost:3000
-```
-
-## Build
-
-```bash
+pnpm --filter @localco/web lint
+pnpm --filter @localco/web typecheck
+pnpm --filter @localco/web test
 pnpm --filter @localco/web build
-```
-
-## Lancer en production locale
-
-```bash
 pnpm --filter @localco/web start
 ```
 
-## Tests
+## Pages utiles en démo
 
-```bash
-pnpm --filter @localco/web test
-```
+- `/` : tableau de bord.
+- `/commandes` : commandes en ligne.
+- `/preparation` : préparation par date et point de retrait.
+- `/stock` : stock, lots et mouvements.
+- `/caisse` : caisse du jour.
+- `/articles` et `/matieres-premieres` : catalogue interne.
+- `/admin/stripe-reconciliations` : suivi Stripe pour un compte `gerant`.
 
-## Docker
+## Documentation liée
 
-Le back-office peut être lancé avec les autres services depuis la racine du projet :
-
-```bash
-pnpm docker:dev
-```
-
-Services utilisés en développement :
-
-```txt
-API  : http://localhost:4000/api
-Web  : http://localhost:3000
-Shop : http://localhost:3001
-```
-
-## Responsabilités de l’interface
-
-Le back-office doit rester une interface de pilotage.
-
-Il peut :
-
-- afficher les données ;
-- envoyer des actions à l’API ;
-- valider les formulaires côté client ;
-- améliorer l’expérience utilisateur.
-
-Il ne doit pas :
-
-- recalculer seul les règles de stock ;
-- modifier directement les quantités critiques ;
-- contourner les transitions de commande ;
-- traiter les paiements sans passer par l’API ;
-- dupliquer la logique métier sensible.
-
-## Fonctionnalités principales
-
-### Commandes
-
-Le back-office permet de suivre les commandes et leurs statuts.
-
-Les changements sensibles doivent être envoyés à l’API afin de garantir la cohérence entre :
-
-- statut de commande ;
-- historique ;
-- stock réservé ;
-- paiement Stripe ;
-- éventuelle annulation.
-
-### Stock
-
-Le back-office peut afficher les stocks, mais les modifications doivent passer par des actions métier dédiées.
-
-Les opérations de stock doivent rester traçables et cohérentes avec les mouvements enregistrés côté API.
-
-### Authentification
-
-L’accès au back-office est protégé par Better Auth.
-
-Les pages internes doivent être réservées aux utilisateurs autorisés.
-
-## Qualité attendue
-
-Avant de pousser une modification importante sur le back-office :
-
-```bash
-pnpm --filter @localco/web test
-pnpm --filter @localco/web build
-```
-
-## Notes de développement
-
-- Les appels API doivent utiliser `NEXT_PUBLIC_API_URL`.
-- Les erreurs métier retournées par l’API doivent être affichées clairement.
-- Les formulaires doivent rester simples et éviter les mutations directes dangereuses.
-- Les règles critiques doivent être centralisées dans l’API.
+- [README principal](../../README.md)
+- [Démo portfolio](../../docs/DEMO.md)
+- [Déploiement](../../docs/DEPLOYMENT.md)
