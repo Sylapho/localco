@@ -82,7 +82,7 @@ describe('CommandesController', () => {
     expect(commandesServiceMock.findAll).toHaveBeenCalled()
   })
 
-  it('findPickupPoints should return public pickup points', () => {
+  it('findPickupPoints should return public pickup points', async () => {
     const result = [
       {
         label: 'Marché de Gaillon',
@@ -91,9 +91,9 @@ describe('CommandesController', () => {
         value: 'Marché de Gaillon - Mardi matin, 8h-12h',
       },
     ]
-    commandesServiceMock.findPickupPoints.mockReturnValue(result)
+    commandesServiceMock.findPickupPoints.mockResolvedValue(result)
 
-    expect(controller.findPickupPoints()).toEqual(result)
+    await expect(controller.findPickupPoints()).resolves.toEqual(result)
     expect(commandesServiceMock.findPickupPoints).toHaveBeenCalled()
   })
 

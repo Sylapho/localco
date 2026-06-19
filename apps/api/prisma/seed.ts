@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from './generated/prisma/client'
+import { pickupPoints } from '../src/commandes/pickup-slots'
 import { calculateHtFromTtcCents, eurosToCents } from '../src/money'
 
 type SeedArticle = {
@@ -56,6 +57,7 @@ async function main() {
 
   await resetDatabase(prisma)
 
+  await seedPickupPoints(prisma)
   const catalogue = await seedCatalogue(prisma)
   await seedStockLots(prisma, catalogue)
   await seedSalesHistory(prisma, catalogue.articles)
@@ -79,6 +81,21 @@ async function resetDatabase(prisma: PrismaClient) {
   await prisma.nomenclature.deleteMany()
   await prisma.matierePremiere.deleteMany()
   await prisma.article.deleteMany()
+  await prisma.pickupPoint.deleteMany()
+}
+
+async function seedPickupPoints(prisma: PrismaClient) {
+  await prisma.pickupPoint.createMany({
+    data: pickupPoints.map((point) => ({
+      label: point.label,
+      address: point.address ?? point.label,
+      schedule: point.schedule,
+      allowedWeekdays: [...point.allowedWeekdays],
+      alternatingWeekAnchorDate: point.alternatingWeekAnchorDate ?? null,
+      active: true,
+    })),
+    skipDuplicates: true,
+  })
 }
 
 async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {

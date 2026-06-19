@@ -1,4 +1,5 @@
 import { PrismaService } from '../../src/prisma/prisma.service'
+import { pickupPoints } from '../../src/commandes/pickup-slots'
 
 const DEFAULT_E2E_DATABASE_URL =
   'postgresql://localco:localco_dev@localhost:5432/localco_e2e'
@@ -58,4 +59,16 @@ export async function truncateBusinessTables(prisma: PrismaService) {
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE`,
   )
+
+  await prisma.pickupPoint.createMany({
+    data: pickupPoints.map((point) => ({
+      label: point.label,
+      address: point.address ?? point.label,
+      schedule: point.schedule,
+      allowedWeekdays: [...point.allowedWeekdays],
+      alternatingWeekAnchorDate: point.alternatingWeekAnchorDate ?? null,
+      active: true,
+    })),
+    skipDuplicates: true,
+  })
 }

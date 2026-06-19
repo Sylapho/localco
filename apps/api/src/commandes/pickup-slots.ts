@@ -6,46 +6,60 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000
 const AMAP_ALTERNATION_DAYS = 14
 
 export type PickupPoint = {
+  id?: number
   label: string
+  address?: string | null
   schedule: string
   allowedWeekdays: readonly number[]
-  alternatingWeekAnchorDate?: string
+  alternatingWeekAnchorDate?: string | null
+  active?: boolean
+}
+
+export type PublicPickupPoint = PickupPoint & {
+  value: string
 }
 
 export const pickupPoints: readonly PickupPoint[] = [
   {
     label: 'Marché de Gaillon',
+    address: 'Marché de Gaillon',
     schedule: 'Mardi matin, 8h-12h',
     allowedWeekdays: [2],
   },
   {
     label: 'Marché du Neubourg',
+    address: 'Marché du Neubourg',
     schedule: 'Mercredi matin, 8h-12h',
     allowedWeekdays: [3],
   },
   {
     label: 'Marché de Conches',
+    address: 'Marché de Conches',
     schedule: 'Jeudi matin, 8h-12h',
     allowedWeekdays: [4],
   },
   {
     label: 'À la ferme',
+    address: 'À la ferme',
     schedule: 'Vendredi après-midi, 16h-18h',
     allowedWeekdays: [5],
   },
   {
     label: 'À la ferme',
+    address: 'À la ferme',
     schedule: 'Samedi matin, 8h-12h',
     allowedWeekdays: [6],
   },
   {
     label: "AMAP d'Houlbec-Cocherel",
+    address: "AMAP d'Houlbec-Cocherel",
     schedule: 'Jeudi, tous les 15 jours',
     allowedWeekdays: [4],
     alternatingWeekAnchorDate: HOULBEC_COCHEREL_AMAP_ANCHOR_DATE,
   },
   {
     label: 'AMAP Autheuil-Authouillet',
+    address: 'AMAP Autheuil-Authouillet',
     schedule: 'Jeudi, tous les 15 jours',
     allowedWeekdays: [4],
     alternatingWeekAnchorDate: AUTHEUIL_AUTHOUILLET_AMAP_ANCHOR_DATE,
@@ -56,21 +70,30 @@ export function formatPickupPoint(point: PickupPoint) {
   return `${point.label} - ${point.schedule}`
 }
 
-export function getPublicPickupPoints() {
-  return pickupPoints.map((point) => ({
+export function getPublicPickupPoints(
+  points: readonly PickupPoint[] = pickupPoints,
+) {
+  return points.map((point) => ({
     ...point,
     value: formatPickupPoint(point),
   }))
 }
 
-export function findPickupPoint(value: string) {
-  return pickupPoints.find((point) => formatPickupPoint(point) === value)
+export function findPickupPoint(
+  value: string,
+  points: readonly PickupPoint[] = pickupPoints,
+) {
+  return points.find((point) => formatPickupPoint(point) === value)
 }
 
-export function validatePickupSlot(lieu: string, dateRetrait?: string) {
-  const pickupPoint = findPickupPoint(lieu)
+export function validatePickupSlot(
+  lieu: string,
+  dateRetrait: string | undefined,
+  points: readonly PickupPoint[] = pickupPoints,
+) {
+  const pickupPoint = findPickupPoint(lieu, points)
 
-  if (!pickupPoint) {
+  if (!pickupPoint || pickupPoint.active === false) {
     throw new BadRequestException('Lieu de retrait invalide')
   }
 

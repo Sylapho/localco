@@ -1,4 +1,8 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common'
+import {
+  BadRequestException,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
 import express, { Request } from 'express'
@@ -6,6 +10,7 @@ import request from 'supertest'
 import Stripe from 'stripe'
 import { EmailsService } from '../emails/emails.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
+import { PickupPointsService } from '../pickup-points/pickup-points.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { CommandesController } from './commandes.controller'
 import { CommandesService } from './commandes.service'
@@ -153,6 +158,11 @@ describe('Commandes integration', () => {
     sendOrderConfirmation: jest.fn(),
   }
 
+  const pickupPointsServiceMock = {
+    findPublicPickupPoints: jest.fn(),
+    validatePickupSlot: jest.fn(),
+  }
+
   const validPickupPoint = 'Marché de Gaillon - Mardi matin, 8h-12h'
   const validPickupDate = getNextDateForWeekday(2)
 
@@ -177,6 +187,10 @@ describe('Commandes integration', () => {
         {
           provide: EmailsService,
           useValue: emailsServiceMock,
+        },
+        {
+          provide: PickupPointsService,
+          useValue: pickupPointsServiceMock,
         },
       ],
     })
@@ -243,6 +257,8 @@ describe('Commandes integration', () => {
       mouvementsStockServiceMock.getSellableArticleStock,
       configServiceMock.get,
       emailsServiceMock.sendOrderConfirmation,
+      pickupPointsServiceMock.findPublicPickupPoints,
+      pickupPointsServiceMock.validatePickupSlot,
       mockStripeCheckoutSessionsCreate,
       mockStripeCheckoutSessionsRetrieve,
       mockStripeCheckoutSessionsExpire,
@@ -321,6 +337,15 @@ describe('Commandes integration', () => {
     })
 
     emailsServiceMock.sendOrderConfirmation.mockResolvedValue(undefined)
+    pickupPointsServiceMock.findPublicPickupPoints.mockResolvedValue([
+      {
+        label: 'Marché de Gaillon',
+        schedule: 'Mardi matin, 8h-12h',
+        allowedWeekdays: [2],
+        value: validPickupPoint,
+      },
+    ])
+    pickupPointsServiceMock.validatePickupSlot.mockResolvedValue(undefined)
   })
 
   afterEach(async () => {
@@ -461,6 +486,12 @@ describe('Commandes integration', () => {
   })
 
   it('POST /api/commandes should reject an invalid pickup slot before querying articles', async () => {
+    pickupPointsServiceMock.validatePickupSlot.mockRejectedValue(
+      new BadRequestException(
+        'La date de retrait ne correspond pas au lieu choisi',
+      ),
+    )
+
     await request(app.getHttpServer())
       .post('/api/commandes')
       .send({

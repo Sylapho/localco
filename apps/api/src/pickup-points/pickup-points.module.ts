@@ -1,0 +1,10 @@
+import { Module } from '@nestjs/common'
+import { PickupPointsController } from './pickup-points.controller'
+import { PickupPointsService } from './pickup-points.service'
+
+@Module({
+  controllers: [PickupPointsController],
+  providers: [PickupPointsService],
+  exports: [PickupPointsService],
+})
+export class PickupPointsModule {}

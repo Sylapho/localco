@@ -9,6 +9,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import Stripe from 'stripe'
 import { EmailsService } from '../emails/emails.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
+import { PickupPointsService } from '../pickup-points/pickup-points.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { CommandesService } from './commandes.service'
 import { CreateCommandeDto } from './dto/create-commande.dto'
@@ -118,6 +119,11 @@ describe('CommandesService', () => {
 
   const emailsServiceMock = {
     sendOrderConfirmation: jest.fn(),
+  }
+
+  const pickupPointsServiceMock = {
+    findPublicPickupPoints: jest.fn(),
+    validatePickupSlot: jest.fn(),
   }
 
   type TransactionClient = {
@@ -245,6 +251,10 @@ describe('CommandesService', () => {
           provide: EmailsService,
           useValue: emailsServiceMock,
         },
+        {
+          provide: PickupPointsService,
+          useValue: pickupPointsServiceMock,
+        },
       ],
     }).compile()
 
@@ -281,6 +291,8 @@ describe('CommandesService', () => {
       mouvementsStockServiceMock.getSellableArticleStock,
       configServiceMock.get,
       emailsServiceMock.sendOrderConfirmation,
+      pickupPointsServiceMock.findPublicPickupPoints,
+      pickupPointsServiceMock.validatePickupSlot,
       mockStripeCheckoutSessionsCreate,
       mockStripeCheckoutSessionsRetrieve,
       mockStripeCheckoutSessionsExpire,
@@ -334,6 +346,9 @@ describe('CommandesService', () => {
 
       return values[key]
     })
+
+    pickupPointsServiceMock.findPublicPickupPoints.mockResolvedValue([])
+    pickupPointsServiceMock.validatePickupSlot.mockResolvedValue(undefined)
 
     mockStripeCheckoutSessionsCreate.mockResolvedValue({
       id: 'cs_test_123',
@@ -1022,6 +1037,10 @@ describe('CommandesService', () => {
   })
 
   it('create should reject an invalid pickup point before querying articles', async () => {
+    pickupPointsServiceMock.validatePickupSlot.mockRejectedValue(
+      new BadRequestException('Lieu de retrait invalide'),
+    )
+
     await expect(
       service.create(
         baseDto({
@@ -1035,6 +1054,12 @@ describe('CommandesService', () => {
   })
 
   it('create should reject a pickup date that does not match the pickup point weekday', async () => {
+    pickupPointsServiceMock.validatePickupSlot.mockRejectedValue(
+      new BadRequestException(
+        'La date de retrait ne correspond pas au lieu choisi',
+      ),
+    )
+
     await expect(
       service.create(
         baseDto({
@@ -3084,6 +3109,7 @@ describe('CommandesService', () => {
         configServiceMock as never,
         emailsServiceMock as never,
         new StripeCheckoutGateway(configServiceMock as never),
+        pickupPointsServiceMock as never,
       )
 
       prismaMock.commande.findMany.mockResolvedValue([])

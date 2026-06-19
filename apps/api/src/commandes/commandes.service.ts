@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import { EmailsService } from '../emails/emails.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
+import { PickupPointsService } from '../pickup-points/pickup-points.service'
 import { PrismaService } from '../prisma/prisma.service'
 import {
   canTransitionOrderStatus,
@@ -17,7 +18,6 @@ import {
 } from './commande-status-transitions'
 import { CreateCommandeDto } from './dto/create-commande.dto'
 import { CommandeStatut } from './dto/update-commande-statut.dto'
-import { getPublicPickupPoints, validatePickupSlot } from './pickup-slots'
 import {
   CheckoutSessionExpirationResult,
   StripeCheckoutGateway,
@@ -210,12 +210,13 @@ export class CommandesService {
     private readonly configService: ConfigService,
     private readonly emailsService: EmailsService,
     private readonly stripeCheckoutGateway: StripeCheckoutGateway,
+    private readonly pickupPointsService: PickupPointsService,
   ) {
     this.abandonedDelayMinutes = this.parseAbandonedOrderDelayMinutes()
   }
 
   findPickupPoints() {
-    return getPublicPickupPoints()
+    return this.pickupPointsService.findPublicPickupPoints()
   }
 
   async findAll() {
@@ -2235,7 +2236,10 @@ export class CommandesService {
   }
 
   private async prepareCommande(data: CreateCommandeDto) {
-    validatePickupSlot(data.lieu, data.dateRetrait)
+    await this.pickupPointsService.validatePickupSlot(
+      data.lieu,
+      data.dateRetrait,
+    )
 
     const lignesAgregees = this.aggregateLines(data.lignes)
     const articleIds = lignesAgregees.map((ligne) => ligne.articleId)

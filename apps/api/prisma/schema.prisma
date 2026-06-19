@@ -173,6 +173,21 @@ model Commande {
   @@index([dateRetrait])
 }
 
+model PickupPoint {
+  id                        Int      @id @default(autoincrement())
+  label                     String
+  address                   String
+  schedule                  String
+  allowedWeekdays           Int[]
+  alternatingWeekAnchorDate String?
+  active                    Boolean  @default(true)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@unique([label, schedule])
+  @@index([active])
+}
+
 model CommandeReservationRelease {
   id         Int      @id @default(autoincrement())
   commandeId Int      @unique

@@ -65,6 +65,12 @@ const adminNavItems: NavItem[] = [
     description: 'Utilisateurs',
   },
   {
+    label: 'Retraits',
+    href: '/admin/pickup-points',
+    short: 'Lieu',
+    description: 'Points de retrait',
+  },
+  {
     label: 'Stripe',
     href: '/admin/stripe-reconciliations',
     short: 'Pay',

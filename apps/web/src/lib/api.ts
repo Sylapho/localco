@@ -672,3 +672,77 @@ export async function getStockLots(): Promise<StockLot[]> {
 
   return parseResponse<StockLot[]>(response)
 }
+
+export type PickupPoint = {
+  id: number
+  label: string
+  address: string
+  schedule: string
+  allowedWeekdays: number[]
+  alternatingWeekAnchorDate?: string | null
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type PickupPointPayload = {
+  label: string
+  address: string
+  schedule: string
+  allowedWeekdays: number[]
+  alternatingWeekAnchorDate?: string | null
+  active?: boolean
+}
+
+export async function getPickupPoints(): Promise<PickupPoint[]> {
+  const response = await apiFetch('/pickup-points', {
+    cache: 'no-store',
+  })
+
+  return parseResponse<PickupPoint[]>(response)
+}
+
+export async function createPickupPoint(
+  data: PickupPointPayload,
+): Promise<PickupPoint> {
+  const response = await apiFetch('/pickup-points', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  return parseResponse<PickupPoint>(response)
+}
+
+export async function updatePickupPoint(
+  id: number,
+  data: Partial<PickupPointPayload>,
+): Promise<PickupPoint> {
+  const response = await apiFetch(`/pickup-points/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+
+  return parseResponse<PickupPoint>(response)
+}
+
+export async function deactivatePickupPoint(id: number): Promise<PickupPoint> {
+  const response = await apiFetch(`/pickup-points/${id}/deactivate`, {
+    method: 'PATCH',
+  })
+
+  return parseResponse<PickupPoint>(response)
+}
+
+export async function reactivatePickupPoint(id: number): Promise<PickupPoint> {
+  const response = await apiFetch(`/pickup-points/${id}/reactivate`, {
+    method: 'PATCH',
+  })
+
+  return parseResponse<PickupPoint>(response)
+}
