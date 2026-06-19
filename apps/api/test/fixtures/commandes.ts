@@ -13,6 +13,7 @@ export function createPendingCommande(
 ) {
   return prisma.commande.create({
     data: {
+      trackingToken: `e2e-pending-${data.stripeId}`,
       nom: 'Client E2E',
       email: 'client.e2e@example.com',
       tel: '0600000000',

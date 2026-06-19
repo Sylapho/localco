@@ -14,6 +14,7 @@ describe('EmailsService', () => {
 
   const order = {
     id: 42,
+    trackingToken: 'track_token_42',
     nom: 'Marie Dupont',
     email: 'marie@example.fr',
     totalTtcCents: 1200,
@@ -73,6 +74,7 @@ describe('EmailsService', () => {
       if (key === 'RESEND_FROM_EMAIL') {
         return 'Les Cocottes de Diane <commande@example.com>'
       }
+      if (key === 'SHOP_PUBLIC_URL') return 'https://shop.example.com'
 
       return undefined
     })
@@ -85,6 +87,12 @@ describe('EmailsService', () => {
         from: 'Les Cocottes de Diane <commande@example.com>',
         to: 'marie@example.fr',
         subject: 'Confirmation de votre commande #42',
+        html: expect.stringContaining(
+          'https://shop.example.com/suivi?token=track_token_42',
+        ) as string,
+        text: expect.stringContaining(
+          'https://shop.example.com/suivi?token=track_token_42',
+        ) as string,
       }),
     )
   })

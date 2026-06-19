@@ -28,7 +28,7 @@ export type CreateCommandePayload = {
 }
 
 export type CheckoutSummary = {
-  id: number
+  trackingToken: string
   reference: string
   totalTtcCents: number
   lieu: string
@@ -43,6 +43,8 @@ export type CheckoutSummary = {
     totalCents: number
   }[]
 }
+
+export type CommandeTrackingSummary = CheckoutSummary
 
 export type PickupPoint = {
   label: string
@@ -94,6 +96,27 @@ export async function getCheckoutSummary(
 
   if (!response.ok) {
     throw new Error('Impossible de charger la commande')
+  }
+
+  return response.json()
+}
+
+export async function getCommandeTracking(
+  token: string,
+): Promise<CommandeTrackingSummary | null> {
+  const response = await fetch(
+    `${SERVER_API_URL}/commandes/suivi/${encodeURIComponent(token)}`,
+    {
+      cache: 'no-store',
+    },
+  )
+
+  if (response.status === 400 || response.status === 404) {
+    return null
+  }
+
+  if (!response.ok) {
+    throw new Error('Impossible de charger le suivi de commande')
   }
 
   return response.json()

@@ -1,65 +1,61 @@
+import { getCommandeTracking, type CommandeTrackingSummary } from '@/lib/api'
 import { formatCurrencyFromCents } from '@/lib/money'
 import Link from 'next/link'
-import { getCheckoutSummary, type CheckoutSummary } from '@/lib/api'
 
-type SuccessPageProps = {
+type SuiviPageProps = {
   searchParams?: Promise<{
-    session_id?: string | string[]
+    token?: string | string[]
   }>
 }
 
-type SuccessPageState =
+type SuiviPageState =
   | {
-      kind: 'confirmed'
-      summary: CheckoutSummary
+      kind: 'found'
+      summary: CommandeTrackingSummary
     }
   | {
-      kind: 'missing-session' | 'not-found' | 'api-error'
+      kind: 'missing-token' | 'not-found' | 'api-error'
     }
 
 export const dynamic = 'force-dynamic'
 
-export default async function SuccessPage({ searchParams }: SuccessPageProps) {
+export default async function SuiviPage({ searchParams }: SuiviPageProps) {
   const params = searchParams ? await searchParams : {}
-  const sessionId = Array.isArray(params.session_id)
-    ? params.session_id[0]
-    : params.session_id
-
-  const state = await getSuccessPageState(sessionId)
+  const token = Array.isArray(params.token) ? params.token[0] : params.token
+  const state = await getSuiviPageState(token)
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#fffafb_0%,#faf7f8_42%,#f7edf2_100%)] px-4 py-6 sm:py-10">
       <div className="mx-auto grid max-w-6xl gap-6">
-        {state.kind === 'confirmed' ? (
-          <ConfirmedOrder summary={state.summary} />
+        {state.kind === 'found' ? (
+          <TrackedOrder summary={state.summary} />
         ) : (
-          <FallbackConfirmation kind={state.kind} />
+          <TrackingFallback kind={state.kind} />
         )}
       </div>
     </main>
   )
 }
 
-async function getSuccessPageState(
-  sessionId: string | undefined,
-): Promise<SuccessPageState> {
-  if (!sessionId) {
-    return { kind: 'missing-session' }
+async function getSuiviPageState(
+  token: string | undefined,
+): Promise<SuiviPageState> {
+  if (!token?.trim()) {
+    return { kind: 'missing-token' }
   }
 
   try {
-    const summary = await getCheckoutSummary(sessionId)
+    const summary = await getCommandeTracking(token)
 
-    return summary ? { kind: 'confirmed', summary } : { kind: 'not-found' }
+    return summary ? { kind: 'found', summary } : { kind: 'not-found' }
   } catch {
     return { kind: 'api-error' }
   }
 }
 
-function ConfirmedOrder({ summary }: { summary: CheckoutSummary }) {
+function TrackedOrder({ summary }: { summary: CommandeTrackingSummary }) {
   const paymentStatus = getPaymentStatus(summary.paiementStatut)
   const orderStatus = getOrderStatus(summary.statut)
-  const isPaymentConfirmed = summary.paiementStatut === 'confirme'
 
   return (
     <>
@@ -67,54 +63,28 @@ function ConfirmedOrder({ summary }: { summary: CheckoutSummary }) {
         <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1fr_360px] lg:items-stretch">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.22em] text-[#b5006e]">
-              Paiement {paymentStatus.label.toLowerCase()}
+              Suivi public
             </p>
-
             <h1 className="mt-3 text-4xl font-black tracking-tight text-[#181014] sm:text-5xl">
-              {isPaymentConfirmed
-                ? 'Commande confirmée'
-                : 'Commande bien reçue'}
+              Commande {summary.reference}
             </h1>
-
             <p className="mt-4 max-w-2xl text-sm leading-6 text-[#7a6d73] sm:text-base sm:leading-7">
-              Merci pour votre commande. Nous préparons votre retrait Click &
-              Collect avec les informations renseignées au paiement.
+              Retrouvez ici les informations utiles pour votre retrait Click &
+              Collect. Ce lien ne donne pas accès à un espace client.
             </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/"
-                className="rounded-full bg-[#b5006e] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#8c0055]"
-              >
-                Retour à la boutique
-              </Link>
-              <Link
-                href={`/suivi?token=${encodeURIComponent(summary.trackingToken)}`}
-                className="rounded-full border border-[#b5006e] bg-white px-5 py-3 text-sm font-black text-[#5a0037] transition hover:bg-[#fceef6]"
-              >
-                Suivre ma commande
-              </Link>
-              <Link
-                href="/click-and-collect"
-                className="rounded-full border border-[#e8e1e4] bg-white px-5 py-3 text-sm font-black text-[#5a0037] transition hover:border-[#b5006e]"
-              >
-                Infos retrait
-              </Link>
-            </div>
           </div>
 
           <div className="rounded-[1.5rem] bg-[#fceef6] p-5">
             <p className="text-sm font-black uppercase tracking-wide text-[#8c0055]">
-              Récapitulatif
+              État de la commande
             </p>
             <dl className="mt-4 grid gap-3 text-sm">
-              <SummaryRow label="Commande" value={summary.reference} />
+              <SummaryRow label="Statut" value={orderStatus.label} />
+              <SummaryRow label="Paiement" value={paymentStatus.label} />
               <SummaryRow
                 label="Total TTC"
                 value={formatCurrency(summary.totalTtcCents)}
               />
-              <SummaryRow label="Paiement" value={paymentStatus.label} />
-              <SummaryRow label="Statut" value={orderStatus.label} />
             </dl>
           </div>
         </div>
@@ -158,8 +128,7 @@ function ConfirmedOrder({ summary }: { summary: CheckoutSummary }) {
             </ul>
           ) : (
             <p className="mt-5 rounded-2xl bg-[#faf7f8] p-4 text-sm leading-6 text-[#7a6d73]">
-              Le détail des produits n’est pas disponible, mais votre paiement a
-              bien été pris en compte.
+              Le détail des produits n’est pas disponible pour le moment.
             </p>
           )}
         </section>
@@ -167,12 +136,11 @@ function ConfirmedOrder({ summary }: { summary: CheckoutSummary }) {
         <aside className="grid gap-6">
           <section className="rounded-[1.75rem] border border-[#eee2e7] bg-white p-5 shadow-sm">
             <p className="text-sm font-black uppercase tracking-wide text-[#b5006e]">
-              Click & Collect
+              Retrait
             </p>
             <h2 className="mt-1 text-2xl font-black text-[#181014]">
-              Votre retrait
+              Click & Collect
             </h2>
-
             <dl className="mt-4 grid gap-3 text-sm">
               <SummaryRow label="Lieu" value={summary.lieu} />
               <SummaryRow
@@ -184,29 +152,22 @@ function ConfirmedOrder({ summary }: { summary: CheckoutSummary }) {
                 }
               />
             </dl>
-
-            <div className="mt-5 rounded-2xl bg-[#faf7f8] p-4 text-sm leading-6 text-[#4a3d43]">
-              Présentez-vous au point de retrait choisi avec votre nom de
-              commande. Les commandes sont uniquement disponibles en Click &
-              Collect : aucune livraison à domicile n’est proposée.
-            </div>
           </section>
 
           <section className="rounded-[1.75rem] border border-[#eee2e7] bg-white p-5 shadow-sm">
             <p className="text-sm font-black uppercase tracking-wide text-[#b5006e]">
-              Prochaines étapes
+              Besoin d’aide ?
             </p>
-            <ol className="mt-4 grid gap-3">
-              <StepItem title="Confirmation" text={getEmailStepText(summary)} />
-              <StepItem
-                title="Préparation"
-                text="La boutique prépare les produits sélectionnés pour le créneau prévu."
-              />
-              <StepItem
-                title="Retrait"
-                text="Récupérez votre commande au lieu choisi, sans livraison à domicile."
-              />
-            </ol>
+            <p className="mt-3 text-sm leading-6 text-[#7a6d73]">
+              Si une information vous semble incorrecte, contactez la boutique
+              avec la référence {summary.reference}.
+            </p>
+            <Link
+              href="/"
+              className="mt-5 inline-flex rounded-full bg-[#b5006e] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#8c0055]"
+            >
+              Retour à la boutique
+            </Link>
           </section>
         </aside>
       </div>
@@ -214,10 +175,10 @@ function ConfirmedOrder({ summary }: { summary: CheckoutSummary }) {
   )
 }
 
-function FallbackConfirmation({
+function TrackingFallback({
   kind,
 }: {
-  kind: Exclude<SuccessPageState['kind'], 'confirmed'>
+  kind: Exclude<SuiviPageState['kind'], 'found'>
 }) {
   const content = getFallbackContent(kind)
 
@@ -233,21 +194,12 @@ function FallbackConfirmation({
         <p className="mt-4 text-sm leading-6 text-[#7a6d73]">
           {content.message}
         </p>
-
-        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link
-            href="/"
-            className="rounded-full bg-[#b5006e] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#8c0055]"
-          >
-            Retour à la boutique
-          </Link>
-          <Link
-            href="/checkout"
-            className="rounded-full border border-[#e8e1e4] bg-white px-5 py-3 text-sm font-black text-[#5a0037] transition hover:border-[#b5006e]"
-          >
-            Retour au paiement
-          </Link>
-        </div>
+        <Link
+          href="/"
+          className="mt-6 inline-flex rounded-full bg-[#b5006e] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#8c0055]"
+        >
+          Retour à la boutique
+        </Link>
       </div>
     </section>
   )
@@ -262,17 +214,11 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function StepItem({ title, text }: { title: string; text: string }) {
-  return (
-    <li className="rounded-2xl bg-[#faf7f8] p-4">
-      <p className="font-black text-[#181014]">{title}</p>
-      <p className="mt-1 text-sm leading-6 text-[#7a6d73]">{text}</p>
-    </li>
-  )
-}
-
-function getPaymentStatus(status: CheckoutSummary['paiementStatut']) {
-  const labels: Record<CheckoutSummary['paiementStatut'], { label: string }> = {
+function getPaymentStatus(status: CommandeTrackingSummary['paiementStatut']) {
+  const labels: Record<
+    CommandeTrackingSummary['paiementStatut'],
+    { label: string }
+  > = {
     confirme: { label: 'Confirmé' },
     en_attente: { label: 'En cours' },
     a_verifier: { label: 'À vérifier' },
@@ -295,40 +241,29 @@ function getOrderStatus(status: string) {
   return labels[status] ?? { label: 'En cours' }
 }
 
-function getEmailStepText(summary: CheckoutSummary) {
-  if (summary.paiementStatut === 'confirme') {
-    return 'Un email de confirmation est envoyé à l’adresse renseignée lors du paiement.'
-  }
-
-  return 'La confirmation finale sera envoyée dès que le paiement sera validé.'
-}
-
-function getFallbackContent(
-  kind: Exclude<SuccessPageState['kind'], 'confirmed'>,
-) {
-  if (kind === 'not-found') {
+function getFallbackContent(kind: Exclude<SuiviPageState['kind'], 'found'>) {
+  if (kind === 'missing-token') {
     return {
-      eyebrow: 'Commande introuvable',
-      title: 'Impossible de retrouver cette commande',
+      eyebrow: 'Lien manquant',
+      title: 'Aucune commande à afficher',
       message:
-        'Le lien de confirmation ne correspond à aucune commande connue. Si le paiement vient d’être validé, patientez quelques instants puis revenez depuis l’email de confirmation.',
+        'Ouvrez le lien de suivi reçu après votre paiement pour consulter votre commande.',
     }
   }
 
   if (kind === 'api-error') {
     return {
-      eyebrow: 'Détails indisponibles',
-      title: 'Votre confirmation est en cours',
+      eyebrow: 'Suivi indisponible',
+      title: 'Impossible de charger le suivi',
       message:
-        'Nous ne pouvons pas afficher le récapitulatif pour le moment. Si le paiement a été validé, la boutique reçoit tout de même la commande et la confirmation suit par email.',
+        'Le suivi est temporairement indisponible. Réessayez dans quelques instants.',
     }
   }
 
   return {
-    eyebrow: 'Confirmation',
-    title: 'Aucune commande à afficher',
-    message:
-      'Cette page s’ouvre normalement après un paiement validé. Pour finaliser une commande, retournez au panier puis relancez le paiement.',
+    eyebrow: 'Commande introuvable',
+    title: 'Lien de suivi invalide',
+    message: 'Commande introuvable ou lien de suivi invalide.',
   }
 }
 

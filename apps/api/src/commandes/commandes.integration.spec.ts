@@ -56,6 +56,7 @@ type TransactionClient = {
   commande: {
     findMany: jest.Mock
     findFirst: jest.Mock
+    findUnique: jest.Mock
     findUniqueOrThrow: jest.Mock
     create: jest.Mock
     update: jest.Mock
@@ -100,6 +101,7 @@ describe('Commandes integration', () => {
     commande: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -417,6 +419,7 @@ describe('Commandes integration', () => {
     expect(prismaMock.commande.create).toHaveBeenCalledWith({
       data: {
         nom: 'Marie Dupont',
+        trackingToken: expect.any(String) as string,
         email: 'marie@example.fr',
         tel: '0612345678',
         lieu: validPickupPoint,
@@ -583,6 +586,7 @@ describe('Commandes integration', () => {
     expect(prismaMock.commande.create).toHaveBeenCalledWith({
       data: {
         nom: 'Marie Dupont',
+        trackingToken: expect.any(String) as string,
         email: 'marie@example.fr',
         tel: '0612345678',
         lieu: validPickupPoint,
@@ -766,6 +770,7 @@ describe('Commandes integration', () => {
     expect(prismaMock.commande.create).toHaveBeenCalledWith({
       data: {
         nom: 'Marie Dupont',
+        trackingToken: expect.any(String) as string,
         email: 'marie@example.fr',
         tel: '0612345678',
         lieu: validPickupPoint,
@@ -1114,6 +1119,7 @@ describe('Commandes integration', () => {
 
     prismaMock.commande.findFirst.mockResolvedValue({
       id: 505,
+      trackingToken: 'track_token_505',
       totalTtcCents: 1250,
       lieu: validPickupPoint,
       dateRetrait,
@@ -1135,7 +1141,7 @@ describe('Commandes integration', () => {
       .expect(200)
 
     expect(response.body).toEqual({
-      id: 505,
+      trackingToken: 'track_token_505',
       reference: 'CMD-000505',
       totalTtcCents: 1250,
       lieu: validPickupPoint,
@@ -1157,6 +1163,7 @@ describe('Commandes integration', () => {
       where: { stripeId: 'cs_paid' },
       select: {
         id: true,
+        trackingToken: true,
         totalTtcCents: true,
         lieu: true,
         dateRetrait: true,
@@ -1183,6 +1190,68 @@ describe('Commandes integration', () => {
     await request(app.getHttpServer())
       .get('/api/commandes/checkout-session/cs_unknown')
       .expect(404)
+  })
+
+  it('GET /api/commandes/suivi/:token should return public tracking summary without sensitive fields', async () => {
+    const createdAt = new Date('2026-06-05T10:00:00.000Z')
+    const dateRetrait = new Date('2026-06-09T00:00:00.000Z')
+
+    prismaMock.commande.findUnique.mockResolvedValue({
+      id: 506,
+      trackingToken: 'track_token_506',
+      totalTtcCents: 500,
+      lieu: validPickupPoint,
+      dateRetrait,
+      statut: 'preparee',
+      createdAt,
+      lignes: [
+        {
+          quantite: 2,
+          prixUnitCents: 250,
+          article: {
+            nom: 'Baguette',
+          },
+        },
+      ],
+    })
+
+    const response = await request(app.getHttpServer())
+      .get('/api/commandes/suivi/track_token_506')
+      .expect(200)
+
+    expect(response.body).toEqual({
+      trackingToken: 'track_token_506',
+      reference: 'CMD-000506',
+      totalTtcCents: 500,
+      lieu: validPickupPoint,
+      dateRetrait: dateRetrait.toISOString(),
+      statut: 'preparee',
+      paiementStatut: 'confirme',
+      createdAt: createdAt.toISOString(),
+      lignes: [
+        {
+          nom: 'Baguette',
+          quantite: 2,
+          prixUnitCents: 250,
+          totalCents: 500,
+        },
+      ],
+    })
+    expect(response.body).not.toHaveProperty('id')
+    expect(response.body).not.toHaveProperty('stripeId')
+    expect(response.body).not.toHaveProperty('email')
+  })
+
+  it('GET /api/commandes/suivi/:token should return a neutral 404 for unknown token', async () => {
+    prismaMock.commande.findUnique.mockResolvedValue(null)
+
+    const response = await request(app.getHttpServer())
+      .get('/api/commandes/suivi/unknown_token')
+      .expect(404)
+
+    expect(response.body.message).toBe(
+      'Commande introuvable ou lien de suivi invalide',
+    )
   })
 
   it('POST /api/commandes/stripe/webhook should reject missing Stripe signature', async () => {

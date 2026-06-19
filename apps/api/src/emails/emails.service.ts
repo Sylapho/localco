@@ -5,6 +5,7 @@ import { formatCurrencyFromCents } from '../money'
 
 type OrderConfirmationEmail = {
   id: number
+  trackingToken?: string | null
   nom: string
   email: string
   totalTtcCents: number
@@ -74,6 +75,7 @@ export class EmailsService {
   }
 
   private renderOrderConfirmationHtml(order: OrderConfirmationEmail) {
+    const trackingUrl = this.getTrackingUrl(order.trackingToken)
     const rows = order.lignes
       .map(
         (line) => `
@@ -120,12 +122,15 @@ export class EmailsService {
           Date souhaitée : ${this.formatDate(order.dateRetrait)}
         </p>
 
+        ${this.renderTrackingLinkHtml(trackingUrl)}
+
         <p style="margin-top: 24px;">À très vite,<br />Les Cocottes de Diane</p>
       </div>
     `
   }
 
   private renderOrderConfirmationText(order: OrderConfirmationEmail) {
+    const trackingUrl = this.getTrackingUrl(order.trackingToken)
     const lines = order.lignes
       .map(
         (line) =>
@@ -149,9 +154,43 @@ export class EmailsService {
       `Lieu : ${order.lieu}`,
       `Date souhaitée : ${this.formatDate(order.dateRetrait)}`,
       '',
+      ...(trackingUrl
+        ? ['Vous pouvez suivre votre commande ici :', trackingUrl, '']
+        : []),
       'À très vite,',
       'Les Cocottes de Diane',
     ].join('\n')
+  }
+
+  private getTrackingUrl(token?: string | null) {
+    if (!token) {
+      return null
+    }
+
+    const shopUrl =
+      this.configService.get<string>('SHOP_PUBLIC_URL') ??
+      'http://localhost:3001'
+
+    return `${shopUrl.replace(/\/$/, '')}/suivi?token=${encodeURIComponent(
+      token,
+    )}`
+  }
+
+  private renderTrackingLinkHtml(trackingUrl: string | null) {
+    if (!trackingUrl) {
+      return ''
+    }
+
+    const escapedUrl = this.escapeHtml(trackingUrl)
+
+    return `
+        <p style="margin-top: 24px;">
+          Vous pouvez suivre votre commande ici :
+          <a href="${escapedUrl}" style="color: #b5006e; font-weight: 700;">
+            ${escapedUrl}
+          </a>
+        </p>
+    `
   }
 
   private formatCurrency(value: number) {

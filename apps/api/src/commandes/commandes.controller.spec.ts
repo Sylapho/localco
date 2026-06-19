@@ -12,6 +12,7 @@ describe('CommandesController', () => {
     createCheckout: jest.fn(),
     handleStripeWebhook: jest.fn(),
     findPublicCheckoutSummary: jest.fn(),
+    findPublicTrackingSummary: jest.fn(),
     findPickupPoints: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
@@ -107,8 +108,8 @@ describe('CommandesController', () => {
 
   it('findCheckoutSessionSummary should return public checkout summary', async () => {
     const result = {
-      id: 1,
       reference: 'CMD-000001',
+      trackingToken: 'tracking_token',
       paiementStatut: 'confirme',
     }
 
@@ -119,6 +120,23 @@ describe('CommandesController', () => {
     ).resolves.toEqual(result)
     expect(commandesServiceMock.findPublicCheckoutSummary).toHaveBeenCalledWith(
       'cs_test_123',
+    )
+  })
+
+  it('findTrackingSummary should return public tracking summary', async () => {
+    const result = {
+      reference: 'CMD-000001',
+      trackingToken: 'tracking_token',
+      paiementStatut: 'confirme',
+    }
+
+    commandesServiceMock.findPublicTrackingSummary.mockResolvedValue(result)
+
+    await expect(
+      controller.findTrackingSummary('tracking_token'),
+    ).resolves.toEqual(result)
+    expect(commandesServiceMock.findPublicTrackingSummary).toHaveBeenCalledWith(
+      'tracking_token',
     )
   })
 
