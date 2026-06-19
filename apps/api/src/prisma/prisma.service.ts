@@ -35,4 +35,13 @@ export class PrismaService
     await this.$disconnect()
     await this.pool.end()
   }
+
+  async isDatabaseAvailable() {
+    try {
+      await this.$queryRaw`SELECT 1`
+      return true
+    } catch {
+      return false
+    }
+  }
 }

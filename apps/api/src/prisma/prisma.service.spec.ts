@@ -2,6 +2,7 @@ const mockPoolEnd = jest.fn()
 const mockPrismaPg = jest.fn()
 const mockConnect = jest.fn()
 const mockDisconnect = jest.fn()
+const mockQueryRaw = jest.fn()
 
 jest.mock('pg', () => ({
   Pool: jest.fn().mockImplementation((options) => ({
@@ -23,6 +24,7 @@ jest.mock('../../prisma/generated/prisma/client', () => ({
   PrismaClient: class {
     $connect = mockConnect
     $disconnect = mockDisconnect
+    $queryRaw = mockQueryRaw
 
     constructor(readonly options: unknown) {}
   },
@@ -36,6 +38,7 @@ describe('PrismaService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockQueryRaw.mockResolvedValue([{ '?column?': 1 }])
     process.env.DATABASE_URL = 'postgresql://localco:test@localhost:5432/test'
   })
 
@@ -72,5 +75,19 @@ describe('PrismaService', () => {
     delete process.env.DATABASE_URL
 
     expect(() => new PrismaService()).toThrow(/DATABASE_URL est manquante/)
+  })
+
+  it('checks database availability with a lightweight query', async () => {
+    const service = new PrismaService()
+
+    await expect(service.isDatabaseAvailable()).resolves.toBe(true)
+    expect(mockQueryRaw).toHaveBeenCalled()
+  })
+
+  it('returns false when the database check fails', async () => {
+    mockQueryRaw.mockRejectedValue(new Error('database unavailable'))
+    const service = new PrismaService()
+
+    await expect(service.isDatabaseAvailable()).resolves.toBe(false)
   })
 })

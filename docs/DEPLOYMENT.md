@@ -96,7 +96,73 @@ Ne lancez pas automatiquement les migrations dans chaque réplique applicative, 
 
 ## Health checks attendus
 
-- API : `GET /api` doit répondre `200`.
+### API
+
+L'API expose deux endpoints de santé complémentaires :
+
+- `GET /api/health` : vérifie uniquement que l'API répond. Ce check reste léger et ne dépend pas de PostgreSQL, Stripe ou Resend.
+- `GET /api/health/ready` : vérifie que l'instance est prête à recevoir du trafic. Ce check valide la disponibilité PostgreSQL via Prisma et indique si Stripe et Resend sont configurés.
+
+Vérification locale :
+
+```bash
+curl http://localhost:4000/api/health
+curl http://localhost:4000/api/health/ready
+```
+
+Vérification après déploiement :
+
+```bash
+curl https://api.example.com/api/health
+curl https://api.example.com/api/health/ready
+```
+
+`/api/health/ready` renvoie `200` quand l'instance est prête et `503` quand elle ne doit pas encore être considérée comme disponible. La réponse expose uniquement des statuts et booléens de configuration ; les secrets et valeurs des variables d'environnement ne sont jamais affichés.
+
+Exemple de réponse prête :
+
+```json
+{
+  "status": "ready",
+  "service": "localco-api",
+  "timestamp": "2026-06-19T00:00:00.000Z",
+  "checks": {
+    "database": {
+      "status": "up"
+    },
+    "stripe": {
+      "configured": true
+    },
+    "resend": {
+      "configured": true
+    }
+  }
+}
+```
+
+Exemple de réponse non prête :
+
+```json
+{
+  "status": "not_ready",
+  "service": "localco-api",
+  "timestamp": "2026-06-19T00:00:00.000Z",
+  "checks": {
+    "database": {
+      "status": "down"
+    },
+    "stripe": {
+      "configured": true
+    },
+    "resend": {
+      "configured": false
+    }
+  }
+}
+```
+
+### Autres services
+
 - Web : `GET /` doit répondre `200` une fois l'API et la base disponibles.
 - Shop : `GET /` doit répondre `200` une fois l'API disponible.
 - PostgreSQL : health check natif `pg_isready`.

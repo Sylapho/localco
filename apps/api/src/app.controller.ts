@@ -1,6 +1,7 @@
-import { Controller, Get } from '@nestjs/common'
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common'
+import type { Response } from 'express'
 import { AppService } from './app.service'
-import type { HealthStatus } from './app.service'
+import type { HealthStatus, ReadinessStatus } from './app.service'
 
 @Controller()
 export class AppController {
@@ -14,5 +15,18 @@ export class AppController {
   @Get('health')
   getHealth(): HealthStatus {
     return this.appService.getHealth()
+  }
+
+  @Get('health/ready')
+  async getReadiness(
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<ReadinessStatus> {
+    const readiness = await this.appService.getReadiness()
+
+    if (readiness.status === 'not_ready') {
+      response.status(HttpStatus.SERVICE_UNAVAILABLE)
+    }
+
+    return readiness
   }
 }
