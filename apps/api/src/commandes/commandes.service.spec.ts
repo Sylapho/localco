@@ -790,6 +790,7 @@ describe('CommandesService', () => {
 
     prismaMock.commande.findFirst.mockResolvedValue({
       id: 8,
+      trackingToken: 'track_token_123',
       totalTtcCents: 1500,
       lieu: validPickupPoint,
       dateRetrait,
@@ -809,7 +810,7 @@ describe('CommandesService', () => {
     await expect(
       service.findPublicCheckoutSummary(' cs_paid '),
     ).resolves.toEqual({
-      id: 8,
+      trackingToken: 'track_token_123',
       reference: 'CMD-000008',
       totalTtcCents: 1500,
       lieu: validPickupPoint,
@@ -831,6 +832,7 @@ describe('CommandesService', () => {
       where: { stripeId: 'cs_paid' },
       select: {
         id: true,
+        trackingToken: true,
         totalTtcCents: true,
         lieu: true,
         dateRetrait: true,
@@ -857,6 +859,88 @@ describe('CommandesService', () => {
     await expect(
       service.findPublicCheckoutSummary('cs_unknown'),
     ).rejects.toBeInstanceOf(NotFoundException)
+  })
+
+  it('findPublicTrackingSummary should return a safe public order summary', async () => {
+    const createdAt = new Date('2026-06-05T10:00:00.000Z')
+    const dateRetrait = new Date('2026-06-06T00:00:00.000Z')
+
+    prismaMock.commande.findUnique.mockResolvedValue({
+      id: 9,
+      trackingToken: 'track_token_valid',
+      totalTtcCents: 2250,
+      lieu: validPickupPoint,
+      dateRetrait,
+      statut: 'preparee',
+      createdAt,
+      lignes: [
+        {
+          quantite: 3,
+          prixUnitCents: 750,
+          article: {
+            nom: 'Terrine de volaille',
+          },
+        },
+      ],
+    })
+
+    const result = await service.findPublicTrackingSummary(
+      ' track_token_valid ',
+    )
+
+    expect(result).toEqual({
+      trackingToken: 'track_token_valid',
+      reference: 'CMD-000009',
+      totalTtcCents: 2250,
+      lieu: validPickupPoint,
+      dateRetrait: dateRetrait.toISOString(),
+      statut: 'preparee',
+      paiementStatut: 'confirme',
+      createdAt: createdAt.toISOString(),
+      lignes: [
+        {
+          nom: 'Terrine de volaille',
+          quantite: 3,
+          prixUnitCents: 750,
+          totalCents: 2250,
+        },
+      ],
+    })
+    expect(result).not.toHaveProperty('id')
+    expect(result).not.toHaveProperty('stripeId')
+    expect(result).not.toHaveProperty('email')
+
+    expect(prismaMock.commande.findUnique).toHaveBeenCalledWith({
+      where: { trackingToken: 'track_token_valid' },
+      select: {
+        id: true,
+        trackingToken: true,
+        totalTtcCents: true,
+        lieu: true,
+        dateRetrait: true,
+        statut: true,
+        createdAt: true,
+        lignes: {
+          select: {
+            quantite: true,
+            prixUnitCents: true,
+            article: {
+              select: {
+                nom: true,
+              },
+            },
+          },
+        },
+      },
+    })
+  })
+
+  it('findPublicTrackingSummary should reject an unknown tracking token neutrally', async () => {
+    prismaMock.commande.findUnique.mockResolvedValue(null)
+
+    await expect(
+      service.findPublicTrackingSummary('unknown_token'),
+    ).rejects.toThrow('Commande introuvable ou lien de suivi invalide')
   })
 
   it('create should aggregate duplicated lines, compute total, decrement stock and record movement', async () => {
@@ -900,6 +984,7 @@ describe('CommandesService', () => {
     expect(prismaMock.commande.create).toHaveBeenCalledWith({
       data: {
         nom: 'Marie Dupont',
+        trackingToken: expect.any(String) as string,
         email: 'marie@example.fr',
         tel: '0612345678',
         lieu: validPickupPoint,
@@ -924,6 +1009,9 @@ describe('CommandesService', () => {
         },
       },
     })
+    expect(
+      prismaMock.commande.create.mock.calls[0][0].data.trackingToken,
+    ).toMatch(/^[A-Za-z0-9_-]{32}$/)
 
     expect(prismaMock.article.update).toHaveBeenCalledWith({
       where: { id: 1 },
@@ -989,6 +1077,7 @@ describe('CommandesService', () => {
     expect(prismaMock.commande.create).toHaveBeenCalledWith({
       data: {
         nom: 'Marie Dupont',
+        trackingToken: expect.any(String) as string,
         email: 'marie@example.fr',
         tel: '0612345678',
         lieu: validPickupPoint,
@@ -1134,6 +1223,7 @@ describe('CommandesService', () => {
     expect(prismaMock.commande.create).toHaveBeenCalledWith({
       data: {
         nom: 'Marie Dupont',
+        trackingToken: expect.any(String) as string,
         email: 'marie@example.fr',
         tel: '0612345678',
         lieu: validPickupPoint,

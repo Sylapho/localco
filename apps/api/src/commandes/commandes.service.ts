@@ -7,6 +7,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { randomBytes } from 'crypto'
 import { EmailsService } from '../emails/emails.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
 import { PickupPointsService } from '../pickup-points/pickup-points.service'
@@ -177,6 +178,23 @@ type ProductionOpenCommande = {
   }[]
 }
 
+type PublicCommandeSummary = {
+  trackingToken: string
+  reference: string
+  totalTtcCents: number
+  lieu: string
+  dateRetrait: string | null
+  statut: string
+  paiementStatut: 'confirme' | 'en_attente' | 'a_verifier' | 'annule'
+  createdAt: string
+  lignes: {
+    nom: string
+    quantite: number
+    prixUnitCents: number
+    totalCents: number
+  }[]
+}
+
 @Injectable()
 export class CommandesService {
   private readonly logger = new Logger(CommandesService.name)
@@ -276,6 +294,7 @@ export class CommandesService {
       where: { stripeId: normalizedSessionId },
       select: {
         id: true,
+        trackingToken: true,
         totalTtcCents: true,
         lieu: true,
         dateRetrait: true,
@@ -299,22 +318,49 @@ export class CommandesService {
       throw new NotFoundException('Commande introuvable')
     }
 
-    return {
-      id: commande.id,
-      reference: this.formatCommandeReference(commande.id),
-      totalTtcCents: commande.totalTtcCents,
-      lieu: commande.lieu,
-      dateRetrait: commande.dateRetrait?.toISOString() ?? null,
-      statut: commande.statut,
-      paiementStatut: this.getPublicPaymentStatus(commande.statut),
-      createdAt: commande.createdAt.toISOString(),
-      lignes: commande.lignes.map((ligne) => ({
-        nom: ligne.article.nom,
-        quantite: ligne.quantite,
-        prixUnitCents: ligne.prixUnitCents,
-        totalCents: ligne.prixUnitCents * ligne.quantite,
-      })),
+    return this.toPublicCommandeSummary(commande)
+  }
+
+  async findPublicTrackingSummary(token: string) {
+    const normalizedToken = token.trim()
+
+    if (!normalizedToken) {
+      throw new NotFoundException(
+        'Commande introuvable ou lien de suivi invalide',
+      )
     }
+
+    const commande = await this.prisma.commande.findUnique({
+      where: { trackingToken: normalizedToken },
+      select: {
+        id: true,
+        trackingToken: true,
+        totalTtcCents: true,
+        lieu: true,
+        dateRetrait: true,
+        statut: true,
+        createdAt: true,
+        lignes: {
+          select: {
+            quantite: true,
+            prixUnitCents: true,
+            article: {
+              select: {
+                nom: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!commande) {
+      throw new NotFoundException(
+        'Commande introuvable ou lien de suivi invalide',
+      )
+    }
+
+    return this.toPublicCommandeSummary(commande)
   }
 
   async create(data: CreateCommandeDto) {
@@ -325,6 +371,7 @@ export class CommandesService {
       const commande = await tx.commande.create({
         data: {
           nom: data.nom,
+          trackingToken: this.generateTrackingToken(),
           email: data.email,
           tel: data.tel,
           lieu: data.lieu,
@@ -390,6 +437,7 @@ export class CommandesService {
       const created = await tx.commande.create({
         data: {
           nom: data.nom,
+          trackingToken: this.generateTrackingToken(),
           email: data.email,
           tel: data.tel,
           lieu: data.lieu,
@@ -1987,6 +2035,44 @@ export class CommandesService {
 
   private getMissingCheckoutSessionReference(commandeId: number) {
     return `commande:${commandeId}:missing-checkout-session`
+  }
+
+  private generateTrackingToken() {
+    return randomBytes(24).toString('base64url')
+  }
+
+  private toPublicCommandeSummary(commande: {
+    id: number
+    trackingToken: string
+    totalTtcCents: number
+    lieu: string
+    dateRetrait?: Date | null
+    statut: string
+    createdAt: Date
+    lignes: {
+      quantite: number
+      prixUnitCents: number
+      article: {
+        nom: string
+      }
+    }[]
+  }): PublicCommandeSummary {
+    return {
+      trackingToken: commande.trackingToken,
+      reference: this.formatCommandeReference(commande.id),
+      totalTtcCents: commande.totalTtcCents,
+      lieu: commande.lieu,
+      dateRetrait: commande.dateRetrait?.toISOString() ?? null,
+      statut: commande.statut,
+      paiementStatut: this.getPublicPaymentStatus(commande.statut),
+      createdAt: commande.createdAt.toISOString(),
+      lignes: commande.lignes.map((ligne) => ({
+        nom: ligne.article.nom,
+        quantite: ligne.quantite,
+        prixUnitCents: ligne.prixUnitCents,
+        totalCents: ligne.prixUnitCents * ligne.quantite,
+      })),
+    }
   }
 
   private async withProductionNeeds<T extends CommandeWithProductionLines>(

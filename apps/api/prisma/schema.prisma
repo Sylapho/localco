@@ -153,6 +153,7 @@ model LigneVente {
 
 model Commande {
   id            Int                        @id @default(autoincrement())
+  trackingToken String                     @unique
   nom           String
   email         String
   tel           String?

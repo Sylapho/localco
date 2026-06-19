@@ -67,6 +67,11 @@ export class CommandesController {
     return this.commandesService.findPublicCheckoutSummary(sessionId)
   }
 
+  @Get('suivi/:token')
+  findTrackingSummary(@Param('token') token: string) {
+    return this.commandesService.findPublicTrackingSummary(token)
+  }
+
   @Get(':id')
   @UseGuards(BetterAuthGuard, RolesGuard)
   @Roles(ROLES.GERANT, ROLES.VENDEUR, ROLES.PRODUCTION, ROLES.COMPTABLE)
