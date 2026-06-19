@@ -38,6 +38,12 @@ const navItems: NavItem[] = [
     description: 'En ligne',
   },
   {
+    label: 'Préparation',
+    href: '/preparation',
+    short: 'Prep',
+    description: 'Retraits du jour',
+  },
+  {
     label: 'Articles',
     href: '/articles',
     short: 'Arts',
