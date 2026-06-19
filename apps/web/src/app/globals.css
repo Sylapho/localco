@@ -379,3 +379,20 @@ textarea:focus-visible {
     padding: 18px;
   }
 }
+
+@media print {
+  body:has(.preparation-print-page) .lc-sidebar,
+  body:has(.preparation-print-page) .lc-topbar,
+  body:has(.preparation-print-page) .lc-bottom-nav {
+    display: none;
+  }
+
+  body:has(.preparation-print-page) .lc-workspace {
+    padding-left: 0;
+    background: #fff;
+  }
+
+  body:has(.preparation-print-page) .lc-content main {
+    padding: 0;
+  }
+}
