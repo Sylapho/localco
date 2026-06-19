@@ -102,6 +102,7 @@ describe('API E2E - atomic order status transitions', () => {
 
     const commande = await testApp.prisma.commande.create({
       data: {
+        trackingToken: 'e2e-status-transition-order',
         nom: 'Client E2E',
         email: 'client.e2e@example.com',
         tel: '0600000000',
