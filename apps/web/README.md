@@ -1,6 +1,6 @@
-# Les cocottes de Diane Web
+# LocalCo Web
 
-Back-office Next.js de Les cocottes de Diane pour piloter l'activité interne.
+Back-office Next.js de LocalCo pour piloter l'activité interne.
 
 ## Rôle
 
@@ -14,7 +14,16 @@ Back-office Next.js de Les cocottes de Diane pour piloter l'activité interne.
 
 Copier `apps/web/.env.example` vers `apps/web/.env.local`.
 
-Consulter `apps/web/.env.example` pour la liste complète des variables attendues par le back-office.
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4000/api
+API_INTERNAL_URL=http://localhost:4000/api
+NEXT_PUBLIC_AUTH_URL=http://localhost:4000
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+```
 
 `DATABASE_URL` est nécessaire côté serveur pour Better Auth. Les providers OAuth sont optionnels. Les inscriptions par e-mail sont désactivées ; un compte doit être créé par l'administration Better Auth.
 

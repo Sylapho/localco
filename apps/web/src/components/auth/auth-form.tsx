@@ -41,7 +41,7 @@ export default function AuthForm() {
     <form onSubmit={handleSubmit} className="grid w-full max-w-sm gap-4 rounded border bg-white p-6 shadow-sm">
       <div>
         <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-          Les cocottes de Diane
+          LocalCo
         </p>
         <h1 className="mt-2 text-2xl font-bold">
           Connexion
