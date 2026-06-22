@@ -148,9 +148,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="lc-shell">
       <aside className="lc-sidebar">
-        <Link href="/" className="lc-brand" aria-label="LocalCo accueil">
-          <span className="lc-brand-kicker">Local</span>
-          <strong>Co</strong>
+        <Link href="/" className="lc-brand" aria-label="Les cocottes de Diane accueil">
+          <span className="lc-brand-kicker">Les cocottes</span>
+          <strong>de Diane</strong>
           <small>Gestion stock & caisse</small>
         </Link>
 
@@ -185,7 +185,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 className="lc-avatar"
                 title="Se déconnecter"
               >
-                {user?.name?.slice(0, 2).toUpperCase() ?? 'LC'}
+                {user?.name?.slice(0, 2).toUpperCase() ?? 'LD'}
               </button>
               <span>
                 <strong>{user?.name ?? 'Compte'}</strong>
@@ -207,7 +207,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <div className="lc-workspace">
         <div className="lc-topbar">
           <div>
-            <strong>LocalCo</strong>
+            <strong>Les cocottes de Diane</strong>
             {isLoaded && hasSession ? <span>Interface de gestion</span> : null}
             {isLoaded && !hasSession ? (
               <span>Connecte-toi pour accéder à la gestion</span>
@@ -218,33 +218,27 @@ export default function AppShell({ children }: { children: ReactNode }) {
               Nouvelle vente
             </Link>
           ) : null}
-          {isLoaded && !hasSession ? (
-            <div className="lc-topbar-auth">
-              <Link href="/sign-in" className="lc-topbar-action">
-                Connexion
-              </Link>
-            </div>
-          ) : null}
         </div>
 
-        <div className="lc-content">{children}</div>
+        <main>{children}</main>
+
+        <nav className="lc-mobile-nav" aria-label="Navigation mobile">
+          {visibleMobileNavItems.map((item) => {
+            const active = isActive(pathname, item.href)
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={active ? 'active' : undefined}
+              >
+                <span>{item.short.slice(0, 2)}</span>
+                <small>{item.short}</small>
+              </Link>
+            )
+          })}
+        </nav>
       </div>
-
-      <nav className="lc-bottom-nav" aria-label="Navigation mobile">
-        {visibleMobileNavItems.map((item) => {
-          const active = isActive(pathname, item.href)
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={active ? 'active' : undefined}
-            >
-              <span>{item.short}</span>
-            </Link>
-          )
-        })}
-      </nav>
     </div>
   )
 }
