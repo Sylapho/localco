@@ -2,13 +2,20 @@ import {
   Injectable,
   BadRequestException,
   ConflictException,
+  NotFoundException,
 } from '@nestjs/common'
+import { unlink } from 'fs/promises'
+import { resolve, sep } from 'path'
 import { Prisma } from '../../prisma/generated/prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
 import { CreateArticleDto } from './dto/create-article.dto'
 import { ProduceArticleDto } from './dto/produce-article.dto'
 import { UpdateArticleDto } from './dto/update-article.dto'
+import { ARTICLE_IMAGE_UPLOAD_DIR } from './article-image-upload'
+
+const ARTICLE_IMAGE_FILENAME_PATTERN =
+  /^article-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/i
 
 type ProductionArticle = {
   id: number
@@ -93,6 +100,32 @@ export class ArticlesService {
         imageUrl: data.imageUrl,
       },
     })
+  }
+
+  async updateImage(id: number, imageUrl: string, uploadedFilename?: string) {
+    const existingArticle = await this.prisma.article.findUnique({
+      where: { id },
+      select: { imageUrl: true },
+    })
+
+    if (!existingArticle) {
+      await this.deleteArticleImageFile(uploadedFilename)
+      throw new NotFoundException('Article introuvable')
+    }
+
+    try {
+      const updatedArticle = await this.prisma.article.update({
+        where: { id },
+        data: { imageUrl },
+      })
+
+      await this.deleteLocalArticleImage(existingArticle.imageUrl)
+
+      return updatedArticle
+    } catch (error) {
+      await this.deleteArticleImageFile(uploadedFilename)
+      throw error
+    }
   }
 
   remove(id: number) {
@@ -445,5 +478,51 @@ export class ArticlesService {
     today.setHours(0, 0, 0, 0)
 
     return today
+  }
+
+  private async deleteLocalArticleImage(imageUrl?: string | null) {
+    const filename = this.getLocalArticleImageFilename(imageUrl)
+
+    if (!filename) return
+
+    await this.deleteArticleImageFile(filename)
+  }
+
+  private getLocalArticleImageFilename(imageUrl?: string | null) {
+    if (!imageUrl) return null
+
+    let pathname: string
+
+    try {
+      pathname = new URL(imageUrl).pathname
+    } catch {
+      pathname = imageUrl
+    }
+
+    const match = pathname.match(/^\/uploads\/articles\/([^/]+)$/)
+
+    return match && this.isArticleImageFilename(match[1]) ? match[1] : null
+  }
+
+  private async deleteArticleImageFile(filename?: string | null) {
+    if (!filename || !this.isArticleImageFilename(filename)) return
+
+    const uploadRoot = resolve(ARTICLE_IMAGE_UPLOAD_DIR)
+    const targetPath = resolve(uploadRoot, filename)
+    const uploadRootWithSep = uploadRoot.endsWith(sep)
+      ? uploadRoot
+      : `${uploadRoot}${sep}`
+
+    if (!targetPath.startsWith(uploadRootWithSep)) return
+
+    try {
+      await unlink(targetPath)
+    } catch {
+      return
+    }
+  }
+
+  private isArticleImageFilename(filename: string) {
+    return ARTICLE_IMAGE_FILENAME_PATTERN.test(filename)
   }
 }

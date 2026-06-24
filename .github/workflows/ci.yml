@@ -265,6 +265,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           pnpm-version: ${{ env.PNPM_VERSION }}
 
+      - name: Disable unavailable Microsoft apt sources
+        run: |
+          sudo find /etc/apt/sources.list.d -name '*.list' -type f -print0 \
+            | sudo xargs -0 --no-run-if-empty sed -i 's|^deb .*packages.microsoft.com|# disabled: &|'
+
       - name: Install Playwright browsers
         run: pnpm --filter @localco/shop exec playwright install --with-deps chromium
 
@@ -329,6 +334,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           pnpm-version: ${{ env.PNPM_VERSION }}
+
+      - name: Disable unavailable Microsoft apt sources
+        run: |
+          sudo find /etc/apt/sources.list.d -name '*.list' -type f -print0 \
+            | sudo xargs -0 --no-run-if-empty sed -i 's|^deb .*packages.microsoft.com|# disabled: &|'
 
       - name: Install Playwright browsers
         run: pnpm --filter @localco/shop exec playwright install --with-deps chromium

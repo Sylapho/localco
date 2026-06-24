@@ -2,6 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { ConfigService } from '@nestjs/config'
 import { ArticlesController } from './articles.controller'
 import { ArticlesService } from './articles.service'
+import {
+  ARTICLE_IMAGE_MAX_SIZE_BYTES,
+  articleImageFileFilter,
+  buildArticleImageFilename,
+  buildArticleImagePath,
+  ensureArticleImageUploadDir,
+} from './article-image-upload'
 
 describe('ArticlesController', () => {
   let controller: ArticlesController
@@ -11,6 +18,7 @@ describe('ArticlesController', () => {
     findOne: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    updateImage: jest.fn(),
     remove: jest.fn(),
     getProductionCapacity: jest.fn(),
     produce: jest.fn(),
@@ -71,6 +79,77 @@ describe('ArticlesController', () => {
     articlesServiceMock.update.mockResolvedValue(result)
 
     await expect(controller.update(1, body)).resolves.toEqual(result)
+  })
+
+  it('uploadImage should update article image', async () => {
+    const result = {
+      id: 1,
+      nom: 'Baguette',
+      imageUrl: '/uploads/articles/article-1-test.jpg',
+    }
+    const file = {
+      filename: 'article-1-test.jpg',
+    }
+
+    articlesServiceMock.updateImage.mockResolvedValue(result)
+
+    await expect(controller.uploadImage(1, file)).resolves.toEqual(result)
+    expect(articlesServiceMock.updateImage).toHaveBeenCalledWith(
+      1,
+      '/uploads/articles/article-1-test.jpg',
+      'article-1-test.jpg',
+    )
+  })
+
+  it('uploadImage should reject missing files', async () => {
+    await expect(controller.uploadImage(1)).rejects.toThrow(
+      'Aucune image fournie.',
+    )
+    expect(articlesServiceMock.updateImage).not.toHaveBeenCalled()
+  })
+
+  it('articleImageFileFilter should accept supported images', () => {
+    const callback = jest.fn()
+
+    articleImageFileFilter({}, { mimetype: 'image/webp' }, callback)
+
+    expect(callback).toHaveBeenCalledWith(null, true)
+  })
+
+  it('articleImageFileFilter should reject unsupported files', () => {
+    const callback = jest.fn()
+
+    articleImageFileFilter({}, { mimetype: 'application/pdf' }, callback)
+
+    expect(callback).toHaveBeenCalledWith(expect.any(Error), false)
+  })
+
+  it('buildArticleImageFilename should generate a safe extension from MIME type', () => {
+    expect(buildArticleImageFilename('12', 'image/png')).toMatch(
+      /^article-12-\d+-[0-9a-f-]+\.png$/,
+    )
+    expect(buildArticleImageFilename('12', 'image/jpeg')).toMatch(/\.jpg$/)
+    expect(buildArticleImageFilename('12', 'image/webp')).toMatch(/\.webp$/)
+  })
+
+  it('buildArticleImageFilename should reject unsupported MIME types', () => {
+    expect(() => buildArticleImageFilename('12', 'application/pdf')).toThrow(
+      'Format invalide',
+    )
+  })
+
+  it('buildArticleImagePath should return a public upload path', () => {
+    expect(buildArticleImagePath('article-12-test.png')).toBe(
+      '/uploads/articles/article-12-test.png',
+    )
+  })
+
+  it('ensureArticleImageUploadDir should create the upload directory', () => {
+    expect(() => ensureArticleImageUploadDir()).not.toThrow()
+  })
+
+  it('should limit article image uploads to 2 Mo', () => {
+    expect(ARTICLE_IMAGE_MAX_SIZE_BYTES).toBe(2 * 1024 * 1024)
   })
 
   it('remove should return deleted article', async () => {

@@ -54,7 +54,7 @@ export default async function ArticlesPage() {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="lc-stat-grid">
         <StatCard
           label="Articles"
           value={articles.length}
@@ -75,7 +75,7 @@ export default async function ArticlesPage() {
       </section>
 
       <SectionCard
-        className="mt-6"
+        className="lc-section-spaced"
         title="Catalogue produits"
         description={
           articles.length > 0
@@ -96,69 +96,64 @@ export default async function ArticlesPage() {
             }
           />
         ) : (
-          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <ul className="lc-catalog-grid">
             {articles.map((article) => {
               const tone = stockTone(article.stock)
 
               return (
-                <li
-                  key={article.id}
-                  className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm transition hover:border-[var(--primary)]"
-                >
-                  <div className="flex items-start gap-3">
+                <li key={article.id} className="lc-catalog-card">
+                  <div className="lc-catalog-card-head">
                     <ArticleImage
                       article={article}
-                      className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)]"
+                      className="lc-catalog-image"
                     />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="truncate text-lg font-bold">
-                          {article.nom}
-                        </h2>
+                    <div className="lc-catalog-card-title">
+                      <div className="lc-catalog-title-row">
+                        <h2>{article.nom}</h2>
                         <span
                           className={
                             article.online
-                              ? 'rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold text-green-700'
-                              : 'rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-bold text-zinc-600'
+                              ? 'lc-status-pill lc-status-pill-success'
+                              : 'lc-status-pill lc-status-pill-muted'
                           }
                         >
                           {article.online ? 'En ligne' : 'Hors ligne'}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm text-[var(--muted)]">
+                      <p className="lc-catalog-category">
                         {getArticleCategoryLabel(article.category)}
                       </p>
                     </div>
                   </div>
 
                   {article.description ? (
-                    <p className="mt-4 line-clamp-2 text-sm leading-6 text-[var(--muted)]">
+                    <p className="lc-catalog-description">
                       {article.description}
                     </p>
                   ) : (
-                    <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+                    <p className="lc-catalog-description">
                       Aucune description renseignée.
                     </p>
                   )}
 
-                  <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-xl bg-[var(--surface-soft)] p-3">
-                      <dt className="text-[var(--muted)]">Prix TTC</dt>
-                      <dd className="mt-1 font-bold">
+                  <dl className="lc-catalog-metrics">
+                    <div>
+                      <dt>Prix TTC</dt>
+                      <dd>
                         {formatCurrencyFromCents(article.prixCents)}
                       </dd>
                     </div>
-                    <div className="rounded-xl bg-[var(--surface-soft)] p-3">
-                      <dt className="text-[var(--muted)]">Stock</dt>
-                      <dd className="mt-1 flex items-center gap-2 font-bold">
+                    <div>
+                      <dt>Stock</dt>
+                      <dd>
                         {article.stock}
                         <span
                           className={
                             tone === 'danger'
-                              ? 'rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700'
+                              ? 'lc-stock-pill lc-stock-pill-danger'
                               : tone === 'warning'
-                                ? 'rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800'
-                                : 'rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700'
+                                ? 'lc-stock-pill lc-stock-pill-warning'
+                                : 'lc-stock-pill lc-stock-pill-success'
                           }
                         >
                           {stockLabel(article.stock)}
@@ -167,7 +162,7 @@ export default async function ArticlesPage() {
                     </div>
                   </dl>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="lc-catalog-actions">
                     <Link
                       href={`/articles/${article.id}`}
                       className="lc-button lc-button-secondary"

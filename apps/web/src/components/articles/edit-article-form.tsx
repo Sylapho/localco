@@ -1,5 +1,6 @@
 'use client'
 
+import ArticleImage from '@/components/articles/article-image'
 import type { Article } from '@/lib/api'
 import { getApiErrorMessage, getUnknownErrorMessage } from '@/lib/api-error'
 import {
@@ -11,18 +12,19 @@ import {
 } from '@/lib/article-categories'
 import { centsToEuros, eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { FormEvent, useState } from 'react'
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react'
 
 type EditArticleFormProps = {
   article: Article
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
+const ARTICLE_IMAGE_MAX_SIZE_BYTES = 2 * 2048 * 2048
+const ARTICLE_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp'
 
-export default function EditArticleForm({
-  article,
-}: EditArticleFormProps) {
+export default function EditArticleForm({ article }: EditArticleFormProps) {
   const router = useRouter()
   const sessionFetch = useSessionFetch()
 
@@ -33,11 +35,84 @@ export default function EditArticleForm({
       : defaultArticleCategory,
   )
   const [prix, setPrix] = useState(String(centsToEuros(article.prixCents)))
-  const [imageUrl, setImageUrl] = useState(article.imageUrl ?? '')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
   const [description, setDescription] = useState(article.description ?? '')
   const [online, setOnline] = useState(article.online)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const imagePreviewUrlRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrlRef.current) {
+        URL.revokeObjectURL(imagePreviewUrlRef.current)
+      }
+    }
+  }, [])
+
+  function setSelectedImage(file: File | null) {
+    if (imagePreviewUrlRef.current) {
+      URL.revokeObjectURL(imagePreviewUrlRef.current)
+      imagePreviewUrlRef.current = null
+    }
+
+    setImageFile(file)
+
+    if (!file) {
+      setImagePreviewUrl('')
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    imagePreviewUrlRef.current = previewUrl
+    setImagePreviewUrl(previewUrl)
+  }
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+
+    if (!file) {
+      setSelectedImage(null)
+      return
+    }
+
+    if (!ARTICLE_IMAGE_ACCEPT.split(',').includes(file.type)) {
+      setError('Format invalide. Utilisez une image JPEG, PNG ou WebP.')
+      event.target.value = ''
+      setSelectedImage(null)
+      return
+    }
+
+    if (file.size > ARTICLE_IMAGE_MAX_SIZE_BYTES) {
+      setError('Image trop lourde. Taille maximale : 2 Mo.')
+      event.target.value = ''
+      setSelectedImage(null)
+      return
+    }
+
+    setError('')
+    setSelectedImage(file)
+  }
+
+  async function uploadArticleImage(file: File) {
+    const formData = new FormData()
+    formData.append('image', file)
+
+    const response = await sessionFetch(
+      `${API_URL}/articles/${article.id}/image`,
+      {
+        method: 'POST',
+        body: formData,
+      },
+    )
+
+    if (!response.ok) {
+      throw new Error(
+        await getApiErrorMessage(response, 'Erreur lors de l’upload image.'),
+      )
+    }
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -54,7 +129,6 @@ export default function EditArticleForm({
           nom,
           category,
           prixCents: eurosToCents(Number(prix)),
-          imageUrl: imageUrl || null,
           description: description || undefined,
           online,
         }),
@@ -64,6 +138,10 @@ export default function EditArticleForm({
         throw new Error(
           await getApiErrorMessage(response, 'Erreur lors de la mise à jour.'),
         )
+      }
+
+      if (imageFile) {
+        await uploadArticleImage(imageFile)
       }
 
       router.push(`/articles/${article.id}`)
@@ -137,15 +215,37 @@ export default function EditArticleForm({
       </div>
 
       <div className="grid gap-1">
-        <label htmlFor="imageUrl">Image</label>
+        <label htmlFor="image">Image</label>
         <input
-          id="imageUrl"
-          type="url"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
+          id="image"
+          type="file"
+          accept={ARTICLE_IMAGE_ACCEPT}
+          onChange={handleImageChange}
           className="rounded border px-3 py-2"
-          placeholder="https://exemple.fr/photo.jpg"
         />
+        <p className="text-sm text-gray-600">
+          Sélectionnez un nouveau fichier pour remplacer l’image actuelle.
+          Formats acceptés : JPEG, PNG ou WebP, 2 Mo maximum.
+        </p>
+        {imagePreviewUrl ? (
+          <Image
+            src={imagePreviewUrl}
+            alt="Aperçu de la nouvelle image"
+            width={128}
+            height={128}
+            unoptimized
+            className="mt-2 h-32 w-32 rounded border object-cover"
+          />
+        ) : article.imageUrl ? (
+          <ArticleImage
+            article={article}
+            className="mt-2 h-32 w-32 overflow-hidden rounded border bg-gray-100"
+          />
+        ) : (
+          <p className="mt-2 rounded border bg-gray-50 px-3 py-2 text-sm text-gray-600">
+            Aucune image définie.
+          </p>
+        )}
       </div>
 
       <label className="flex items-center gap-2">

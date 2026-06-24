@@ -11,6 +11,7 @@ describe('ArticlesService', () => {
   const prismaMock = {
     article: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -193,6 +194,48 @@ describe('ArticlesService', () => {
         imageUrl: undefined,
       },
     })
+  })
+
+  it('updateImage should update an existing article image', async () => {
+    const updated = {
+      id: 1,
+      nom: 'Baguette',
+      imageUrl: '/uploads/articles/article-1-new.jpg',
+    }
+
+    prismaMock.article.findUnique.mockResolvedValue({ imageUrl: null })
+    prismaMock.article.update.mockResolvedValue(updated)
+
+    await expect(
+      service.updateImage(
+        1,
+        '/uploads/articles/article-1-new.jpg',
+        'uploads/articles/article-1-new.jpg',
+      ),
+    ).resolves.toEqual(updated)
+    expect(prismaMock.article.findUnique).toHaveBeenCalledWith({
+      where: { id: 1 },
+      select: { imageUrl: true },
+    })
+    expect(prismaMock.article.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: {
+        imageUrl: '/uploads/articles/article-1-new.jpg',
+      },
+    })
+  })
+
+  it('updateImage should reject an unknown article', async () => {
+    prismaMock.article.findUnique.mockResolvedValue(null)
+
+    await expect(
+      service.updateImage(
+        999,
+        '/uploads/articles/article-999-new.jpg',
+        'uploads/articles/article-999-new.jpg',
+      ),
+    ).rejects.toThrow('Article introuvable')
+    expect(prismaMock.article.update).not.toHaveBeenCalled()
   })
 
   it('remove should delete an article', async () => {

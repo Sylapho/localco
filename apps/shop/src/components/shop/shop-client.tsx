@@ -17,6 +17,7 @@ import {
   writeStoredCart,
   type Cart,
 } from '@/lib/cart'
+import { getImageUrl } from '@/lib/image-url'
 import { formatPickupPoint } from '@/lib/pickup-points'
 import ProductInfoPopover from './product-info-popover'
 import Image from 'next/image'
@@ -574,11 +575,13 @@ function ProductRow({
 }
 
 function ProductThumbnail({ article }: { article: ShopArticle }) {
-  if (article.imageUrl) {
+  const imageUrl = getImageUrl(article.imageUrl)
+
+  if (imageUrl) {
     return (
       <div className="relative h-[4.5rem] w-[4.5rem] overflow-hidden rounded-2xl bg-[#fceef6]">
         <Image
-          src={article.imageUrl}
+          src={imageUrl}
           alt={article.nom}
           fill
           sizes="72px"

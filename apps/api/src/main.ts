@@ -1,6 +1,11 @@
 import 'dotenv/config'
+import { NestExpressApplication } from '@nestjs/platform-express'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
+import {
+  ARTICLE_IMAGE_UPLOAD_ROOT,
+  ensureArticleImageUploadDir,
+} from './articles/article-image-upload'
 import { configureApp } from './bootstrap/configure-app'
 
 function getCorsOrigins() {
@@ -17,9 +22,17 @@ function getCorsOrigins() {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true })
+  ensureArticleImageUploadDir()
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  })
 
   configureApp(app)
+
+  app.useStaticAssets(ARTICLE_IMAGE_UPLOAD_ROOT, {
+    prefix: '/uploads/',
+  })
 
   app.enableCors({
     origin: getCorsOrigins(),

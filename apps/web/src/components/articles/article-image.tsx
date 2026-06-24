@@ -1,4 +1,5 @@
 import type { Article } from '@/lib/api'
+import { getImageUrl } from '@/lib/image-url'
 import Image from 'next/image'
 
 type ArticleImageProps = {
@@ -9,12 +10,13 @@ type ArticleImageProps = {
 export default function ArticleImage({ article, className }: ArticleImageProps) {
   const baseClass =
     className ?? 'h-14 w-14 overflow-hidden rounded border bg-gray-100'
+  const imageUrl = getImageUrl(article.imageUrl)
 
-  if (article.imageUrl) {
+  if (imageUrl) {
     return (
       <div className={`${baseClass} relative`}>
         <Image
-          src={article.imageUrl}
+          src={imageUrl}
           alt={article.nom}
           fill
           sizes="96px"

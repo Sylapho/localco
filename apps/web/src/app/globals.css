@@ -529,6 +529,185 @@ textarea::placeholder {
   border-bottom: 0;
 }
 
+.lc-section-spaced {
+  margin-top: 24px;
+}
+
+.lc-stat-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lc-catalog-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lc-catalog-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(51, 35, 46, 0.05);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.lc-catalog-card:hover {
+  border-color: rgba(160, 0, 95, 0.32);
+  box-shadow: 0 14px 32px rgba(51, 35, 46, 0.08);
+  transform: translateY(-1px);
+}
+
+.lc-catalog-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.lc-catalog-image {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.lc-catalog-card-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.lc-catalog-title-row {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lc-catalog-title-row h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.06rem;
+  font-weight: 850;
+}
+
+.lc-catalog-category {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.lc-status-pill,
+.lc-stock-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.lc-status-pill {
+  padding: 6px 9px;
+}
+
+.lc-status-pill-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.lc-status-pill-muted {
+  background: #f4f4f5;
+  color: #52525b;
+}
+
+.lc-catalog-description {
+  display: -webkit-box;
+  min-height: 48px;
+  margin-top: 14px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.lc-catalog-metrics {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.lc-catalog-metrics > div {
+  min-width: 0;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.lc-catalog-metrics dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.lc-catalog-metrics dd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0 0;
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+.lc-stock-pill {
+  padding: 4px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.lc-stock-pill-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.lc-stock-pill-warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.lc-stock-pill-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.lc-catalog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
 .lc-mobile-nav {
   display: none;
 }
@@ -571,6 +750,11 @@ textarea::placeholder {
   .lc-page-actions,
   .lc-card-actions {
     justify-content: flex-start;
+  }
+
+  .lc-stat-grid,
+  .lc-catalog-grid {
+    grid-template-columns: 1fr;
   }
 
   .lc-mobile-nav {

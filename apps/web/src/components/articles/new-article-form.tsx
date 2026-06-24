@@ -9,10 +9,13 @@ import {
 } from '@/lib/article-categories'
 import { eurosToCents } from '@/lib/money'
 import { useSessionFetch } from '@/lib/use-session-fetch'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { FormEvent, useState } from 'react'
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
+const ARTICLE_IMAGE_MAX_SIZE_BYTES = 2 * 2048 * 2048
+const ARTICLE_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp'
 
 export default function NewArticleForm() {
   const router = useRouter()
@@ -23,10 +26,83 @@ export default function NewArticleForm() {
     defaultArticleCategory,
   )
   const [prix, setPrix] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const imagePreviewUrlRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrlRef.current) {
+        URL.revokeObjectURL(imagePreviewUrlRef.current)
+      }
+    }
+  }, [])
+
+  function setSelectedImage(file: File | null) {
+    if (imagePreviewUrlRef.current) {
+      URL.revokeObjectURL(imagePreviewUrlRef.current)
+      imagePreviewUrlRef.current = null
+    }
+
+    setImageFile(file)
+
+    if (!file) {
+      setImagePreviewUrl('')
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    imagePreviewUrlRef.current = previewUrl
+    setImagePreviewUrl(previewUrl)
+  }
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+
+    if (!file) {
+      setSelectedImage(null)
+      return
+    }
+
+    if (!ARTICLE_IMAGE_ACCEPT.split(',').includes(file.type)) {
+      setError('Format invalide. Utilisez une image JPEG, PNG ou WebP.')
+      event.target.value = ''
+      setSelectedImage(null)
+      return
+    }
+
+    if (file.size > ARTICLE_IMAGE_MAX_SIZE_BYTES) {
+      setError('Image trop lourde. Taille maximale : 2 Mo.')
+      event.target.value = ''
+      setSelectedImage(null)
+      return
+    }
+
+    setError('')
+    setSelectedImage(file)
+  }
+
+  async function uploadArticleImage(articleId: number, file: File) {
+    const formData = new FormData()
+    formData.append('image', file)
+
+    const response = await sessionFetch(
+      `${API_URL}/articles/${articleId}/image`,
+      {
+        method: 'POST',
+        body: formData,
+      },
+    )
+
+    if (!response.ok) {
+      throw new Error(
+        await getApiErrorMessage(response, 'Erreur lors de l’upload image.'),
+      )
+    }
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -44,7 +120,6 @@ export default function NewArticleForm() {
           category,
           prixCents: eurosToCents(Number(prix)),
           online: true,
-          imageUrl: imageUrl || undefined,
           description: description || undefined,
         }),
       })
@@ -55,7 +130,13 @@ export default function NewArticleForm() {
         )
       }
 
-      router.push('/articles')
+      const createdArticle = (await response.json()) as { id: number }
+
+      if (imageFile) {
+        await uploadArticleImage(createdArticle.id, imageFile)
+      }
+
+      router.push(`/articles/${createdArticle.id}`)
       router.refresh()
     } catch (err) {
       setError(getUnknownErrorMessage(err))
@@ -119,19 +200,27 @@ export default function NewArticleForm() {
       </div>
 
       <div className="grid gap-1">
-        <label htmlFor="imageUrl">Image</label>
+        <label htmlFor="image">Image</label>
         <input
-          id="imageUrl"
-          type="url"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
+          id="image"
+          type="file"
+          accept={ARTICLE_IMAGE_ACCEPT}
+          onChange={handleImageChange}
           className="rounded border px-3 py-2"
-          placeholder="https://exemple.fr/photo.jpg"
         />
         <p className="text-sm text-gray-600">
-          Pour le moment, colle une URL d&apos;image. On pourra ajouter
-          l&apos;upload de fichier ensuite.
+          Formats acceptés : JPEG, PNG ou WebP. Taille maximale : 2 Mo.
         </p>
+        {imagePreviewUrl ? (
+          <Image
+            src={imagePreviewUrl}
+            alt="Aperçu de l’image sélectionnée"
+            width={128}
+            height={128}
+            unoptimized
+            className="mt-2 h-32 w-32 rounded border object-cover"
+          />
+        ) : null}
       </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
