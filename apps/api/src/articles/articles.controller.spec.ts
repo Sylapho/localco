@@ -5,6 +5,9 @@ import { ArticlesService } from './articles.service'
 import {
   ARTICLE_IMAGE_MAX_SIZE_BYTES,
   articleImageFileFilter,
+  buildArticleImageFilename,
+  buildArticleImagePath,
+  ensureArticleImageUploadDir,
 } from './article-image-upload'
 
 describe('ArticlesController', () => {
@@ -120,6 +123,30 @@ describe('ArticlesController', () => {
     articleImageFileFilter({}, { mimetype: 'application/pdf' }, callback)
 
     expect(callback).toHaveBeenCalledWith(expect.any(Error), false)
+  })
+
+  it('buildArticleImageFilename should generate a safe extension from MIME type', () => {
+    expect(buildArticleImageFilename('12', 'image/png')).toMatch(
+      /^article-12-\d+-[0-9a-f-]+\.png$/,
+    )
+    expect(buildArticleImageFilename('12', 'image/jpeg')).toMatch(/\.jpg$/)
+    expect(buildArticleImageFilename('12', 'image/webp')).toMatch(/\.webp$/)
+  })
+
+  it('buildArticleImageFilename should reject unsupported MIME types', () => {
+    expect(() => buildArticleImageFilename('12', 'application/pdf')).toThrow(
+      'Format invalide',
+    )
+  })
+
+  it('buildArticleImagePath should return a public upload path', () => {
+    expect(buildArticleImagePath('article-12-test.png')).toBe(
+      '/uploads/articles/article-12-test.png',
+    )
+  })
+
+  it('ensureArticleImageUploadDir should create the upload directory', () => {
+    expect(() => ensureArticleImageUploadDir()).not.toThrow()
   })
 
   it('should limit article image uploads to 2 Mo', () => {
