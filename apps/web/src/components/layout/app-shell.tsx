@@ -43,52 +43,52 @@ const navItems: NavItem[] = [
     label: 'Ventes',
     href: '/ventes/new',
     short: 'Vente',
-    description: 'Encaissement',
+    description: 'Encaissement rapide',
     canAccess: canCreateSales,
   },
   {
     label: 'Commandes',
     href: '/commandes',
     short: 'Cmd',
-    description: 'En ligne',
+    description: 'Click & Collect',
     canAccess: canViewOrders,
   },
   {
     label: 'Préparation',
     href: '/preparation',
     short: 'Prep',
-    description: 'Retraits du jour',
+    description: 'Retraits à servir',
     canAccess: canViewOrders,
   },
   {
     label: 'Articles',
     href: '/articles',
     short: 'Arts',
-    description: 'Catalogue',
+    description: 'Catalogue boutique',
     canAccess: canViewArticles,
   },
   {
     label: 'Stock',
     href: '/stock',
     short: 'Stock',
-    description: 'Matières & articles',
+    description: 'Lots, DLC et alertes',
     canAccess: canViewStock,
   },
   {
     label: 'Historique',
     href: '/caisse/journees',
     short: 'Hist.',
-    description: 'Clôtures',
+    description: 'Clôtures de caisse',
     canAccess: canManageCashRegister,
   },
 ]
 
 const adminNavItems: NavItem[] = [
   {
-    label: 'Admin',
+    label: 'Utilisateurs',
     href: '/admin/users',
     short: 'Admin',
-    description: 'Utilisateurs',
+    description: 'Rôles et accès',
     canAccess: canAccessAdmin,
   },
   {
@@ -102,7 +102,7 @@ const adminNavItems: NavItem[] = [
     label: 'Stripe',
     href: '/admin/stripe-reconciliations',
     short: 'Pay',
-    description: 'Réconciliations',
+    description: 'Paiements à vérifier',
     canAccess: canAccessAdmin,
   },
 ]
@@ -119,6 +119,26 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const active = isActive(pathname, item.href)
+
+  return (
+    <Link
+      href={item.href}
+      className={active ? 'lc-nav-item active' : 'lc-nav-item'}
+      aria-current={active ? 'page' : undefined}
+    >
+      <span className="lc-nav-mark" aria-hidden="true">
+        {item.short.slice(0, 2)}
+      </span>
+      <span>
+        <span className="lc-nav-label">{item.label}</span>
+        <span className="lc-nav-desc">{item.description}</span>
+      </span>
+    </Link>
+  )
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -127,12 +147,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const role = getUserRole(user)
   const hasSession = Boolean(session)
   const isLoaded = !isPending
-  const visibleNavItems = [...navItems, ...adminNavItems].filter((item) =>
+  const visibleNavItems = navItems.filter((item) => item.canAccess(user))
+  const visibleAdminNavItems = adminNavItems.filter((item) =>
     item.canAccess(user),
   )
-  const visibleMobileNavItems = navItems
-    .filter((item) => item.canAccess(user))
-    .slice(0, 5)
+  const visibleMobileNavItems = visibleNavItems.slice(0, 5)
 
   async function handleSignOut() {
     await authClient.signOut({
@@ -149,31 +168,25 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="lc-shell">
       <aside className="lc-sidebar">
         <Link href="/" className="lc-brand" aria-label="Les cocottes de Diane accueil">
-          <span className="lc-brand-kicker">Les cocottes</span>
-          <strong>de Diane</strong>
-          <small>Gestion stock & caisse</small>
+          <span className="lc-brand-kicker">Back-office</span>
+          <strong>Les cocottes de Diane</strong>
+          <small>Commandes, stock, caisse et production</small>
         </Link>
 
         <nav className="lc-nav" aria-label="Navigation principale">
-          {visibleNavItems.map((item) => {
-            const active = isActive(pathname, item.href)
+          <p className="lc-nav-section">Pilotage</p>
+          {visibleNavItems.map((item) => (
+            <NavLink key={item.href} item={item} pathname={pathname} />
+          ))}
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={active ? 'lc-nav-item active' : 'lc-nav-item'}
-              >
-                <span className="lc-nav-mark" aria-hidden="true">
-                  {item.short.slice(0, 2)}
-                </span>
-                <span>
-                  <span className="lc-nav-label">{item.label}</span>
-                  <span className="lc-nav-desc">{item.description}</span>
-                </span>
-              </Link>
-            )
-          })}
+          {visibleAdminNavItems.length > 0 ? (
+            <>
+              <p className="lc-nav-section">Administration</p>
+              {visibleAdminNavItems.map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} />
+              ))}
+            </>
+          ) : null}
         </nav>
 
         <div className="lc-sidebar-foot">
@@ -184,33 +197,34 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 onClick={handleSignOut}
                 className="lc-avatar"
                 title="Se déconnecter"
+                aria-label="Se déconnecter"
               >
                 {user?.name?.slice(0, 2).toUpperCase() ?? 'LD'}
               </button>
               <span>
-                <strong>{user?.name ?? 'Compte'}</strong>
+                <strong>{user?.name ?? 'Compte équipe'}</strong>
                 <small>Rôle : {role}</small>
               </span>
             </div>
           ) : null}
 
           {isLoaded && !hasSession ? (
-            <div className="lc-auth-actions">
-              <Link href="/sign-in" className="lc-auth-primary">
-                Se connecter
-              </Link>
-            </div>
+            <Link href="/sign-in" className="lc-auth-primary">
+              Se connecter
+            </Link>
           ) : null}
         </div>
       </aside>
 
       <div className="lc-workspace">
-        <div className="lc-topbar">
+        <header className="lc-topbar">
           <div>
-            <strong>Les cocottes de Diane</strong>
-            {isLoaded && hasSession ? <span>Interface de gestion</span> : null}
+            <strong>Interface de gestion</strong>
+            {isLoaded && hasSession ? (
+              <span>Connecté au back-office Les cocottes de Diane</span>
+            ) : null}
             {isLoaded && !hasSession ? (
-              <span>Connecte-toi pour accéder à la gestion</span>
+              <span>Connecte-toi pour accéder aux opérations internes</span>
             ) : null}
           </div>
           {isLoaded && hasSession && canCreateSales(user) ? (
@@ -218,9 +232,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
               Nouvelle vente
             </Link>
           ) : null}
-        </div>
+        </header>
 
-        <main>{children}</main>
+        <div className="lc-content">{children}</div>
 
         <nav className="lc-mobile-nav" aria-label="Navigation mobile">
           {visibleMobileNavItems.map((item) => {
@@ -231,6 +245,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={active ? 'active' : undefined}
+                aria-current={active ? 'page' : undefined}
               >
                 <span>{item.short.slice(0, 2)}</span>
                 <small>{item.short}</small>

@@ -257,7 +257,7 @@ function CommandeFiltersForm({
   activeFilterCount: number
 }) {
   return (
-    <section className="rounded border bg-white p-4 shadow-sm">
+    <section className="lc-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Filtres commandes</h2>
@@ -267,7 +267,7 @@ function CommandeFiltersForm({
           </p>
         </div>
         {activeFilterCount > 0 ? (
-          <Link href="/commandes" className="rounded border px-3 py-2 text-sm">
+          <Link href="/commandes" className="lc-button lc-button-secondary">
             Reinitialiser
           </Link>
         ) : null}
@@ -354,7 +354,7 @@ function CommandeFiltersForm({
         <div className="flex items-end">
           <button
             type="submit"
-            className="w-full rounded bg-black px-4 py-2 text-sm font-medium text-white"
+            className="lc-button lc-button-primary w-full"
           >
             Filtrer
           </button>
@@ -401,7 +401,7 @@ export default async function CommandesPage({
   const activeFilterCount = getActiveFilterCount(filters)
 
   return (
-    <main className="p-8">
+    <main className="lc-page">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Commandes en ligne</h1>
@@ -412,14 +412,14 @@ export default async function CommandesPage({
       </div>
 
       <section className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded border bg-white px-4 py-3 shadow-sm">
+        <div className="lc-stat-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             Commandes à traiter
           </p>
           <p className="mt-1 text-2xl font-bold">{commandesATraiter.length}</p>
         </div>
 
-        <div className="rounded border bg-white px-4 py-3 shadow-sm">
+        <div className="lc-stat-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             Produits à produire
           </p>
@@ -448,7 +448,7 @@ export default async function CommandesPage({
       </section>
 
       {commandes.length === 0 ? (
-        <section className="rounded border bg-white p-6 shadow-sm">
+        <section className="lc-card">
           <h2 className="text-lg font-semibold">Aucune commande</h2>
           <p className="mt-1 text-sm text-gray-600">
             Les commandes client apparaîtront ici quand la boutique publique
@@ -571,7 +571,7 @@ export default async function CommandesPage({
 
           <section className="grid gap-4">
             {filteredCommandes.length === 0 ? (
-              <div className="rounded border bg-white p-6 shadow-sm">
+              <div className="lc-card">
                 <h2 className="text-lg font-semibold">
                   Aucune commande ne correspond aux filtres
                 </h2>
@@ -589,7 +589,7 @@ export default async function CommandesPage({
               return (
                 <article
                   key={commande.id}
-                  className="rounded border bg-white p-4 shadow-sm"
+                  className="lc-card"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
@@ -705,7 +705,7 @@ export default async function CommandesPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`/commandes/${commande.id}`}
-                        className="rounded border px-3 py-2 text-sm"
+                        className="lc-button lc-button-secondary"
                       >
                         Voir détail
                       </Link>

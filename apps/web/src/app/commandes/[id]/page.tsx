@@ -3,10 +3,10 @@ import CommandeStatusActions from '@/components/commandes/commande-status-action
 import CommandeStatusBadge, {
   commandeStatusLabels,
 } from '@/components/commandes/commande-status-badge'
+import { ButtonLink, Page, SectionCard } from '@/components/ui/dashboard'
 import { getCommande } from '@/lib/api'
 import { requireUiPermission } from '@/lib/auth-session'
 import { canManageOrders, canViewOrders } from '@/lib/permissions'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 type PageProps = {
@@ -63,14 +63,14 @@ export default async function CommandeDetailPage({ params }: PageProps) {
   )
 
   return (
-    <main className="p-8">
+    <Page>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Link href="/commandes" className="rounded border px-3 py-2 text-sm">
+        <ButtonLink href="/commandes" variant="secondary">
           Retour aux commandes
-        </Link>
+        </ButtonLink>
       </div>
 
-      <section className="rounded border bg-white p-6 shadow-sm">
+      <SectionCard>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -94,10 +94,10 @@ export default async function CommandeDetailPage({ params }: PageProps) {
             canManage={userCanManageOrders}
           />
         </div>
-      </section>
+      </SectionCard>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <section className="rounded border bg-white p-5 shadow-sm">
+        <SectionCard>
           <h2 className="text-lg font-semibold">Client</h2>
           <dl className="mt-4 grid gap-3 text-sm">
             <div className="flex justify-between gap-4 border-b pb-2">
@@ -113,9 +113,9 @@ export default async function CommandeDetailPage({ params }: PageProps) {
               <dd className="font-medium">{commande.tel || '-'}</dd>
             </div>
           </dl>
-        </section>
+        </SectionCard>
 
-        <section className="rounded border bg-white p-5 shadow-sm">
+        <SectionCard>
           <h2 className="text-lg font-semibold">Retrait et paiement</h2>
           <dl className="mt-4 grid gap-3 text-sm">
             <div className="flex justify-between gap-4 border-b pb-2">
@@ -141,10 +141,10 @@ export default async function CommandeDetailPage({ params }: PageProps) {
               </dd>
             </div>
           </dl>
-        </section>
+        </SectionCard>
       </div>
 
-      <section className="mt-6 rounded border bg-white p-5 shadow-sm">
+      <SectionCard className="mt-6">
         <h2 className="text-lg font-semibold">Articles</h2>
 
         <ul className="mt-4 divide-y">
@@ -172,22 +172,22 @@ export default async function CommandeDetailPage({ params }: PageProps) {
 
               {(ligne.productionQuantity ?? 0) > 0 ? (
                 <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
-                  {formatQuantity(ligne.productionQuantity ?? 0)} Ã  produire
+                  {formatQuantity(ligne.productionQuantity ?? 0)} à produire
                 </span>
               ) : null}
             </li>
           ))}
         </ul>
-      </section>
+      </SectionCard>
 
       {productionLines.length > 0 ? (
-        <section className="mt-6 rounded border border-amber-200 bg-amber-50 p-5 shadow-sm">
+        <SectionCard className="mt-6 border-amber-200 bg-amber-50">
           <h2 className="text-lg font-semibold text-amber-950">
             Production requise
           </h2>
           <p className="mt-1 text-sm text-amber-800">
-            Cette commande a Ã©tÃ© acceptÃ©e malgrÃ© un stock insuffisant. Les
-            quantitÃ©s ci-dessous sont Ã  produire ou Ã  ajuster avant retrait.
+            Cette commande a été acceptée malgré un stock insuffisant. Les
+            quantités ci-dessous sont à produire ou à ajuster avant retrait.
           </p>
 
           <ul className="mt-4 grid gap-2 text-sm text-amber-950">
@@ -198,15 +198,15 @@ export default async function CommandeDetailPage({ params }: PageProps) {
               >
                 <span className="font-medium">{ligne.article.nom}</span>
                 <span className="font-bold">
-                  {formatQuantity(ligne.productionQuantity ?? 0)} Ã  produire
+                  {formatQuantity(ligne.productionQuantity ?? 0)} à produire
                 </span>
               </li>
             ))}
           </ul>
-        </section>
+        </SectionCard>
       ) : null}
 
-      <section className="mt-6 rounded border bg-white p-5 shadow-sm">
+      <SectionCard className="mt-6">
         <h2 className="text-lg font-semibold">Historique des statuts</h2>
 
         {commande.historique && commande.historique.length > 0 ? (
@@ -239,7 +239,7 @@ export default async function CommandeDetailPage({ params }: PageProps) {
             Aucun historique disponible pour cette commande.
           </p>
         )}
-      </section>
-    </main>
+      </SectionCard>
+    </Page>
   )
 }

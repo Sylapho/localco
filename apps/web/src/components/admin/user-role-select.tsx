@@ -54,7 +54,7 @@ export default function UserRoleSelect({
         value={value}
         onChange={(event) => updateRole(event.target.value as Role)}
         disabled={disabled || loading}
-        className="rounded border px-3 py-2 text-sm disabled:opacity-60"
+        className="rounded-xl border px-3 py-2 text-sm disabled:opacity-60"
       >
         {roles.map((item) => (
           <option key={item} value={item}>

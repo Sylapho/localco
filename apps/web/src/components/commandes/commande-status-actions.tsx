@@ -78,7 +78,7 @@ export default function CommandeStatusActions({
           type="button"
           onClick={() => updateStatus('annulee')}
           disabled={Boolean(loadingStatus)}
-          className="w-fit rounded border px-3 py-2 text-sm text-red-700 disabled:opacity-50"
+          className="lc-button lc-button-danger w-fit disabled:opacity-50"
         >
           {loadingStatus === 'annulee' ? 'Annulation...' : 'Annuler'}
         </button>
@@ -100,7 +100,7 @@ export default function CommandeStatusActions({
           type="button"
           onClick={() => updateStatus('annulee')}
           disabled={Boolean(loadingStatus)}
-          className="w-fit rounded border px-3 py-2 text-sm text-red-700 disabled:opacity-50"
+          className="lc-button lc-button-danger w-fit disabled:opacity-50"
         >
           {loadingStatus === 'annulee' ? 'Annulation...' : 'Annuler'}
         </button>
@@ -118,7 +118,7 @@ export default function CommandeStatusActions({
             type="button"
             onClick={() => updateStatus('preparee')}
             disabled={Boolean(loadingStatus)}
-            className="rounded border px-3 py-2 text-sm disabled:opacity-50"
+            className="lc-button lc-button-secondary disabled:opacity-50"
           >
             {loadingStatus === 'preparee' ? 'Préparation...' : 'Préparer'}
           </button>
@@ -128,7 +128,7 @@ export default function CommandeStatusActions({
           type="button"
           onClick={() => updateStatus('traitee')}
           disabled={Boolean(loadingStatus)}
-          className="rounded bg-black px-3 py-2 text-sm text-white disabled:opacity-50"
+          className="lc-button lc-button-primary disabled:opacity-50"
         >
           {loadingStatus === 'traitee' ? 'Traitement...' : 'Traiter'}
         </button>
@@ -137,7 +137,7 @@ export default function CommandeStatusActions({
           type="button"
           onClick={() => updateStatus('annulee')}
           disabled={Boolean(loadingStatus)}
-          className="rounded border px-3 py-2 text-sm text-red-700 disabled:opacity-50"
+          className="lc-button lc-button-danger disabled:opacity-50"
         >
           {loadingStatus === 'annulee' ? 'Annulation...' : 'Annuler'}
         </button>

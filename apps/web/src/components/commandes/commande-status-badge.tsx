@@ -10,12 +10,12 @@ export const commandeStatusLabels: Record<CommandeStatut, string> = {
 }
 
 const commandeStatusClasses: Record<CommandeStatut, string> = {
-  paiement_en_attente: 'bg-gray-100 text-gray-800',
-  nouvelle: 'bg-amber-100 text-amber-800',
-  preparee: 'bg-blue-100 text-blue-800',
-  traitee: 'bg-green-100 text-green-800',
-  annulee: 'bg-red-100 text-red-800',
-  paiement_a_verifier: 'bg-purple-100 text-purple-800',
+  paiement_en_attente: 'border-zinc-200 bg-zinc-100 text-zinc-700',
+  nouvelle: 'border-amber-200 bg-amber-100 text-amber-800',
+  preparee: 'border-blue-200 bg-blue-100 text-blue-800',
+  traitee: 'border-green-200 bg-green-100 text-green-800',
+  annulee: 'border-red-200 bg-red-100 text-red-800',
+  paiement_a_verifier: 'border-violet-200 bg-violet-100 text-violet-800',
 }
 
 export default function CommandeStatusBadge({
@@ -25,7 +25,7 @@ export default function CommandeStatusBadge({
 }) {
   return (
     <span
-      className={`rounded px-2 py-1 text-xs font-semibold ${commandeStatusClasses[statut]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold ${commandeStatusClasses[statut]}`}
     >
       {commandeStatusLabels[statut]}
     </span>

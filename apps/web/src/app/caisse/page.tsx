@@ -2,6 +2,14 @@ import Link from 'next/link'
 import ArticleImage from '@/components/articles/article-image'
 import CloseCaisseButton from '@/components/caisse/close-caisse-button'
 import {
+  ButtonLink,
+  EmptyState,
+  Page,
+  PageHeader,
+  SectionCard,
+  StatCard,
+} from '@/components/ui/dashboard'
+import {
   getCaisseToday,
   getVentes,
   type Vente,
@@ -112,44 +120,44 @@ export default async function CaissePage() {
       : 0
 
   return (
-    <main className="p-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Caisse du jour</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Synthèse des ventes du {caisse.dayKey}
-          </p>
-        </div>
+    <Page>
+      <PageHeader
+        eyebrow="Caisse"
+        title="Caisse du jour"
+        description={`Synthèse opérationnelle des ventes du ${caisse.dayKey}.`}
+        actions={
+          <>
+            <ButtonLink href="/ventes" variant="secondary">
+              Voir les ventes
+            </ButtonLink>
+            {userCanCreateSales ? (
+              <ButtonLink href="/ventes/new" variant="primary">
+                Nouvelle vente
+              </ButtonLink>
+            ) : null}
+          </>
+        }
+      />
 
-        <div className="flex flex-wrap gap-3">
-          <Link href="/ventes" className="rounded border px-4 py-2">
-            Voir les ventes
-          </Link>
-          {userCanCreateSales ? (
-            <Link
-              href="/ventes/new"
-              className="rounded bg-black px-4 py-2 text-white"
-            >
-              Nouvelle vente
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
-      <section className="mb-6 rounded border p-4">
+      <SectionCard className="mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-gray-600">État de la caisse</p>
+            <p className="lc-eyebrow">État de caisse</p>
             {caisse.status === 'closed' ? (
-              <p className="mt-1 font-semibold">
+              <p className="mt-2 text-xl font-bold">
                 Journée clôturée
                 {caisse.closedDay
                   ? ` le ${formatDateTime(caisse.closedDay.clotureeA)}`
                   : ''}
               </p>
             ) : (
-              <p className="mt-1 font-semibold">Journée ouverte</p>
+              <p className="mt-2 text-xl font-bold text-[var(--success)]">
+                Journée ouverte
+              </p>
             )}
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              La clôture fige les totaux de la journée pour le suivi comptable.
+            </p>
           </div>
 
           <CloseCaisseButton
@@ -157,142 +165,134 @@ export default async function CaissePage() {
             canClose={userCanCloseCashRegister}
           />
         </div>
-      </section>
+      </SectionCard>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded border p-4">
-          <p className="text-sm text-gray-600">Total TTC</p>
-          <p className="mt-2 text-2xl font-bold">{formatCurrency(totalTTC)}</p>
-        </div>
-        <div className="rounded border p-4">
-          <p className="text-sm text-gray-600">Nombre de ventes</p>
-          <p className="mt-2 text-2xl font-bold">{caisse.totals.nbVentes}</p>
-        </div>
-        <div className="rounded border p-4">
-          <p className="text-sm text-gray-600">Panier moyen</p>
-          <p className="mt-2 text-2xl font-bold">
-            {formatCurrency(panierMoyen)}
-          </p>
-        </div>
-        <div className="rounded border p-4">
-          <p className="text-sm text-gray-600">Articles vendus</p>
-          <p className="mt-2 text-2xl font-bold">{nbArticles}</p>
-        </div>
+        <StatCard label="Total TTC" value={formatCurrency(totalTTC)} tone="success" />
+        <StatCard
+          label="Nombre de ventes"
+          value={caisse.totals.nbVentes}
+          detail="Tickets enregistrés"
+        />
+        <StatCard
+          label="Panier moyen"
+          value={formatCurrency(panierMoyen)}
+          detail="TTC par vente"
+          tone="info"
+        />
+        <StatCard
+          label="Articles vendus"
+          value={nbArticles}
+          detail="Quantités sorties"
+        />
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <div className="rounded border p-4">
-          <h2 className="mb-4 text-lg font-semibold">Encaissements</h2>
+      <section className="mt-6 grid gap-4 lg:grid-cols-2">
+        <SectionCard title="Encaissements" description="Répartition par mode de paiement.">
           <dl className="grid gap-3">
             {Object.entries(totalsByMode).map(([mode, total]) => (
-              <div key={mode} className="flex justify-between gap-4">
+              <div
+                key={mode}
+                className="flex justify-between gap-4 rounded-xl bg-[var(--surface-soft)] px-4 py-3"
+              >
                 <dt>{modeLabels[mode as VenteMode]}</dt>
-                <dd className="font-medium">{formatCurrency(total)}</dd>
+                <dd className="font-bold">{formatCurrency(total)}</dd>
               </div>
             ))}
           </dl>
-        </div>
+        </SectionCard>
 
-        <div className="rounded border p-4">
-          <h2 className="mb-4 text-lg font-semibold">Totaux comptables</h2>
+        <SectionCard title="Totaux comptables" description="Montants utiles à la clôture.">
           <dl className="grid gap-3">
-            <div className="flex justify-between gap-4">
-              <dt>Total HT</dt>
-              <dd className="font-medium">{formatCurrency(totalHT)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt>TVA</dt>
-              <dd className="font-medium">{formatCurrency(totalTVA)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt>Remises</dt>
-              <dd className="font-medium">{formatCurrency(totalRemise)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt>Marge estimée</dt>
-              <dd className="font-medium">
-                {formatCurrency(caisse.totals.margeCents)}
-              </dd>
-            </div>
+            {[
+              ['Total HT', totalHT],
+              ['TVA', totalTVA],
+              ['Remises', totalRemise],
+              ['Marge estimée', caisse.totals.margeCents],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="flex justify-between gap-4 rounded-xl bg-[var(--surface-soft)] px-4 py-3"
+              >
+                <dt>{label}</dt>
+                <dd className="font-bold">{formatCurrency(value as number)}</dd>
+              </div>
+            ))}
           </dl>
-        </div>
+        </SectionCard>
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <div className="rounded border p-4">
-          <h2 className="mb-4 text-lg font-semibold">Top articles</h2>
-
+      <section className="mt-6 grid gap-4 lg:grid-cols-2">
+        <SectionCard title="Top articles" description="Produits les plus vendus aujourd'hui.">
           {topArticles.length === 0 ? (
-            <p className="text-sm text-gray-600">
-              Aucun article vendu aujourd&apos;hui.
-            </p>
+            <EmptyState
+              title="Aucun article vendu aujourd'hui"
+              description="Les meilleures ventes apparaîtront ici dès les premiers encaissements."
+            />
           ) : (
             <ul className="grid gap-3">
               {topArticles.map((article) => (
                 <li
                   key={article.nom}
-                  className="flex items-center justify-between gap-4 border-b pb-3 last:border-b-0 last:pb-0"
+                  className="flex items-center justify-between gap-4 rounded-xl bg-[var(--surface-soft)] px-4 py-3"
                 >
-                  <div>
-                    <p className="font-medium">
-                      <span className="flex items-center gap-2">
-                        <ArticleImage
-                          article={article}
-                          className="h-8 w-8 overflow-hidden rounded border bg-gray-100"
-                        />
-                        <span>{article.nom}</span>
+                  <div className="flex items-center gap-3">
+                    <ArticleImage
+                      article={article}
+                      className="h-10 w-10 overflow-hidden rounded-xl border border-[var(--border)] bg-white"
+                    />
+                    <span>
+                      <span className="block font-bold">{article.nom}</span>
+                      <span className="text-sm text-[var(--muted)]">
+                        {article.quantite} vendu(s)
                       </span>
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {article.quantite} vendu(s)
-                    </p>
+                    </span>
                   </div>
-                  <p className="font-medium">
-                    {formatCurrency(article.totalTtcCents)}
-                  </p>
+                  <p className="font-bold">{formatCurrency(article.totalTtcCents)}</p>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </SectionCard>
 
-        <div className="rounded border p-4">
-          <h2 className="mb-4 text-lg font-semibold">Dernieres ventes</h2>
-
+        <SectionCard title="Dernières ventes" description="Les derniers tickets de la journée.">
           {ventesDuJour.length === 0 ? (
-            <div>
-              <p className="text-sm text-gray-600">
-                Aucune vente enregistrée aujourd&apos;hui.
-              </p>
-              {userCanCreateSales ? (
-                <Link
-                  href="/ventes/new"
-                  className="mt-4 inline-block rounded bg-black px-4 py-2 text-white"
-                >
-                  Enregistrer une vente
-                </Link>
-              ) : null}
-            </div>
+            <EmptyState
+              title="Aucune vente aujourd'hui"
+              description="Enregistrez une vente pour alimenter la caisse et les statistiques du jour."
+              action={
+                userCanCreateSales ? (
+                  <ButtonLink href="/ventes/new" variant="primary">
+                    Enregistrer une vente
+                  </ButtonLink>
+                ) : null
+              }
+            />
           ) : (
             <ul className="grid gap-3">
               {ventesDuJour.slice(0, 6).map((vente) => (
                 <li
                   key={vente.id}
-                  className="flex items-center justify-between gap-4 border-b pb-3 last:border-b-0 last:pb-0"
+                  className="flex items-center justify-between gap-4 rounded-xl bg-[var(--surface-soft)] px-4 py-3"
                 >
                   <div>
-                    <p className="font-medium">Vente #{vente.id}</p>
-                    <p className="text-sm text-gray-600">
-                      {formatDateTime(vente.date)} - {modeLabels[vente.mode]}
+                    <Link
+                      href={`/ventes`}
+                      className="font-bold text-[var(--foreground)]"
+                    >
+                      Vente #{vente.id}
+                    </Link>
+                    <p className="text-sm text-[var(--muted)]">
+                      {formatDateTime(vente.date)} · {modeLabels[vente.mode]}
                     </p>
                   </div>
-                  <p className="font-medium">{formatCurrency(vente.totalTtcCents)}</p>
+                  <p className="font-bold">{formatCurrency(vente.totalTtcCents)}</p>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </SectionCard>
       </section>
-    </main>
+    </Page>
   )
 }

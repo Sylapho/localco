@@ -55,7 +55,7 @@ export default function CreateEmployeeForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid gap-4 rounded border bg-white p-4 shadow-sm"
+      className="lc-card grid gap-4"
     >
       <div>
         <h2 className="text-xl font-semibold">Créer un employé</h2>
@@ -71,7 +71,7 @@ export default function CreateEmployeeForm() {
             id="employee-name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="rounded border px-3 py-2"
+            className="rounded-xl border px-3 py-2"
             required
           />
         </div>
@@ -83,7 +83,7 @@ export default function CreateEmployeeForm() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="rounded border px-3 py-2"
+            className="rounded-xl border px-3 py-2"
             required
           />
         </div>
@@ -96,7 +96,7 @@ export default function CreateEmployeeForm() {
             minLength={8}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="rounded border px-3 py-2"
+            className="rounded-xl border px-3 py-2"
             required
           />
         </div>
@@ -107,7 +107,7 @@ export default function CreateEmployeeForm() {
             id="employee-role"
             value={role}
             onChange={(event) => setRole(event.target.value as Role)}
-            className="rounded border px-3 py-2"
+            className="rounded-xl border px-3 py-2"
           >
             {roles.map((item) => (
               <option key={item} value={item}>
@@ -124,7 +124,7 @@ export default function CreateEmployeeForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-fit rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+        className="lc-button lc-button-primary w-fit disabled:opacity-50"
       >
         {loading ? 'Création...' : "Créer l'employé"}
       </button>

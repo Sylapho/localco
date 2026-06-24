@@ -397,7 +397,7 @@ export default function StockDashboard({
   }
 
   return (
-    <main className="p-8">
+    <main className="lc-page">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Stock</h1>
@@ -410,20 +410,20 @@ export default function StockDashboard({
           {canManageStock ? (
             <Link
               href="/matieres-premieres/new"
-              className="rounded border px-4 py-2 text-sm"
+              className="lc-button lc-button-secondary"
             >
               + Matière première
             </Link>
           ) : null}
           {canProduceArticles ? (
-            <a href="#lot-article" className="rounded border px-4 py-2 text-sm">
+            <a href="#lot-article" className="lc-button lc-button-secondary">
               + Lot article
             </a>
           ) : null}
           {canManageStock ? (
             <a
               href="#reappro"
-              className="rounded bg-black px-4 py-2 text-sm text-white"
+              className="lc-button lc-button-primary"
             >
               + Réappro
             </a>
@@ -432,7 +432,7 @@ export default function StockDashboard({
       </div>
 
       <section className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded border bg-white p-4 shadow-sm">
+        <div className="lc-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             MP critiques
           </p>
@@ -440,7 +440,7 @@ export default function StockDashboard({
             {matieresCritiques.length}
           </p>
         </div>
-        <div className="rounded border bg-white p-4 shadow-sm">
+        <div className="lc-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             MP à surveiller
           </p>
@@ -448,7 +448,7 @@ export default function StockDashboard({
             {matieresMoyennes.length}
           </p>
         </div>
-        <div className="rounded border bg-white p-4 shadow-sm">
+        <div className="lc-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             Articles en rupture
           </p>
@@ -456,7 +456,7 @@ export default function StockDashboard({
             {articlesCritiques.length}
           </p>
         </div>
-        <div className="rounded border bg-white p-4 shadow-sm">
+        <div className="lc-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             Articles bas
           </p>
@@ -467,13 +467,13 @@ export default function StockDashboard({
       </section>
 
       <section className="mb-6 grid gap-3 md:grid-cols-3">
-        <div className="rounded border bg-white p-4 shadow-sm">
+        <div className="lc-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             Lots avec DLC
           </p>
           <p className="mt-2 text-2xl font-bold">{lots.length}</p>
         </div>
-        <div className="rounded border bg-white p-4 shadow-sm">
+        <div className="lc-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             DLC ≤ 3 jours
           </p>
@@ -481,7 +481,7 @@ export default function StockDashboard({
             {urgentLots.length}
           </p>
         </div>
-        <div className="rounded border bg-white p-4 shadow-sm">
+        <div className="lc-card">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             Périmés
           </p>
@@ -517,7 +517,7 @@ export default function StockDashboard({
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+            <table className="lc-data-table min-w-[760px]">
               <thead>
                 <tr className="border-b text-gray-600">
                   <th className="py-3 pr-4 font-medium">Élément</th>
@@ -573,7 +573,7 @@ export default function StockDashboard({
         {lossError ? <p className="mt-3 text-sm text-red-600">{lossError}</p> : null}
       </section>
 
-      <section className="rounded border bg-white p-4 shadow-sm">
+      <section className="lc-card">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <button
@@ -611,7 +611,7 @@ export default function StockDashboard({
           <button
             type="button"
             onClick={exportCurrentTab}
-            className="rounded border px-3 py-2 text-sm"
+            className="lc-button lc-button-secondary"
           >
             Export CSV
           </button>
@@ -621,7 +621,7 @@ export default function StockDashboard({
           <select
             value={filter}
             onChange={(event) => setFilter(event.target.value as StockFilter)}
-            className="rounded border px-3 py-2 text-sm"
+            className="lc-button lc-button-secondary"
             title="Filtrer par statut"
           >
             <option value="all">Tous les statuts</option>
@@ -633,7 +633,7 @@ export default function StockDashboard({
           <select
             value={sort}
             onChange={(event) => setSort(event.target.value as SortMode)}
-            className="rounded border px-3 py-2 text-sm"
+            className="lc-button lc-button-secondary"
             title="Trier"
           >
             <option value="nom">Trier : Nom</option>
@@ -651,7 +651,7 @@ export default function StockDashboard({
 
         {tab === 'mp' ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+            <table className="lc-data-table min-w-[760px]">
               <thead>
                 <tr className="border-b text-gray-600">
                   <th className="py-3 pr-4 font-medium">Matière</th>
@@ -689,7 +689,7 @@ export default function StockDashboard({
                       <td className="py-3 pr-4">
                         <Link
                           href={`/matieres-premieres/${matiere.id}`}
-                          className="rounded border px-3 py-2 text-xs"
+                          className="lc-button lc-button-secondary min-h-0 px-3 py-1.5 text-xs"
                         >
                           Voir
                         </Link>
@@ -702,7 +702,7 @@ export default function StockDashboard({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+            <table className="lc-data-table min-w-[760px]">
               <thead>
                 <tr className="border-b text-gray-600">
                   <th className="py-3 pr-4 font-medium">Article</th>
@@ -742,7 +742,7 @@ export default function StockDashboard({
                       <td className="py-3 pr-4">
                         <Link
                           href={`/articles/${article.id}`}
-                          className="rounded border px-3 py-2 text-xs"
+                          className="lc-button lc-button-secondary min-h-0 px-3 py-1.5 text-xs"
                         >
                           Voir
                         </Link>

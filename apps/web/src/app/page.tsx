@@ -17,30 +17,38 @@ import {
   canViewStock,
 } from '@/lib/permissions'
 import { getProductionNeeds } from '@/lib/production-needs'
+import {
+  ButtonLink,
+  EmptyState,
+  Page,
+  PageHeader,
+  SectionCard,
+  StatCard,
+} from '@/components/ui/dashboard'
 
 const quickLinks = [
   {
-    label: 'Caisse',
+    label: 'Ouvrir la caisse',
     href: '/caisse',
-    description: 'Suivre la journée et clôturer la caisse.',
+    description: 'Suivre la journée, les paiements et la clôture.',
     section: 'cash',
   },
   {
-    label: 'Articles',
+    label: 'Gérer les articles',
     href: '/articles',
-    description: 'Gérer le catalogue, les prix et les stocks.',
+    description: 'Prix, stock, visibilité boutique et fiches produits.',
     section: 'articles',
   },
   {
-    label: 'Stock',
+    label: 'Contrôler le stock',
     href: '/stock',
-    description: 'Contrôler les lots, DLC et alertes.',
+    description: 'Lots, DLC, matières premières et réapprovisionnement.',
     section: 'stock',
   },
   {
-    label: 'Commandes',
+    label: 'Préparer les commandes',
     href: '/commandes',
-    description: 'Préparer les commandes en ligne.',
+    description: 'Suivre les retraits clients et les statuts.',
     section: 'orders',
   },
 ] as const
@@ -76,6 +84,7 @@ function getLowStockItems(
       name: article.nom,
       detail: `${article.stock} en stock`,
       href: `/articles/${article.id}`,
+      tone: article.stock <= 0 ? 'danger' : 'warning',
     }))
 
   const lowMatieres = matieres
@@ -85,6 +94,7 @@ function getLowStockItems(
       name: matiere.nom,
       detail: `${matiere.stock} ${matiere.unite} / seuil ${matiere.seuil}`,
       href: `/matieres-premieres/${matiere.id}`,
+      tone: 'danger',
     }))
 
   return [...lowMatieres, ...lowArticles].slice(0, 5)
@@ -142,84 +152,154 @@ export default async function Home() {
     .slice(0, 5)
 
   return (
-    <main className="p-6 sm:p-8">
-      <div className="mx-auto grid max-w-7xl gap-6">
-        <section className="rounded border bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-gray-500">
-                Espace employé
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Tableau de bord Les cocottes de Diane
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-gray-600 sm:text-base">
-                Les indicateurs utiles pour démarrer la journée : caisse, stock
-                et commandes à préparer.
-              </p>
+    <Page>
+      <PageHeader
+        eyebrow="Pilotage quotidien"
+        title="Tableau de bord Les cocottes de Diane"
+        description="Les priorités de la journée au même endroit : commandes à préparer, production à prévoir, caisse et alertes stock."
+        actions={
+          userCanCreateSales ? (
+            <ButtonLink href="/ventes/new" variant="primary">
+              Nouvelle vente
+            </ButtonLink>
+          ) : null
+        }
+      />
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {caisse ? (
+          <>
+            <StatCard
+              label="Ventes du jour"
+              value={formatCurrency(caisse.totals.totalTtcCents)}
+              detail={`${caisse.totals.nbVentes} vente(s) enregistrée(s)`}
+              tone="success"
+            />
+            <StatCard
+              label="État de caisse"
+              value={caisse.status === 'closed' ? 'Clôturée' : 'Ouverte'}
+              detail={`Journée du ${formatDate(caisse.date)}`}
+              tone={caisse.status === 'closed' ? 'neutral' : 'info'}
+            />
+          </>
+        ) : null}
+
+        {userCanViewOrders ? (
+          <>
+            <StatCard
+              label="Commandes à préparer"
+              value={commandesAPreparer.length}
+              detail="Nouvelles ou déjà en préparation"
+              tone="info"
+            />
+            <StatCard
+              label="Unités à produire"
+              value={formatQuantity(totalProductionNeeds)}
+              detail="Besoin lié aux précommandes"
+              tone={totalProductionNeeds > 0 ? 'warning' : 'success'}
+            />
+          </>
+        ) : null}
+      </section>
+
+      <section className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <SectionCard
+          title="Raccourcis métier"
+          description="Accédez vite aux écrans utilisés pendant une journée de vente."
+        >
+          {visibleQuickLinks.length === 0 ? (
+            <EmptyState
+              title="Aucun raccourci disponible"
+              description="Ton rôle ne donne pas encore accès aux modules opérationnels."
+            />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {visibleQuickLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="group rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 transition hover:border-[var(--primary)] hover:bg-white"
+                >
+                  <p className="font-bold text-[var(--foreground)]">
+                    {link.label}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                    {link.description}
+                  </p>
+                  <span className="mt-3 inline-flex text-sm font-bold text-[var(--primary)]">
+                    Ouvrir
+                  </span>
+                </Link>
+              ))}
             </div>
+          )}
+        </SectionCard>
 
-            {userCanCreateSales ? (
-              <Link
-                href="/ventes/new"
-                className="rounded bg-black px-4 py-2 text-sm font-medium text-white"
-              >
-                Nouvelle vente
-              </Link>
-            ) : null}
-          </div>
-        </section>
+        <SectionCard
+          title="Points d'attention"
+          description="Ce qui peut demander une action avant la fin de journée."
+          actions={
+            userCanViewStock ? (
+              <ButtonLink href="/stock" variant="ghost">
+                Voir le stock
+              </ButtonLink>
+            ) : null
+          }
+        >
+          {lowStockItems.length === 0 && expiringLots.length === 0 ? (
+            <EmptyState
+              title="Rien d'urgent à signaler"
+              description="Aucun seuil critique ou lot proche de DLC n'a été détecté."
+            />
+          ) : (
+            <div className="grid gap-3">
+              {lowStockItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                >
+                  <span>
+                    <strong className="block">{item.name}</strong>
+                    <span className="text-[var(--muted)]">{item.detail}</span>
+                  </span>
+                  <span
+                    className={
+                      item.tone === 'danger'
+                        ? 'rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700'
+                        : 'rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800'
+                    }
+                  >
+                    Stock
+                  </span>
+                </Link>
+              ))}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {caisse ? (
-            <>
-              <div className="rounded border bg-white p-4 shadow-sm">
-                <p className="text-sm text-gray-600">Ventes du jour</p>
-                <p className="mt-2 text-2xl font-bold">
-                  {formatCurrency(caisse.totals.totalTtcCents)}
-                </p>
-                <p className="mt-1 text-sm text-gray-600">
-                  {caisse.totals.nbVentes} vente(s)
-                </p>
-              </div>
-
-              <div className="rounded border bg-white p-4 shadow-sm">
-                <p className="text-sm text-gray-600">État de caisse</p>
-                <p className="mt-2 text-2xl font-bold">
-                  {caisse.status === 'closed' ? 'Clôturée' : 'Ouverte'}
-                </p>
-                <p className="mt-1 text-sm text-gray-600">
-                  Journée du {formatDate(caisse.date)}
-                </p>
-              </div>
-            </>
-          ) : null}
-
-          {userCanViewOrders ? (
-            <>
-              <div className="rounded border bg-white p-4 shadow-sm">
-                <p className="text-sm text-gray-600">Commandes à préparer</p>
-                <p className="mt-2 text-2xl font-bold">
-                  {commandesAPreparer.length}
-                </p>
-                <p className="mt-1 text-sm text-gray-600">
-                  Nouvelles ou en préparation
-                </p>
-              </div>
-
-              <div className="rounded border border-amber-200 bg-amber-50 p-4 shadow-sm">
-                <p className="text-sm text-amber-800">À produire</p>
-                <p className="mt-2 text-2xl font-bold text-amber-950">
-                  {formatQuantity(totalProductionNeeds)}
-                </p>
-                <p className="mt-1 text-sm text-amber-800">
-                  Articles à faire ou ajuster
-                </p>
-              </div>
-            </>
-          ) : null}
-        </section>
-      </div>
-    </main>
+              {expiringLots.map((lot) => (
+                <Link
+                  key={`lot-${lot.id}`}
+                  href="/stock"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                >
+                  <span>
+                    <strong className="block">
+                      {lot.target === 'article'
+                        ? (lot.article?.nom ?? `Article #${lot.articleId}`)
+                        : (lot.mp?.nom ?? `Matière #${lot.mpId}`)}
+                    </strong>
+                    <span className="text-[var(--muted)]">
+                      DLC {lot.expiresAt ? formatDate(lot.expiresAt) : 'non renseignée'}
+                    </span>
+                  </span>
+                  <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-800">
+                    DLC
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      </section>
+    </Page>
   )
 }

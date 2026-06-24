@@ -32,7 +32,7 @@ export default async function VentesPage() {
   const totalTTC = ventes.reduce((total, vente) => total + vente.totalTtcCents, 0)
 
   return (
-    <main className="p-8">
+    <main className="lc-page">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Ventes</h1>

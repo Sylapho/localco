@@ -3,46 +3,271 @@ import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from './generated/prisma/client'
 import { pickupPoints } from '../src/commandes/pickup-slots'
-import { calculateHtFromTtcCents, eurosToCents } from '../src/money'
+import { eurosToCents } from '../src/money'
 
-type SeedArticle = {
-  id: number
-  nom: string
-  prixCents: number
-  tvaBps: number
-  nomen: {
-    quantite: number
-    mp: {
-      coutUnitaireCents: number
-    }
-  }[]
-}
-
-type SeedMatiere = {
-  id: number
+type SeedMatierePremiere = {
+  key: string
   nom: string
   stock: number
   unite: string
+  coutUnitaire: number
+  seuil: number
+  conditionnement: string
 }
 
-type SeedCatalogue = {
-  articles: Record<string, SeedArticle>
-  matieres: Record<string, SeedMatiere>
+type SeedArticle = {
+  key: string
+  nom: string
+  prix: number
+  description: string
+  stock: number
+  ingredients?: string
+  allergenes?: string | null
+  nomenclature?: Array<{
+    matiereKey: string
+    quantite: number
+  }>
 }
 
-type SaleLineSeed = {
-  article: SeedArticle
-  quantite: number
-}
+const matieresPremieres = [
+  {
+    key: 'whole_chicken',
+    nom: 'Poulet entier',
+    stock: 80,
+    unite: 'piece',
+    coutUnitaire: 8.2,
+    seuil: 10,
+    conditionnement: 'caisse',
+  },
+  {
+    key: 'chicken_breast',
+    nom: 'Blanc de poulet',
+    stock: 45,
+    unite: 'kg',
+    coutUnitaire: 9.8,
+    seuil: 8,
+    conditionnement: 'caisse sous vide',
+  },
+  {
+    key: 'chicken_thigh',
+    nom: 'Cuisse de poulet',
+    stock: 55,
+    unite: 'kg',
+    coutUnitaire: 6.4,
+    seuil: 8,
+    conditionnement: 'caisse sous vide',
+  },
+  {
+    key: 'chicken_wing',
+    nom: 'Aile de poulet',
+    stock: 30,
+    unite: 'kg',
+    coutUnitaire: 4.9,
+    seuil: 5,
+    conditionnement: 'caisse sous vide',
+  },
+  {
+    key: 'chicken_liver',
+    nom: 'Foie de volaille',
+    stock: 14,
+    unite: 'kg',
+    coutUnitaire: 4.2,
+    seuil: 3,
+    conditionnement: 'bac frais',
+  },
+  {
+    key: 'eggs',
+    nom: 'Oeufs',
+    stock: 240,
+    unite: 'piece',
+    coutUnitaire: 0.18,
+    seuil: 48,
+    conditionnement: 'plateau de 30',
+  },
+  {
+    key: 'natural_casing',
+    nom: 'Boyau naturel',
+    stock: 8,
+    unite: 'kg',
+    coutUnitaire: 18,
+    seuil: 1,
+    conditionnement: 'seau',
+  },
+  {
+    key: 'seasoning',
+    nom: 'Assaisonnement volailles',
+    stock: 12,
+    unite: 'kg',
+    coutUnitaire: 11,
+    seuil: 2,
+    conditionnement: 'seau',
+  },
+  {
+    key: 'herbs',
+    nom: 'Herbes aromatiques',
+    stock: 6,
+    unite: 'kg',
+    coutUnitaire: 14,
+    seuil: 1,
+    conditionnement: 'sachet',
+  },
+  {
+    key: 'breadcrumbs',
+    nom: 'Panure',
+    stock: 18,
+    unite: 'kg',
+    coutUnitaire: 3.4,
+    seuil: 3,
+    conditionnement: 'sac',
+  },
+  {
+    key: 'cheese',
+    nom: 'Fromage',
+    stock: 12,
+    unite: 'kg',
+    coutUnitaire: 7.5,
+    seuil: 2,
+    conditionnement: 'bloc',
+  },
+  {
+    key: 'camembert',
+    nom: 'Camembert',
+    stock: 24,
+    unite: 'piece',
+    coutUnitaire: 2.1,
+    seuil: 6,
+    conditionnement: 'carton',
+  },
+  {
+    key: 'bacon',
+    nom: 'Bacon',
+    stock: 10,
+    unite: 'kg',
+    coutUnitaire: 8.8,
+    seuil: 2,
+    conditionnement: 'barquette',
+  },
+  {
+    key: 'chorizo',
+    nom: 'Chorizo',
+    stock: 8,
+    unite: 'kg',
+    coutUnitaire: 9.5,
+    seuil: 2,
+    conditionnement: 'barquette',
+  },
+] satisfies SeedMatierePremiere[]
 
-type SaleSeed = {
-  date: Date
-  mode: 'cb' | 'especes' | 'cheque'
-  remiseCents: number
-  lignes: SaleLineSeed[]
-}
-
-const TIME_ZONE = 'Europe/Paris'
+const shopArticles = [
+  ['gesiers', 'Gésiers de poulet confits', 8.3, '+/- 350 g', 20],
+  ['mousse_foie', 'Mousse de foie de volaille', 5.3, 'Pot 180 g', 20],
+  ['terrine_normande', 'Terrine de poulet normande', 5.3, 'Pot 200 g', 20],
+  ['rillettes', 'Rillettes de poulet', 5.3, 'Pot 200 g', 20],
+  [
+    'rillettes_piment',
+    "Rillettes de poulet piment d'Espelette",
+    5.9,
+    'Pot 200 g',
+    20,
+  ],
+  ['terrine_thym', 'Terrine de poulet au thym', 5.9, 'Pot 200 g', 20],
+  [
+    'terrine_noisette',
+    'Terrine de poulet noisette',
+    5.9,
+    'Pot 200 g',
+    20,
+  ],
+  [
+    'whole_chicken_small',
+    'Poulet prêt à cuire 4/6 personnes',
+    15.5,
+    '+/- 1,4 à 1,6 kg',
+    20,
+  ],
+  [
+    'whole_chicken_medium',
+    'Poulet prêt à cuire 6/8 personnes',
+    17.5,
+    '+/- 1,7 à 1,8 kg',
+    20,
+  ],
+  [
+    'whole_chicken_large',
+    'Poulet prêt à cuire 8 personnes et plus',
+    18.5,
+    '+/- 1,9 à 2,1 kg',
+    20,
+  ],
+  ['breast_x2', 'Blanc de poulet x2', 7.5, '+/- 350 g', 20],
+  ['breast_x4', 'Blanc de poulet x4', 14, '+/- 700 g', 20],
+  ['leg_x2', 'Cuisse entière x2', 8, '+/- 550 g', 20],
+  ['leg_x4', 'Cuisse entière x4', 15, '+/- 1,1 kg', 20],
+  ['boneless_leg_x2', 'Cuisse désossée x2', 5.5, '+/- 350 g', 20],
+  ['thigh_x2', 'Haut de cuisse x2', 4.5, '+/- 500 g', 20],
+  ['drumsticks_x2', 'Pilons de poulet x2', 3.3, '+/- 250 g', 20],
+  ['wings_x3', 'Ailes de poulet x3', 4, '+/- 400 g', 20],
+  ['sausage_nature', 'Saucisse nature x6', 6.5, '+/- 500 g', 20],
+  ['sausage_herbs', 'Saucisse aux herbes x6', 6.3, 'Préparation bouchère', 20],
+  [
+    'sausage_provence',
+    'Saucisse provençale x6',
+    6.3,
+    'Préparation bouchère',
+    20,
+  ],
+  [
+    'merguez',
+    'Volaille façon merguez x6',
+    6.5,
+    'Préparation bouchère',
+    20,
+  ],
+  ['paupiette_chorizo', 'Paupiette chorizo x2', 6.5, '+/- 450 g', 20],
+  ['paupiette_camembert', 'Paupiette camembert x2', 6.5, '+/- 450 g', 20],
+  ['paupiette_bacon', 'Paupiette bacon x2', 6.5, '+/- 450 g', 20],
+  ['ballotine_chorizo', 'Ballotine chorizo', 9.5, '+/- 350 g', 20],
+  ['ballotine_camembert', 'Ballotine camembert', 9.5, '+/- 350 g', 20],
+  ['ballotine_bacon', 'Ballotine bacon', 9.5, '+/- 350 g', 20],
+  ['cordon_bleu', 'Cordon bleu x2', 9, '+/- 500 g', 20],
+  ['chicken', 'Chicken x6', 7.5, '+/- 400 g', 20],
+  ['milanese', 'Escalope milanaise x2', 5.5, '+/- 350 g', 20],
+  ['skewer_thym', 'Brochette thym citron x2', 4.5, '+/- 250 g', 20],
+  ['skewer_curry', 'Brochette curry coco x2', 4.5, '+/- 250 g', 20],
+  ['skewer', 'Brochette x2', 4.5, '+/- 250 g', 20],
+  ['eggs_x6', 'Oeufs x6', 2, 'Boîte de 6 oeufs', 40],
+  ['eggs_x12', 'Oeufs x12', 3.6, 'Boîte de 12 oeufs', 30],
+  ['eggs_x24', 'Oeufs x24', 6.8, 'Plateau de 24 oeufs', 20],
+  ['eggs_x30', 'Oeufs x30', 8.2, 'Plateau de 30 oeufs', 20],
+  [
+    'bbq_pack',
+    'BBQ Pack',
+    12,
+    'Pack grillades : brochettes, saucisses nature, saucisses aux herbes et volaille façon merguez',
+    15,
+  ],
+  [
+    'ado_pack',
+    'Ado Pack',
+    28,
+    'Pack grillades familial : brochettes et assortiments de saucisses',
+    10,
+  ],
+  [
+    'family_pack',
+    'Family Pack',
+    40,
+    'Grand pack grillades : brochettes, saucisses nature, herbes, provençales et volaille façon merguez',
+    8,
+  ],
+  [
+    'maxi_pack',
+    'Maxi Pack',
+    78,
+    'Pack grillades maxi pour grands repas, avec assortiment de brochettes et saucisses',
+    5,
+  ],
+] as const
 
 async function main() {
   const connectionString = process.env.DATABASE_URL
@@ -56,18 +281,15 @@ async function main() {
   const prisma = new PrismaClient({ adapter })
 
   await resetDatabase(prisma)
-
   await seedPickupPoints(prisma)
-  const catalogue = await seedCatalogue(prisma)
-  await seedStockLots(prisma, catalogue)
-  await seedSalesHistory(prisma, catalogue.articles)
+  const matieres = await seedMatieresPremieres(prisma)
+  const articles = await seedArticles(prisma, matieres)
+  await seedStockLots(prisma, matieres, articles)
 
   await prisma.$disconnect()
   await pool.end()
 
-  console.log(
-    'Seed terminé avec catalogue, ventes, lots DLC et historique de caisse',
-  )
+  console.log('Seed terminé avec catalogue Les Cocottes, matières premières et lots DLC')
 }
 
 async function resetDatabase(prisma: PrismaClient) {
@@ -98,243 +320,274 @@ async function seedPickupPoints(prisma: PrismaClient) {
   })
 }
 
-async function seedCatalogue(prisma: PrismaClient): Promise<SeedCatalogue> {
-  const farine = await prisma.matierePremiere.create({
-    data: {
-      nom: 'Farine T65',
-      stock: 80,
-      unite: 'kg',
-      coutUnitaireCents: eurosToCents(1.2),
-      seuil: 10,
-      conditionnement: 'sac de 25 kg',
-    },
-  })
+async function seedMatieresPremieres(prisma: PrismaClient) {
+  const seeded = new Map<string, { id: number; stock: number }>()
 
-  const beurre = await prisma.matierePremiere.create({
-    data: {
-      nom: 'Beurre AOP',
-      stock: 25,
-      unite: 'kg',
-      coutUnitaireCents: eurosToCents(8.5),
-      seuil: 4,
-      conditionnement: 'carton',
-    },
-  })
-
-  const levure = await prisma.matierePremiere.create({
-    data: {
-      nom: 'Levure boulangere',
-      stock: 6,
-      unite: 'kg',
-      coutUnitaireCents: eurosToCents(6.2),
-      seuil: 1,
-      conditionnement: 'sachet sous vide',
-    },
-  })
-
-  const sucre = await prisma.matierePremiere.create({
-    data: {
-      nom: 'Sucre',
-      stock: 40,
-      unite: 'kg',
-      coutUnitaireCents: eurosToCents(1.6),
-      seuil: 8,
-      conditionnement: 'sac de 5 kg',
-    },
-  })
-
-  const lait = await prisma.matierePremiere.create({
-    data: {
-      nom: 'Lait entier',
-      stock: 35,
-      unite: 'L',
-      coutUnitaireCents: eurosToCents(0.95),
-      seuil: 8,
-      conditionnement: 'brique',
-    },
-  })
-
-  const baguette = await prisma.article.create({
-    data: {
-      nom: 'Baguette tradition',
-      category: 'OTHER',
-      prixCents: eurosToCents(1.2),
-      tvaBps: 550,
-      stock: 120,
-      online: false,
-      emoji: 'BT',
-      description: 'Baguette tradition croustillante',
-    },
-  })
-
-  const croissant = await prisma.article.create({
-    data: {
-      nom: 'Croissant',
-      category: 'OTHER',
-      prixCents: eurosToCents(1.1),
-      tvaBps: 550,
-      stock: 90,
-      online: false,
-      emoji: 'CR',
-      description: 'Croissant pur beurre',
-    },
-  })
-
-  const painChocolat = await prisma.article.create({
-    data: {
-      nom: 'Pain au chocolat',
-      category: 'OTHER',
-      prixCents: eurosToCents(1.2),
-      tvaBps: 550,
-      stock: 80,
-      online: false,
-      emoji: 'PC',
-      description: 'Pain au chocolat pur beurre',
-    },
-  })
-
-  const flan = await prisma.article.create({
-    data: {
-      nom: 'Flan patissier',
-      category: 'OTHER',
-      prixCents: eurosToCents(3.5),
-      tvaBps: 550,
-      stock: 25,
-      online: false,
-      emoji: 'FL',
-      description: 'Part de flan maison',
-    },
-  })
-
-  await seedShopCatalogue(prisma)
-
-  await prisma.nomenclature.createMany({
-    data: [
-      { articleId: baguette.id, mpId: farine.id, quantite: 0.35 },
-      { articleId: baguette.id, mpId: levure.id, quantite: 0.01 },
-      { articleId: croissant.id, mpId: farine.id, quantite: 0.08 },
-      { articleId: croissant.id, mpId: beurre.id, quantite: 0.04 },
-      { articleId: croissant.id, mpId: sucre.id, quantite: 0.01 },
-      { articleId: painChocolat.id, mpId: farine.id, quantite: 0.08 },
-      { articleId: painChocolat.id, mpId: beurre.id, quantite: 0.04 },
-      { articleId: painChocolat.id, mpId: sucre.id, quantite: 0.015 },
-      { articleId: flan.id, mpId: lait.id, quantite: 0.2 },
-      { articleId: flan.id, mpId: sucre.id, quantite: 0.04 },
-    ],
-  })
-
-  const seededArticles = await prisma.article.findMany({
-    include: {
-      nomen: {
-        include: {
-          mp: true,
-        },
+  for (const matiere of matieresPremieres) {
+    const created = await prisma.matierePremiere.create({
+      data: {
+        nom: matiere.nom,
+        stock: matiere.stock,
+        unite: matiere.unite,
+        coutUnitaireCents: eurosToCents(matiere.coutUnitaire),
+        seuil: matiere.seuil,
+        conditionnement: matiere.conditionnement,
       },
-    },
-    orderBy: {
-      nom: 'asc',
-    },
-  })
+    })
 
-  return {
-    articles: {
-      baguette: seededArticles.find((article) => article.id === baguette.id)!,
-      croissant: seededArticles.find((article) => article.id === croissant.id)!,
-      painChocolat: seededArticles.find(
-        (article) => article.id === painChocolat.id,
-      )!,
-      flan: seededArticles.find((article) => article.id === flan.id)!,
-    },
-    matieres: {
-      farine,
-      beurre,
-      levure,
-      sucre,
-      lait,
-    },
+    seeded.set(matiere.key, {
+      id: created.id,
+      stock: created.stock,
+    })
   }
+
+  return seeded
 }
 
-async function seedShopCatalogue(prisma: PrismaClient) {
-  const shopArticles = [
-    ['Gésiers de poulet confits', 8.3, '+/- 350 g'],
-    ['Mousse de foie de volaille', 5.3, 'Pot 180 g'],
-    ['Terrine de poulet normande', 5.3, 'Pot 200 g'],
-    ['Rillettes de poulet', 5.3, 'Pot 200 g'],
-    ["Rillettes de poulet piment d'Espelette", 5.9, 'Pot 200 g'],
-    ['Terrine de poulet au thym', 5.9, 'Pot 200 g'],
-    ['Terrine de poulet noisette', 5.9, 'Pot 200 g'],
-    ['Poulet prêt à cuire 4/6 personnes', 15.5, '+/- 1,4 à 1,6 kg'],
-    ['Poulet prêt à cuire 6/8 personnes', 17.5, '+/- 1,7 à 1,8 kg'],
-    ['Poulet prêt à cuire 8 personnes et plus', 18.5, '+/- 1,9 à 2,1 kg'],
-    ['Blanc de poulet x2', 7.5, '+/- 350 g'],
-    ['Blanc de poulet x4', 14, '+/- 700 g'],
-    ['Cuisse entière x2', 8, '+/- 550 g'],
-    ['Cuisse entière x4', 15, '+/- 1,1 kg'],
-    ['Cuisse désossée x2', 5.5, '+/- 350 g'],
-    ['Haut de cuisse x2', 4.5, '+/- 500 g'],
-    ['Pilons de poulet x2', 3.3, '+/- 250 g'],
-    ['Ailes de poulet x3', 4, '+/- 400 g'],
-    ['Saucisse nature x6', 6.5, '+/- 500 g'],
-    ['Saucisse aux herbes x6', 6.3, 'Préparation bouchère'],
-    ['Saucisse provençale x6', 6.3, 'Préparation bouchère'],
-    ['Volaille façon merguez x6', 6.5, 'Préparation bouchère'],
-    ['Paupiette chorizo x2', 6.5, '+/- 450 g'],
-    ['Paupiette camembert x2', 6.5, '+/- 450 g'],
-    ['Paupiette bacon x2', 6.5, '+/- 450 g'],
-    ['Ballotine chorizo', 9.5, '+/- 350 g'],
-    ['Ballotine camembert', 9.5, '+/- 350 g'],
-    ['Ballotine bacon', 9.5, '+/- 350 g'],
-    ['Cordon bleu x2', 9, '+/- 500 g'],
-    ['Chicken x6', 7.5, '+/- 400 g'],
-    ['Escalope milanaise x2', 5.5, '+/- 350 g'],
-    ['Brochette thym citron x2', 4.5, '+/- 250 g'],
-    ['Brochette curry coco x2', 4.5, '+/- 250 g'],
-    ['Brochette x2', 4.5, '+/- 250 g'],
-    ['Œufs x6', 2, 'Boîte de 6 œufs'],
-    ['Œufs x12', 3.6, 'Boîte de 12 œufs'],
-    ['Œufs x24', 6.8, 'Plateau de 24 œufs'],
-    ['Œufs x30', 8.2, 'Plateau de 30 œufs'],
-    [
-      'BBQ Pack',
-      12,
-      'Pack grillades : brochettes, saucisses nature, saucisses aux herbes et volaille façon merguez',
-    ],
-    [
-      'Ado Pack',
-      28,
-      'Pack grillades familial : brochettes et assortiments de saucisses',
-    ],
-    [
-      'Family Pack',
-      40,
-      'Grand pack grillades : brochettes, saucisses nature, herbes, provençales et volaille façon merguez',
-    ],
-    [
-      'Maxi Pack',
-      78,
-      'Pack grillades maxi pour grands repas, avec assortiment de brochettes et saucisses',
-    ],
-  ] as const
+async function seedArticles(
+  prisma: PrismaClient,
+  matieres: Map<string, { id: number }>,
+) {
+  const seeded = new Map<string, { id: number; stock: number }>()
 
-  await prisma.article.createMany({
-    data: shopArticles.map(([nom, prix, description]) => ({
-      nom,
-      prixCents: eurosToCents(prix),
-      category: getShopArticleCategory(nom),
-      tvaBps: 550,
-      stock: nom === 'Maxi Pack' ? 10 : 20,
-      online: true,
-      emoji: nom
-        .split(' ')
-        .map((part) => part[0])
-        .join('')
-        .slice(0, 3)
-        .toUpperCase(),
-      description,
-      ingredients: getShopArticleIngredients(nom),
-      allergenes: getShopArticleAllergenes(nom),
-    })),
+  for (const article of buildArticles()) {
+    const created = await prisma.article.create({
+      data: {
+        nom: article.nom,
+        category: getShopArticleCategory(article.nom),
+        prixCents: eurosToCents(article.prix),
+        tvaBps: 550,
+        stock: article.stock,
+        online: true,
+        emoji: getArticleCode(article.nom),
+        description: article.description,
+        ingredients: article.ingredients ?? getShopArticleIngredients(article.nom),
+        allergenes: article.allergenes ?? getShopArticleAllergenes(article.nom),
+      },
+    })
+
+    seeded.set(article.key, {
+      id: created.id,
+      stock: created.stock,
+    })
+
+    if (!article.nomenclature) continue
+
+    await prisma.nomenclature.createMany({
+      data: article.nomenclature.map((line) => {
+        const matiere = matieres.get(line.matiereKey)
+
+        if (!matiere) {
+          throw new Error(`Matière première introuvable: ${line.matiereKey}`)
+        }
+
+        return {
+          articleId: created.id,
+          mpId: matiere.id,
+          quantite: line.quantite,
+        }
+      }),
+    })
+  }
+
+  return seeded
+}
+
+function buildArticles(): SeedArticle[] {
+  return shopArticles.map(([key, nom, prix, description, stock]) => ({
+    key,
+    nom,
+    prix,
+    description,
+    stock,
+    nomenclature: getArticleNomenclature(key),
+  }))
+}
+
+function getArticleNomenclature(
+  key: string,
+): SeedArticle['nomenclature'] | undefined {
+  if (key.includes('whole_chicken')) {
+    return [{ matiereKey: 'whole_chicken', quantite: 1 }]
+  }
+
+  if (key.includes('breast')) {
+    return [{ matiereKey: 'chicken_breast', quantite: 0.35 }]
+  }
+
+  if (key.includes('leg') || key.includes('thigh') || key.includes('drumsticks')) {
+    return [{ matiereKey: 'chicken_thigh', quantite: 0.55 }]
+  }
+
+  if (key.includes('wings')) {
+    return [{ matiereKey: 'chicken_wing', quantite: 0.4 }]
+  }
+
+  if (key.includes('eggs_x6')) {
+    return [{ matiereKey: 'eggs', quantite: 6 }]
+  }
+
+  if (key.includes('eggs_x12')) {
+    return [{ matiereKey: 'eggs', quantite: 12 }]
+  }
+
+  if (key.includes('eggs_x24')) {
+    return [{ matiereKey: 'eggs', quantite: 24 }]
+  }
+
+  if (key.includes('eggs_x30')) {
+    return [{ matiereKey: 'eggs', quantite: 30 }]
+  }
+
+  if (key.includes('mousse_foie')) {
+    return [
+      { matiereKey: 'chicken_liver', quantite: 0.16 },
+      { matiereKey: 'seasoning', quantite: 0.02 },
+    ]
+  }
+
+  if (
+    key.includes('terrine') ||
+    key.includes('rillettes') ||
+    key.includes('gesiers')
+  ) {
+    return [
+      { matiereKey: 'chicken_thigh', quantite: 0.18 },
+      { matiereKey: 'seasoning', quantite: 0.02 },
+    ]
+  }
+
+  if (key.includes('sausage') || key.includes('merguez')) {
+    return [
+      { matiereKey: 'chicken_thigh', quantite: 0.5 },
+      { matiereKey: 'natural_casing', quantite: 0.03 },
+      { matiereKey: key.includes('herbs') ? 'herbs' : 'seasoning', quantite: 0.02 },
+    ]
+  }
+
+  if (key.includes('camembert')) {
+    return [
+      { matiereKey: 'chicken_breast', quantite: 0.32 },
+      { matiereKey: 'camembert', quantite: 0.25 },
+      { matiereKey: 'seasoning', quantite: 0.02 },
+    ]
+  }
+
+  if (key.includes('bacon')) {
+    return [
+      { matiereKey: 'chicken_breast', quantite: 0.32 },
+      { matiereKey: 'bacon', quantite: 0.08 },
+      { matiereKey: 'seasoning', quantite: 0.02 },
+    ]
+  }
+
+  if (key.includes('chorizo')) {
+    return [
+      { matiereKey: 'chicken_breast', quantite: 0.32 },
+      { matiereKey: 'chorizo', quantite: 0.08 },
+      { matiereKey: 'seasoning', quantite: 0.02 },
+    ]
+  }
+
+  if (key.includes('cordon_bleu')) {
+    return [
+      { matiereKey: 'chicken_breast', quantite: 0.35 },
+      { matiereKey: 'cheese', quantite: 0.08 },
+      { matiereKey: 'breadcrumbs', quantite: 0.04 },
+    ]
+  }
+
+  if (key.includes('chicken') || key.includes('milanese')) {
+    return [
+      { matiereKey: 'chicken_breast', quantite: 0.35 },
+      { matiereKey: 'breadcrumbs', quantite: 0.04 },
+      { matiereKey: 'seasoning', quantite: 0.01 },
+    ]
+  }
+
+  if (key.includes('skewer')) {
+    return [
+      { matiereKey: 'chicken_breast', quantite: 0.25 },
+      { matiereKey: key.includes('thym') ? 'herbs' : 'seasoning', quantite: 0.01 },
+    ]
+  }
+
+  if (key.includes('pack')) {
+    return [
+      { matiereKey: 'chicken_breast', quantite: 0.5 },
+      { matiereKey: 'chicken_thigh', quantite: 0.5 },
+      { matiereKey: 'natural_casing', quantite: 0.03 },
+      { matiereKey: 'seasoning', quantite: 0.03 },
+    ]
+  }
+
+  return undefined
+}
+
+async function seedStockLots(
+  prisma: PrismaClient,
+  matieres: Map<string, { id: number; stock: number }>,
+  articles: Map<string, { id: number; stock: number }>,
+) {
+  const chickenBreast = matieres.get('chicken_breast')
+  const chickenThigh = matieres.get('chicken_thigh')
+  const eggs = matieres.get('eggs')
+  const cordonBleu = articles.get('cordon_bleu')
+  const sausageNature = articles.get('sausage_nature')
+
+  await prisma.stockLot.createMany({
+    data: [
+      chickenBreast
+        ? {
+            target: 'matiere_premiere',
+            mpId: chickenBreast.id,
+            initialQuantity: 20,
+            remainingQuantity: 20,
+            expiresAt: daysFromNow(2),
+            reference: 'seed-blanc-poulet-near',
+          }
+        : null,
+      chickenThigh
+        ? {
+            target: 'matiere_premiere',
+            mpId: chickenThigh.id,
+            initialQuantity: 25,
+            remainingQuantity: 25,
+            expiresAt: daysFromNow(5),
+            reference: 'seed-cuisse-poulet-ok',
+          }
+        : null,
+      eggs
+        ? {
+            target: 'matiere_premiere',
+            mpId: eggs.id,
+            initialQuantity: 120,
+            remainingQuantity: 120,
+            expiresAt: daysFromNow(14),
+            reference: 'seed-oeufs-ok',
+          }
+        : null,
+      cordonBleu
+        ? {
+            target: 'article',
+            articleId: cordonBleu.id,
+            initialQuantity: 10,
+            remainingQuantity: 10,
+            expiresAt: daysFromNow(3),
+            reference: 'seed-cordon-bleu-ok',
+          }
+        : null,
+      sausageNature
+        ? {
+            target: 'article',
+            articleId: sausageNature.id,
+            initialQuantity: 12,
+            remainingQuantity: 12,
+            expiresAt: daysFromNow(2),
+            reference: 'seed-saucisse-nature-near',
+          }
+        : null,
+    ].filter((lot) => lot !== null),
   })
 }
 
@@ -345,7 +598,7 @@ function getShopArticleCategory(nom: string) {
     return 'PACKS'
   }
 
-  if (lowerName.includes('œufs') || lowerName.includes('oeufs')) {
+  if (lowerName.includes('oeufs')) {
     return 'EGGS'
   }
 
@@ -381,8 +634,8 @@ function getShopArticleCategory(nom: string) {
 function getShopArticleIngredients(nom: string) {
   const lowerName = nom.toLowerCase()
 
-  if (lowerName.includes('œufs')) {
-    return 'Œufs de poules élevées en plein air.'
+  if (lowerName.includes('oeufs')) {
+    return 'Oeufs de poules élevées en plein air.'
   }
 
   if (lowerName.includes('pack')) {
@@ -433,8 +686,8 @@ function getShopArticleAllergenes(nom: string) {
   const lowerName = nom.toLowerCase()
   const allergenes = new Set<string>()
 
-  if (lowerName.includes('œufs')) {
-    allergenes.add('Œufs')
+  if (lowerName.includes('oeufs')) {
+    allergenes.add('Oeufs')
   }
 
   if (
@@ -456,192 +709,13 @@ function getShopArticleAllergenes(nom: string) {
   return allergenes.size > 0 ? Array.from(allergenes).join(', ') : null
 }
 
-async function seedStockLots(prisma: PrismaClient, catalogue: SeedCatalogue) {
-  const { articles, matieres } = catalogue
-
-  await prisma.stockLot.createMany({
-    data: [
-      {
-        target: 'matiere_premiere',
-        mpId: matieres.lait.id,
-        initialQuantity: 5,
-        remainingQuantity: 4,
-        expiresAt: daysFromNow(-1),
-        reference: 'seed-lait-expired',
-      },
-      {
-        target: 'matiere_premiere',
-        mpId: matieres.levure.id,
-        initialQuantity: 2,
-        remainingQuantity: 1,
-        expiresAt: daysFromNow(1),
-        reference: 'seed-levure-urgent',
-      },
-      {
-        target: 'matiere_premiere',
-        mpId: matieres.beurre.id,
-        initialQuantity: 8,
-        remainingQuantity: 6,
-        expiresAt: daysFromNow(2),
-        reference: 'seed-beurre-near',
-      },
-      {
-        target: 'matiere_premiere',
-        mpId: matieres.farine.id,
-        initialQuantity: 35,
-        remainingQuantity: 35,
-        expiresAt: daysFromNow(20),
-        reference: 'seed-farine-ok',
-      },
-      {
-        target: 'article',
-        articleId: articles.flan.id,
-        initialQuantity: 4,
-        remainingQuantity: 3,
-        expiresAt: daysFromNow(-1),
-        reference: 'seed-flan-expired',
-      },
-      {
-        target: 'article',
-        articleId: articles.baguette.id,
-        initialQuantity: 25,
-        remainingQuantity: 18,
-        expiresAt: daysFromNow(1),
-        reference: 'seed-baguette-urgent',
-      },
-      {
-        target: 'article',
-        articleId: articles.croissant.id,
-        initialQuantity: 15,
-        remainingQuantity: 12,
-        expiresAt: daysFromNow(2),
-        reference: 'seed-croissant-near',
-      },
-      {
-        target: 'article',
-        articleId: articles.painChocolat.id,
-        initialQuantity: 20,
-        remainingQuantity: 20,
-        expiresAt: daysFromNow(5),
-        reference: 'seed-pain-chocolat-ok',
-      },
-    ],
-  })
-}
-
-async function seedSalesHistory(
-  prisma: PrismaClient,
-  articles: Record<string, SeedArticle>,
-) {
-  const now = new Date()
-  const history = [
-    {
-      daysAgo: 5,
-      sales: [
-        createSaleSeed(now, 5, 8, 'cb', 0, [
-          { article: articles.baguette, quantite: 12 },
-          { article: articles.croissant, quantite: 6 },
-        ]),
-        createSaleSeed(now, 5, 12, 'especes', 0, [
-          { article: articles.painChocolat, quantite: 5 },
-          { article: articles.flan, quantite: 2 },
-        ]),
-        createSaleSeed(now, 5, 17, 'cb', 1, [
-          { article: articles.baguette, quantite: 10 },
-          { article: articles.croissant, quantite: 4 },
-        ]),
-      ],
-    },
-    {
-      daysAgo: 4,
-      sales: [
-        createSaleSeed(now, 4, 9, 'cb', 0, [
-          { article: articles.baguette, quantite: 18 },
-          { article: articles.painChocolat, quantite: 8 },
-        ]),
-        createSaleSeed(now, 4, 14, 'cheque', 0, [
-          { article: articles.flan, quantite: 3 },
-          { article: articles.croissant, quantite: 7 },
-        ]),
-      ],
-    },
-    {
-      daysAgo: 3,
-      sales: [
-        createSaleSeed(now, 3, 8, 'especes', 0, [
-          { article: articles.baguette, quantite: 9 },
-          { article: articles.croissant, quantite: 10 },
-        ]),
-        createSaleSeed(now, 3, 13, 'cb', 0.5, [
-          { article: articles.painChocolat, quantite: 6 },
-          { article: articles.flan, quantite: 4 },
-        ]),
-        createSaleSeed(now, 3, 18, 'cb', 0, [
-          { article: articles.baguette, quantite: 15 },
-        ]),
-      ],
-    },
-    {
-      daysAgo: 2,
-      sales: [
-        createSaleSeed(now, 2, 10, 'cb', 0, [
-          { article: articles.baguette, quantite: 22 },
-          { article: articles.croissant, quantite: 8 },
-        ]),
-        createSaleSeed(now, 2, 16, 'especes', 0, [
-          { article: articles.painChocolat, quantite: 7 },
-          { article: articles.flan, quantite: 2 },
-        ]),
-      ],
-    },
-    {
-      daysAgo: 1,
-      sales: [
-        createSaleSeed(now, 1, 8, 'cb', 0, [
-          { article: articles.baguette, quantite: 16 },
-          { article: articles.croissant, quantite: 12 },
-        ]),
-        createSaleSeed(now, 1, 12, 'especes', 1, [
-          { article: articles.painChocolat, quantite: 9 },
-          { article: articles.flan, quantite: 3 },
-        ]),
-        createSaleSeed(now, 1, 18, 'cheque', 0, [
-          { article: articles.baguette, quantite: 8 },
-          { article: articles.flan, quantite: 2 },
-        ]),
-      ],
-    },
-  ]
-
-  for (const day of history) {
-    const sales: Awaited<ReturnType<typeof createVente>>[] = []
-
-    for (const sale of day.sales) {
-      sales.push(await createVente(prisma, sale))
-    }
-
-    await createClosedCashDay(prisma, day.sales[0].date, sales)
-  }
-}
-
-function createSaleSeed(
-  baseDate: Date,
-  daysAgo: number,
-  hour: number,
-  mode: SaleSeed['mode'],
-  remise: number,
-  lignes: SaleLineSeed[],
-): SaleSeed {
-  const date = new Date(baseDate)
-  date.setDate(date.getDate() - daysAgo)
-  date.setHours(hour, 30, 0, 0)
-
-  return {
-    date,
-    mode,
-    remiseCents: eurosToCents(remise),
-    lignes,
-  }
+function getArticleCode(nom: string) {
+  return nom
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase()
 }
 
 function daysFromNow(days: number) {
@@ -650,182 +724,6 @@ function daysFromNow(days: number) {
   date.setHours(12, 0, 0, 0)
 
   return date
-}
-
-async function createVente(prisma: PrismaClient, sale: SaleSeed) {
-  const lignesCalculees = sale.lignes.map((ligne) => {
-    const totalLigneTtcCents = ligne.article.prixCents * ligne.quantite
-    const totalLigneHtCents = calculateHtFromTtcCents(
-      totalLigneTtcCents,
-      ligne.article.tvaBps,
-    )
-
-    return {
-      article: ligne.article,
-      quantite: ligne.quantite,
-      prixUnitCents: ligne.article.prixCents,
-      totalLigneTtcCents,
-      totalLigneHtCents,
-    }
-  })
-
-  const totalAvantRemiseTtcCents = lignesCalculees.reduce(
-    (total, ligne) => total + ligne.totalLigneTtcCents,
-    0,
-  )
-  const totalTtcCents = Math.max(
-    0,
-    totalAvantRemiseTtcCents - sale.remiseCents,
-  )
-  const totalAvantRemiseHtCents = lignesCalculees.reduce(
-    (total, ligne) => total + ligne.totalLigneHtCents,
-    0,
-  )
-  const totalHtCents =
-    totalAvantRemiseTtcCents > 0
-      ? Math.round(
-          (totalAvantRemiseHtCents * totalTtcCents) /
-            totalAvantRemiseTtcCents,
-        )
-      : totalAvantRemiseHtCents
-  const tvaCents = totalTtcCents - totalHtCents
-
-  return prisma.vente.create({
-    data: {
-      date: sale.date,
-      mode: sale.mode,
-      remiseCents: sale.remiseCents,
-      totalTtcCents,
-      totalHtCents,
-      tvaCents,
-      lignes: {
-        create: lignesCalculees.map((ligne) => ({
-          articleId: ligne.article.id,
-          quantite: ligne.quantite,
-          prixUnitCents: ligne.prixUnitCents,
-          tvaBps: ligne.article.tvaBps,
-        })),
-      },
-    },
-    include: {
-      lignes: {
-        include: {
-          article: {
-            include: {
-              nomen: {
-                include: {
-                  mp: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  })
-}
-
-async function createClosedCashDay(
-  prisma: PrismaClient,
-  date: Date,
-  ventes: Awaited<ReturnType<typeof createVente>>[],
-) {
-  const dayStart = getParisDayStart(date)
-
-  const totals = ventes.reduce(
-    (acc, vente) => {
-      const coutMatieres = vente.lignes.reduce((venteCost, ligne) => {
-        const coutUnitaireCents = ligne.article.nomen.reduce(
-          (lineCost, nomenclatureLine) =>
-            lineCost +
-            Math.round(
-              nomenclatureLine.quantite *
-                nomenclatureLine.mp.coutUnitaireCents,
-            ),
-          0,
-        )
-
-        return venteCost + coutUnitaireCents * ligne.quantite
-      }, 0)
-
-      return {
-        totalTtcCents: acc.totalTtcCents + vente.totalTtcCents,
-        totalHtCents: acc.totalHtCents + vente.totalHtCents,
-        tvaCents: acc.tvaCents + vente.tvaCents,
-        especesCents:
-          acc.especesCents +
-          (vente.mode === 'especes' ? vente.totalTtcCents : 0),
-        cbCents:
-          acc.cbCents + (vente.mode === 'cb' ? vente.totalTtcCents : 0),
-        chequesCents:
-          acc.chequesCents +
-          (vente.mode === 'cheque' ? vente.totalTtcCents : 0),
-        margeCents: acc.margeCents + (vente.totalHtCents - coutMatieres),
-        nbVentes: acc.nbVentes + 1,
-      }
-    },
-    {
-      totalTtcCents: 0,
-      totalHtCents: 0,
-      tvaCents: 0,
-      especesCents: 0,
-      cbCents: 0,
-      chequesCents: 0,
-      margeCents: 0,
-      nbVentes: 0,
-    },
-  )
-
-  await prisma.journeeCaisse.create({
-    data: {
-      date: dayStart,
-      clotureeA: new Date(dayStart.getTime() + 18 * 60 * 60 * 1000),
-      ...totals,
-    },
-  })
-}
-
-function getParisDayStart(date: Date) {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-  const parts = formatter.formatToParts(date)
-  const year = Number(parts.find((part) => part.type === 'year')?.value)
-  const month = Number(parts.find((part) => part.type === 'month')?.value)
-  const day = Number(parts.find((part) => part.type === 'day')?.value)
-  const utcGuess = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
-  const offset = getTimeZoneOffsetMs(utcGuess, TIME_ZONE)
-
-  return new Date(utcGuess.getTime() - offset)
-}
-
-function getTimeZoneOffsetMs(date: Date, timeZone: string) {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  })
-  const parts = formatter.formatToParts(date)
-  const getPart = (type: string) =>
-    Number(parts.find((part) => part.type === type)?.value)
-  const asUtc = Date.UTC(
-    getPart('year'),
-    getPart('month') - 1,
-    getPart('day'),
-    getPart('hour') % 24,
-    getPart('minute'),
-    getPart('second'),
-  )
-
-  return asUtc - date.getTime()
 }
 
 main().catch((e) => {

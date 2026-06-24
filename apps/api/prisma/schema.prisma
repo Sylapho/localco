@@ -87,6 +87,9 @@ model AuthUser {
   emailVerified Boolean       @default(false)
   image         String?
   role          String?       @default("vendeur")
+  banned        Boolean?      @default(false)
+  banReason     String?
+  banExpires    DateTime?     @db.Timestamp(6)
   createdAt     DateTime      @default(now()) @db.Timestamp(6)
   updatedAt     DateTime      @default(now()) @db.Timestamp(6)
   sessions      AuthSession[]
@@ -103,6 +106,7 @@ model AuthSession {
   updatedAt DateTime @default(now()) @db.Timestamp(6)
   ipAddress String?
   userAgent String?
+  impersonatedBy String?
   userId    String
   user      AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
