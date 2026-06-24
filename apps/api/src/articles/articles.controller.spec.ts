@@ -89,7 +89,6 @@ describe('ArticlesController', () => {
     }
     const file = {
       filename: 'article-1-test.jpg',
-      path: 'uploads/articles/article-1-test.jpg',
     }
 
     articlesServiceMock.updateImage.mockResolvedValue(result)
@@ -98,7 +97,7 @@ describe('ArticlesController', () => {
     expect(articlesServiceMock.updateImage).toHaveBeenCalledWith(
       1,
       '/uploads/articles/article-1-test.jpg',
-      'uploads/articles/article-1-test.jpg',
+      'article-1-test.jpg',
     )
   })
 

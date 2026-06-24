@@ -32,7 +32,6 @@ import { ROLES } from '../auth/roles'
 
 type UploadedArticleImage = {
   filename: string
-  path: string
 }
 
 @Controller('articles')
@@ -112,7 +111,7 @@ export class ArticlesController {
     return this.articlesService.updateImage(
       id,
       buildArticleImagePath(file.filename),
-      file.path,
+      file.filename,
     )
   }
 
