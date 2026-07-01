@@ -11,6 +11,11 @@ import { EmailsService } from '../emails/emails.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
 import { PickupPointsService } from '../pickup-points/pickup-points.service'
 import { PrismaService } from '../prisma/prisma.service'
+import { CommandePreparationService } from './commande-preparation.service'
+import { CommandeProductionNeedsService } from './commande-production-needs.service'
+import { CommandePublicSummaryService } from './commande-public-summary.service'
+import { CommandeStatusHistoryService } from './commande-status-history.service'
+import { CommandeStockReservationService } from './commande-stock-reservation.service'
 import { CommandesService } from './commandes.service'
 import { CreateCommandeDto } from './dto/create-commande.dto'
 import { CommandeStatut } from './dto/update-commande-statut.dto'
@@ -235,6 +240,11 @@ describe('CommandesService', () => {
       providers: [
         CommandesService,
         StripeCheckoutGateway,
+        CommandePreparationService,
+        CommandeProductionNeedsService,
+        CommandePublicSummaryService,
+        CommandeStatusHistoryService,
+        CommandeStockReservationService,
         {
           provide: PrismaService,
           useValue: prismaMock,
@@ -3202,6 +3212,16 @@ describe('CommandesService', () => {
         emailsServiceMock as never,
         new StripeCheckoutGateway(configServiceMock as never),
         pickupPointsServiceMock as never,
+        new CommandePreparationService(
+          prismaMock as never,
+          pickupPointsServiceMock as never,
+        ),
+        new CommandeProductionNeedsService(prismaMock as never),
+        new CommandePublicSummaryService(),
+        new CommandeStatusHistoryService(),
+        new CommandeStockReservationService(
+          mouvementsStockServiceMock as never,
+        ),
       )
 
       prismaMock.commande.findMany.mockResolvedValue([])

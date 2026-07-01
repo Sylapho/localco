@@ -12,6 +12,11 @@ import { EmailsService } from '../emails/emails.service'
 import { MouvementsStockService } from '../mouvements-stock/mouvements-stock.service'
 import { PickupPointsService } from '../pickup-points/pickup-points.service'
 import { PrismaService } from '../prisma/prisma.service'
+import { CommandePreparationService } from './commande-preparation.service'
+import { CommandeProductionNeedsService } from './commande-production-needs.service'
+import { CommandePublicSummaryService } from './commande-public-summary.service'
+import { CommandeStatusHistoryService } from './commande-status-history.service'
+import { CommandeStockReservationService } from './commande-stock-reservation.service'
 import { CommandesController } from './commandes.controller'
 import { CommandesService } from './commandes.service'
 import { BetterAuthGuard } from '../auth/better-auth.guard'
@@ -174,6 +179,11 @@ describe('Commandes integration', () => {
       providers: [
         CommandesService,
         StripeCheckoutGateway,
+        CommandePreparationService,
+        CommandeProductionNeedsService,
+        CommandePublicSummaryService,
+        CommandeStatusHistoryService,
+        CommandeStockReservationService,
         {
           provide: PrismaService,
           useValue: prismaMock,

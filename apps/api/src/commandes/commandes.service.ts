@@ -23,6 +23,14 @@ import {
   CheckoutSessionExpirationResult,
   StripeCheckoutGateway,
 } from './stripe-checkout.gateway'
+import { CommandePreparationService } from './commande-preparation.service'
+import {
+  CommandeProductionNeedsService,
+  type CommandeWithProductionLines,
+} from './commande-production-needs.service'
+import { CommandePublicSummaryService } from './commande-public-summary.service'
+import { CommandeStatusHistoryService } from './commande-status-history.service'
+import { CommandeStockReservationService } from './commande-stock-reservation.service'
 
 type StockMovementTransaction = Parameters<
   MouvementsStockService['recordArticleMovement']
@@ -38,26 +46,6 @@ type ReservationLine = {
   article?: {
     stock: number
   } | null
-}
-
-type ReservationArticle = {
-  id: number
-  stock: number
-  prixCents: number
-  nom: string
-  imageUrl?: string | null
-}
-
-type CommandeWithProductionLines = {
-  id: number
-  statut: string
-  dateRetrait?: Date | null
-  createdAt?: Date
-  lignes: {
-    id?: number
-    articleId: number
-    quantite: number
-  }[]
 }
 
 type StripeCheckoutWebhookEvent = {
@@ -167,34 +155,6 @@ type CommandeStockAllocationRow = {
   quantity: number
 }
 
-type ProductionOpenCommande = {
-  id: number
-  statut: string
-  dateRetrait: Date | null
-  createdAt: Date
-  lignes: {
-    articleId: number
-    quantite: number
-  }[]
-}
-
-type PublicCommandeSummary = {
-  trackingToken: string
-  reference: string
-  totalTtcCents: number
-  lieu: string
-  dateRetrait: string | null
-  statut: string
-  paiementStatut: 'confirme' | 'en_attente' | 'a_verifier' | 'annule'
-  createdAt: string
-  lignes: {
-    nom: string
-    quantite: number
-    prixUnitCents: number
-    totalCents: number
-  }[]
-}
-
 @Injectable()
 export class CommandesService {
   private readonly logger = new Logger(CommandesService.name)
@@ -204,19 +164,8 @@ export class CommandesService {
   private readonly maxStripeReconciliationErrorLength = 1_000
   private readonly defaultAbandonedOrderDelayMinutes = 60
   private readonly maxCleanupFailureReasonLength = 200
-  private readonly productionAllocationStatuses = [
-    'paiement_en_attente',
-    'paiement_a_verifier',
-    'nouvelle',
-    'preparee',
-  ]
   private readonly cancellableStockReleaseStatuses = [
     'paiement_en_attente',
-    'paiement_a_verifier',
-    'nouvelle',
-    'preparee',
-  ]
-  private readonly visibleProductionStatuses = [
     'paiement_a_verifier',
     'nouvelle',
     'preparee',
@@ -229,6 +178,11 @@ export class CommandesService {
     private readonly emailsService: EmailsService,
     private readonly stripeCheckoutGateway: StripeCheckoutGateway,
     private readonly pickupPointsService: PickupPointsService,
+    private readonly commandePreparationService: CommandePreparationService,
+    private readonly commandeProductionNeedsService: CommandeProductionNeedsService,
+    private readonly commandePublicSummaryService: CommandePublicSummaryService,
+    private readonly commandeStatusHistoryService: CommandeStatusHistoryService,
+    private readonly commandeStockReservationService: CommandeStockReservationService,
   ) {
     this.abandonedDelayMinutes = this.parseAbandonedOrderDelayMinutes()
   }
@@ -1727,71 +1681,18 @@ export class CommandesService {
     data: {
       commandeId: number
       lignes: ReservationLine[]
-      articles: ReservationArticle[]
+      articles: {
+        id: number
+        stock: number
+        prixCents: number
+        nom: string
+        imageUrl?: string | null
+      }[]
       motif?: string
       reference?: string
     },
   ) {
-    for (const ligne of data.lignes) {
-      const article = data.articles.find((item) => item.id === ligne.articleId)!
-
-      await tx.article.update({
-        where: { id: article.id },
-        data: {
-          stock: {
-            decrement: ligne.quantite,
-          },
-        },
-      })
-
-      const movement = await this.mouvementsStockService.recordArticleMovement(
-        tx,
-        {
-          articleId: article.id,
-          quantite: -ligne.quantite,
-          stockAvant: article.stock,
-          stockApres: article.stock - ligne.quantite,
-          type: 'commande',
-          motif: data.motif ?? `Réservation checkout #${data.commandeId}`,
-          reference:
-            data.reference ?? this.getReservationReference(data.commandeId),
-        },
-      )
-
-      const consumedLots = movement.consumedLots ?? []
-      const physicalQuantity = consumedLots.reduce(
-        (total, consumedLot) => total + consumedLot.quantity,
-        0,
-      )
-      const preorderedQuantity = Math.max(0, ligne.quantite - physicalQuantity)
-
-      if (!ligne.id) {
-        this.logger.warn({
-          message: 'Order line has no id while recording stock allocation',
-          commandeId: data.commandeId,
-          articleId: ligne.articleId,
-        })
-        continue
-      }
-
-      await tx.ligneCommande.update({
-        where: { id: ligne.id },
-        data: {
-          quantitePrecommande: preorderedQuantity,
-        },
-      })
-
-      for (const consumedLot of consumedLots) {
-        await tx.commandeStockAllocation.create({
-          data: {
-            commandeId: data.commandeId,
-            ligneCommandeId: ligne.id,
-            stockLotId: consumedLot.stockLotId,
-            quantity: consumedLot.quantity,
-          },
-        })
-      }
-    }
+    await this.commandeStockReservationService.reserve(tx, data)
   }
 
   private async releaseOrderReservation(
@@ -2025,10 +1926,6 @@ export class CommandesService {
     }
   }
 
-  private getReservationReference(commandeId: number) {
-    return `commande:${commandeId}:reservation`
-  }
-
   private getReservationReleaseReference(commandeId: number) {
     return `commande:${commandeId}:reservation:release`
   }
@@ -2041,257 +1938,18 @@ export class CommandesService {
     return randomBytes(24).toString('base64url')
   }
 
-  private toPublicCommandeSummary(commande: {
-    id: number
-    trackingToken: string
-    totalTtcCents: number
-    lieu: string
-    dateRetrait?: Date | null
-    statut: string
-    createdAt: Date
-    lignes: {
-      quantite: number
-      prixUnitCents: number
-      article: {
-        nom: string
-      }
-    }[]
-  }): PublicCommandeSummary {
-    return {
-      trackingToken: commande.trackingToken,
-      reference: this.formatCommandeReference(commande.id),
-      totalTtcCents: commande.totalTtcCents,
-      lieu: commande.lieu,
-      dateRetrait: commande.dateRetrait?.toISOString() ?? null,
-      statut: commande.statut,
-      paiementStatut: this.getPublicPaymentStatus(commande.statut),
-      createdAt: commande.createdAt.toISOString(),
-      lignes: commande.lignes.map((ligne) => ({
-        nom: ligne.article.nom,
-        quantite: ligne.quantite,
-        prixUnitCents: ligne.prixUnitCents,
-        totalCents: ligne.prixUnitCents * ligne.quantite,
-      })),
-    }
+  private toPublicCommandeSummary(
+    commande: Parameters<
+      CommandePublicSummaryService['toPublicCommandeSummary']
+    >[0],
+  ) {
+    return this.commandePublicSummaryService.toPublicCommandeSummary(commande)
   }
 
   private async withProductionNeeds<T extends CommandeWithProductionLines>(
     commandes: T[],
   ) {
-    if (commandes.length === 0) {
-      return commandes
-    }
-
-    const articleIds = Array.from(
-      new Set(
-        commandes.flatMap((commande) =>
-          commande.lignes.map((ligne) => ligne.articleId),
-        ),
-      ),
-    )
-
-    if (articleIds.length === 0) {
-      return this.applyProductionQuantities(commandes, new Map())
-    }
-
-    const [articles, openCommandes] = await Promise.all([
-      this.prisma.article.findMany({
-        where: {
-          id: {
-            in: articleIds,
-          },
-        },
-        select: {
-          id: true,
-          stock: true,
-        },
-      }),
-      this.prisma.commande.findMany({
-        where: {
-          statut: {
-            in: this.productionAllocationStatuses,
-          },
-          lignes: {
-            some: {
-              articleId: {
-                in: articleIds,
-              },
-            },
-          },
-        },
-        select: {
-          id: true,
-          statut: true,
-          dateRetrait: true,
-          createdAt: true,
-          lignes: {
-            where: {
-              articleId: {
-                in: articleIds,
-              },
-            },
-            select: {
-              articleId: true,
-              quantite: true,
-            },
-          },
-        },
-      }),
-    ])
-
-    const currentStockByArticleId = new Map(
-      articles.map((article) => [article.id, article.stock]),
-    )
-    const productionQuantityByLine = this.allocateProductionQuantities(
-      currentStockByArticleId,
-      openCommandes,
-    )
-
-    return this.applyProductionQuantities(commandes, productionQuantityByLine)
-  }
-
-  private allocateProductionQuantities(
-    currentStockByArticleId: Map<number, number>,
-    openCommandes: ProductionOpenCommande[],
-  ) {
-    const openLinesByArticleId = new Map<
-      number,
-      {
-        commandeId: number
-        statut: string
-        dateRetrait: Date | null
-        createdAt: Date
-        articleId: number
-        quantite: number
-      }[]
-    >()
-
-    for (const commande of openCommandes) {
-      for (const ligne of commande.lignes) {
-        openLinesByArticleId.set(ligne.articleId, [
-          ...(openLinesByArticleId.get(ligne.articleId) ?? []),
-          {
-            commandeId: commande.id,
-            statut: commande.statut,
-            dateRetrait: commande.dateRetrait,
-            createdAt: commande.createdAt,
-            articleId: ligne.articleId,
-            quantite: ligne.quantite,
-          },
-        ])
-      }
-    }
-
-    const productionQuantityByLine = new Map<string, number>()
-
-    for (const [articleId, openLines] of openLinesByArticleId.entries()) {
-      const totalOpenQuantity = openLines.reduce(
-        (total, ligne) => total + ligne.quantite,
-        0,
-      )
-      let remainingAvailableStock =
-        (currentStockByArticleId.get(articleId) ?? 0) + totalOpenQuantity
-
-      const orderedLines = [...openLines].sort((a, b) => {
-        const dueDateOrder = this.compareProductionDueDates(
-          a.dateRetrait,
-          b.dateRetrait,
-        )
-
-        if (dueDateOrder !== 0) {
-          return dueDateOrder
-        }
-
-        const createdAtOrder = a.createdAt.getTime() - b.createdAt.getTime()
-
-        if (createdAtOrder !== 0) {
-          return createdAtOrder
-        }
-
-        return a.commandeId - b.commandeId
-      })
-
-      for (const ligne of orderedLines) {
-        const coveredQuantity = Math.min(
-          Math.max(0, remainingAvailableStock),
-          ligne.quantite,
-        )
-        const productionQuantity = Math.max(0, ligne.quantite - coveredQuantity)
-
-        if (
-          productionQuantity > 0 &&
-          this.visibleProductionStatuses.includes(ligne.statut)
-        ) {
-          productionQuantityByLine.set(
-            this.getProductionLineKey(ligne.commandeId, ligne.articleId),
-            productionQuantity,
-          )
-        }
-
-        remainingAvailableStock = Math.max(
-          0,
-          remainingAvailableStock - ligne.quantite,
-        )
-      }
-    }
-
-    return productionQuantityByLine
-  }
-
-  private applyProductionQuantities<T extends CommandeWithProductionLines>(
-    commandes: T[],
-    productionQuantityByLine: Map<string, number>,
-  ) {
-    return commandes.map((commande) => ({
-      ...commande,
-      lignes: commande.lignes.map((ligne) => ({
-        ...ligne,
-        productionQuantity:
-          productionQuantityByLine.get(
-            this.getProductionLineKey(commande.id, ligne.articleId),
-          ) ?? 0,
-      })),
-    }))
-  }
-
-  private compareProductionDueDates(left: Date | null, right: Date | null) {
-    if (!left && !right) {
-      return 0
-    }
-
-    if (!left) {
-      return 1
-    }
-
-    if (!right) {
-      return -1
-    }
-
-    return left.getTime() - right.getTime()
-  }
-
-  private getProductionLineKey(commandeId: number, articleId: number) {
-    return `${commandeId}:${articleId}`
-  }
-
-  private formatCommandeReference(id: number) {
-    return `CMD-${String(id).padStart(6, '0')}`
-  }
-
-  private getPublicPaymentStatus(statut: string) {
-    if (statut === 'annulee') {
-      return 'annule'
-    }
-
-    if (statut === 'paiement_en_attente') {
-      return 'en_attente'
-    }
-
-    if (statut === 'paiement_a_verifier') {
-      return 'a_verifier'
-    }
-
-    return 'confirme'
+    return this.commandeProductionNeedsService.withProductionNeeds(commandes)
   }
 
   private async recordStatusHistory(
@@ -2316,60 +1974,10 @@ export class CommandesService {
       createdByUserId?: string
     },
   ) {
-    await tx.commandeStatutHistorique.create({
-      data,
-    })
+    await this.commandeStatusHistoryService.record(tx, data)
   }
 
   private async prepareCommande(data: CreateCommandeDto) {
-    await this.pickupPointsService.validatePickupSlot(
-      data.lieu,
-      data.dateRetrait,
-    )
-
-    const lignesAgregees = this.aggregateLines(data.lignes)
-    const articleIds = lignesAgregees.map((ligne) => ligne.articleId)
-
-    const articles = await this.prisma.article.findMany({
-      where: {
-        id: {
-          in: articleIds,
-        },
-        online: true,
-        archivedAt: null,
-      },
-    })
-
-    if (articles.length !== articleIds.length) {
-      throw new BadRequestException(
-        'Un ou plusieurs articles sont introuvables ou indisponibles',
-      )
-    }
-
-    const totalTtcCents = lignesAgregees.reduce((total, ligne) => {
-      const article = articles.find((item) => item.id === ligne.articleId)!
-
-      return total + article.prixCents * ligne.quantite
-    }, 0)
-
-    return { lignesAgregees, articles, totalTtcCents }
-  }
-
-  private aggregateLines(lignes: CreateCommandeDto['lignes']) {
-    const linesByArticle = new Map<number, number>()
-
-    for (const ligne of lignes) {
-      linesByArticle.set(
-        ligne.articleId,
-        (linesByArticle.get(ligne.articleId) ?? 0) + ligne.quantite,
-      )
-    }
-
-    return Array.from(linesByArticle.entries()).map(
-      ([articleId, quantite]) => ({
-        articleId,
-        quantite,
-      }),
-    )
+    return this.commandePreparationService.prepare(data)
   }
 }
