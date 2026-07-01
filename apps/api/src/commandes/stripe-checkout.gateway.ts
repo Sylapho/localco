@@ -9,6 +9,7 @@ type CreateCheckoutSessionArgs = Parameters<
 type RetrievedCheckoutSession = Awaited<
   ReturnType<StripeClient['checkout']['sessions']['retrieve']>
 >
+export type CreatedCheckoutSession = Stripe.Response<Stripe.Checkout.Session>
 
 export type CheckoutSessionStateResult =
   | {
@@ -71,7 +72,7 @@ export class StripeCheckoutGateway {
   createCheckoutSession(
     params: CreateCheckoutSessionArgs[0],
     options?: CreateCheckoutSessionArgs[1],
-  ) {
+  ): Promise<CreatedCheckoutSession> {
     return this.getStripe().checkout.sessions.create(params, options)
   }
 
@@ -169,7 +170,7 @@ export class StripeCheckoutGateway {
     rawBody: Buffer,
     signature: string,
     webhookSecret: string,
-  ) {
+  ): Stripe.Event {
     return this.getStripe().webhooks.constructEvent(
       rawBody,
       signature,

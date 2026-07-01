@@ -44,7 +44,7 @@ test('shop user can add a product and create a checkout session', async ({
   await page.getByRole('link', { name: 'Continuer vers le paiement' }).click()
 
   await expect(
-    page.getByRole('heading', { name: 'Finaliser mon retrait' }),
+    page.getByRole('heading', { name: 'Finaliser ma commande' }),
   ).toBeVisible()
   await expect(page.getByText('Terrine de volaille')).toBeVisible()
 

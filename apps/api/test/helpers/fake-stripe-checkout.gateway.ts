@@ -1,14 +1,11 @@
 import Stripe from 'stripe'
 import {
   CheckoutSessionStateResult,
+  CreatedCheckoutSession,
   ExpireCheckoutSessionError,
   ExpireCheckoutSessionResult,
   StripeCheckoutGateway,
 } from '../../src/commandes/stripe-checkout.gateway'
-
-type CheckoutSession = Awaited<
-  ReturnType<StripeCheckoutGateway['createCheckoutSession']>
->
 
 export class FakeStripeCheckoutGateway {
   readonly createdSessions: {
@@ -17,11 +14,11 @@ export class FakeStripeCheckoutGateway {
   }[] = []
   readonly expiredSessions: string[] = []
   readonly retrievedSessions: string[] = []
-  private nextSession: CheckoutSession = {
+  private nextSession: CreatedCheckoutSession = {
     id: 'cs_test_e2e_success',
     object: 'checkout.session',
     url: 'https://checkout.stripe.test/e2e',
-  } as CheckoutSession
+  } as CreatedCheckoutSession
   private nextError: Error | null = null
   private nextExpirationError: Error | null = null
   private nextExpirationResult: ExpireCheckoutSessionResult | null = null
@@ -47,15 +44,15 @@ export class FakeStripeCheckoutGateway {
       id: 'cs_test_e2e_success',
       object: 'checkout.session',
       url: 'https://checkout.stripe.test/e2e',
-    } as CheckoutSession
+    } as CreatedCheckoutSession
   }
 
-  setNextSession(session: Pick<CheckoutSession, 'id' | 'url'>) {
+  setNextSession(session: Pick<CreatedCheckoutSession, 'id' | 'url'>) {
     this.nextSession = {
       id: session.id,
       object: 'checkout.session',
       url: session.url,
-    } as CheckoutSession
+    } as CreatedCheckoutSession
   }
 
   failNextSession(error = new Error('Stripe unavailable')) {
@@ -108,7 +105,7 @@ export class FakeStripeCheckoutGateway {
   createCheckoutSession(
     params: Parameters<StripeCheckoutGateway['createCheckoutSession']>[0],
     options?: Parameters<StripeCheckoutGateway['createCheckoutSession']>[1],
-  ) {
+  ): Promise<CreatedCheckoutSession> {
     this.createdSessions.push({ params, options })
 
     if (this.nextError) {
@@ -120,7 +117,9 @@ export class FakeStripeCheckoutGateway {
     return Promise.resolve(this.nextSession)
   }
 
-  retrieveCheckoutSession(sessionId: string) {
+  retrieveCheckoutSession(
+    sessionId: string,
+  ): Promise<CheckoutSessionStateResult> {
     this.retrievedSessions.push(sessionId)
 
     if (this.nextRetrieveResult) {
@@ -134,7 +133,9 @@ export class FakeStripeCheckoutGateway {
     } satisfies CheckoutSessionStateResult)
   }
 
-  async expireCheckoutSession(sessionId: string) {
+  async expireCheckoutSession(
+    sessionId: string,
+  ): Promise<ExpireCheckoutSessionResult> {
     this.expiredSessions.push(sessionId)
     this.resolveNextExpirationStarted?.()
     this.resolveNextExpirationStarted = null
@@ -170,7 +171,7 @@ export class FakeStripeCheckoutGateway {
     rawBody: Buffer,
     signature: string,
     webhookSecret: string,
-  ) {
+  ): Stripe.Event {
     const stripe = new Stripe('sk_test_localco_e2e')
 
     return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
