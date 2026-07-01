@@ -168,7 +168,7 @@ export default function ShopClient({ articles, pickupPoints }: ShopClientProps) 
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {['Paiement sécurisé', 'Préparation selon retrait', 'Retrait local'].map(
+            {['Paiement sécurisé', 'Préparation selon le retrait', 'Retrait local'].map(
               (item) => (
                 <div
                   key={item}
@@ -178,31 +178,6 @@ export default function ShopClient({ articles, pickupPoints }: ShopClientProps) 
                 </div>
               ),
             )}
-          </div>
-        </div>
-
-        <div className="rounded-[2rem] bg-[#fceef6] p-5 shadow-sm lg:p-8">
-          <div className="flex items-center gap-4">
-            <Image
-              src="/logo.svg"
-              alt="Les cocottes de Diane"
-              width={112}
-              height={112}
-              className="h-28 w-28 rounded-full bg-white object-contain p-3 shadow-sm"
-            />
-
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-[#b5006e]">
-                Les cocottes de Diane
-              </p>
-              <h2 className="mt-1 text-2xl font-black text-[#181014]">
-                Boutique en ligne
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[#4a3d43]">
-                Une sélection courte, lisible et mise à jour selon les stocks
-                disponibles.
-              </p>
-            </div>
           </div>
         </div>
       </section>

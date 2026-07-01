@@ -212,7 +212,7 @@ export default function CheckoutClient({
               </p>
 
               <h1 className="mt-2 text-3xl font-black tracking-tight text-[#181014] sm:text-4xl">
-                Finaliser mon retrait
+                Finaliser ma commande
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#7a6d73]">
@@ -261,7 +261,7 @@ export default function CheckoutClient({
               <section>
                 <StepHeader
                   eyebrow="Étape 1"
-                  title="Choisir mon retrait"
+                  title="Choisir le retrait"
                   description="Sélectionnez un point de retrait, puis une date compatible avec ce lieu."
                 />
 
@@ -283,7 +283,7 @@ export default function CheckoutClient({
                   </div>
                 ) : (
                   <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                    Aucun point de retrait nâ€™est disponible pour le moment.
+                    Aucun point de retrait n’est disponible pour le moment.
                   </div>
                 )}
 
@@ -327,7 +327,7 @@ export default function CheckoutClient({
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <Field
                     className="sm:col-span-2"
-                    label="Nom / Prénom *"
+                    label="Nom et Prénom *"
                     htmlFor="nom"
                   >
                     <input

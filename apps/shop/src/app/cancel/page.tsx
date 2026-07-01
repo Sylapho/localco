@@ -45,7 +45,7 @@ export default function CancelPage() {
               />
               <CancelStep
                 title="Relancer le paiement"
-                text="Reprenez le checkout pour choisir votre retrait et valider."
+                text="Reprenez le parcours de paiement pour choisir votre retrait et valider."
               />
               <CancelStep
                 title="Aucun débit confirmé"
